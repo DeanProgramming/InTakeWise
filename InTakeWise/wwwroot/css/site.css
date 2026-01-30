@@ -1,4 +1,4 @@
-/* ========== Menu-only CSS (for Pages/Index.cshtml) ========== */
+Ôªø/* ========== Menu-only CSS (for Pages/Index.cshtml) ========== */
 
 /* Theme tokens */
 :root {
@@ -140,7 +140,7 @@
     line-height: 1.5;
 }
 
-/* Status ìboxî */
+/* Status ‚Äúbox‚Äù */
 .menu-side-box {
     border-radius: 14px;
     padding: 14px 16px;
@@ -172,30 +172,40 @@
     font-weight: 900;
 }
 
-/* Responsive */
 @media (max-width: 900px) {
+    .auth-page {
+        min-height: 100vh;
+        display: flex;
+        padding-top: 0px;
+    }
+
     .auth-card.menu-card {
         grid-template-columns: 1fr;
+        grid-template-rows: auto 1fr;  
+        height: 100vh;  
+        align-items: stretch;
     }
 
     .auth-side.menu-side {
         order: -1;
-    }
-
-    .auth-main,
-    .auth-side.menu-side {
-        padding: 28px;
-        padding-top: 20px;
-    }
-
-    .auth-side.menu-side {
+        padding: 20px;
         padding-top: 15px;
         padding-bottom: 25px;
+        max-height: 162.5px;
     }
+
+    .auth-main {
+        padding: 10px;
+        padding-top: 20px;
+        overflow-y: auto; 
+    }
+
     .auth-side-subtitle {
         margin: 0px;
         margin-bottom: 7px;
         margin-top: 7px;
+        font-size: 11px;
+        text-align: center;
     }
 
     .menu-actions-row {
@@ -214,10 +224,28 @@
         margin: 0px;
         text-align: center;
     }
+
+    .whole-container {
+        padding-left: 8px;
+        padding-right: 8px;
+        padding-top: 4px;
+        padding-bottom: 4px;
+        height: 100vh;
+    }
+
+    .main-menu {
+        height: 100vh;
+        padding: 0px !important;
+    }
+
+    .menu-action-title {
+        font-size: 16px;
+    }
 }
 
+
 .curved {
-    border-radius: 999px; /* pill shape */
+    border-radius: 999px;  
     text-align: center;
     font-weight: 900;
     padding: 1px 1px;
@@ -226,7 +254,7 @@
 .curved-Gym-Button {
     font-size: 12px;
 }
-/* 3 meal tiles in a clean grid */
+
 .menu-actions-row {
     display: grid;
     grid-template-columns: repeat(3, 1fr);
