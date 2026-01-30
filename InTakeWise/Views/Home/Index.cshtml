@@ -1,0 +1,73 @@
+﻿@model HomeViewModel
+
+@{
+    ViewData["Title"] = "Menu";
+}
+
+<div class="auth-page">
+    <div class="auth-card menu-card">
+
+        <!-- MAIN -->
+        <section class="auth-main">
+            <div class="menu-actions">
+                <h1 class="auth-title">Today’s Meals</h1>
+
+                <div class="menu-actions-row">
+                    <a class="menu-action menu-meal-row" href="#">
+                        <div class="menu-action-title">Breakfast</div>
+                        <div class="menu-action-sub">
+                            <span class="status-badge status-logged">Logged</span>
+                        </div>
+                    </a>
+
+                    <a class="menu-action menu-meal-row" href="#">
+                        <div class="menu-action-title">Dinner</div>
+                        <div class="menu-action-sub">
+                            <span class="status-badge status-pending">Log now</span>
+                        </div>
+                    </a>
+
+                    <a class="menu-action menu-meal-row" href="#">
+                        <div class="menu-action-title">Tea</div>
+                        <div class="menu-action-sub">
+                            <span class="status-badge status-pending">Log now</span>
+                        </div>
+                    </a>
+                </div>
+
+                <a class="menu-action" href="#">
+                    <div class="menu-action-title">View Recommended Meal</div>
+                    <div class="menu-action-sub">Planned for you • ~15 min cook time</div>
+                </a>
+
+                <a class="menu-action" href="#">
+                    <div class="menu-action-title">Log Workout</div>
+                    <div class="menu-action-sub">You did the hard part — now log it</div>
+                </a>
+
+                <a class="menu-action" href="#">
+                    <div class="menu-action-title">Recommend a week’s shopping</div>
+                    <div class="menu-action-sub">Tell us what’s in your fridge and we’ll generate the rest</div>
+                </a>
+            </div>
+        </section>
+
+        <!-- SIDE -->
+        <aside class="auth-side menu-side">
+            <div class="side-top">
+                <h2 class="auth-side-title">@Model.UserName</h2>
+                <div class="menu-side-box curved">2000 / 2200</div>
+            </div>
+
+            <p class="auth-side-subtitle">
+                Protein 120/220 • Carb 200/210 • Fat 24/30 • Fiber 13/40
+            </p>
+
+            <div class="gym-toggle">
+                <div class="menu-side-box curved curved-Gym-Button is-active">GYM DAY</div>
+                <div class="menu-side-box curved curved-Gym-Button">NON GYM DAY</div>
+            </div>
+        </aside>
+
+    </div>
+</div>
