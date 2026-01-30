@@ -8,7 +8,7 @@
     --primary-hover: #1d4ed8;
     --ring: rgba(37, 99, 235, 0.35);
     --radius: 16px;
-    --card-bg: rgba(255, 255, 255, 0.92);
+    --card-bg: #cfcfcf;
     --tile-bg: rgba(255, 255, 255, 0.88);
     --border: rgba(15, 23, 42, 0.12);
     --shadow: 0 20px 60px rgba(0, 0, 0, 0.35);
@@ -173,17 +173,38 @@
 }
 
 @media (max-width: 900px) {
+    .whole-container {
+        height: 100dvh;
+        box-sizing: border-box;
+        padding: 0;
+    }
+
     .auth-page {
-        min-height: 100vh;
+        height: 100%;
         display: flex;
-        padding-top: 0px;
+        align-items: stretch;
+        justify-content: stretch;
+        padding-top: 0;
+    }
+
+    .main-menu {
+        height: 100%;
+        padding: 0 !important;
     }
 
     .auth-card.menu-card {
         grid-template-columns: 1fr;
-        grid-template-rows: auto 1fr;  
-        height: 100vh;  
-        align-items: stretch;
+        grid-template-rows: auto 1fr;
+        height: 100%;
+        width: 100%;
+        align-self: stretch;
+        box-shadow: 0 0px 0px rgba(0, 0, 0, 0.35);
+    } 
+
+    .auth-main {
+        padding: 10px;
+        padding-top: 20px;
+        overflow-y: auto;
     }
 
     .auth-side.menu-side {
@@ -194,16 +215,8 @@
         max-height: 162.5px;
     }
 
-    .auth-main {
-        padding: 10px;
-        padding-top: 20px;
-        overflow-y: auto; 
-    }
-
     .auth-side-subtitle {
-        margin: 0px;
-        margin-bottom: 7px;
-        margin-top: 7px;
+        margin: 9px 0;
         font-size: 11px;
         text-align: center;
     }
@@ -211,37 +224,26 @@
     .menu-actions-row {
         grid-template-columns: 1fr;
         gap: 4px !important;
+        height: 80px;
     }
 
     .menu-meal-row {
-        padding-right: 0px;
-        padding-left: 0px;
+        padding: 0;
         justify-items: anchor-center;
+        align-content: center;
     }
 
     .auth-title,
     .menu-actions {
-        margin: 0px;
+        margin: 0;
         text-align: center;
-    }
-
-    .whole-container {
-        padding-left: 8px;
-        padding-right: 8px;
-        padding-top: 4px;
-        padding-bottom: 4px;
-        height: 100vh;
-    }
-
-    .main-menu {
-        height: 100vh;
-        padding: 0px !important;
     }
 
     .menu-action-title {
         font-size: 16px;
     }
 }
+
 
 
 .curved {
