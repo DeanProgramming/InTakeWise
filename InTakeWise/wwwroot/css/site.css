@@ -242,6 +242,10 @@
     .menu-action-title {
         font-size: 16px;
     }
+
+    .menu-minimised {
+        max-height: 100px !important;
+    }
 }
 
 

@@ -40,7 +40,18 @@
                     <div class="menu-action-sub">Planned for you • ~15 min cook time</div>
                 </a>
 
-                <a class="menu-action" href="#">
+                <a class="menu-action" 
+                    asp-controller="LogEntry" 
+                    asp-action="Index"
+                    asp-route-mode="Meal">
+                    <div class="menu-action-title">Log Meal </div>
+                    <div class="menu-action-sub">You did the hard part — now log it</div>
+                </a>
+
+                <a class="menu-action" 
+                    asp-controller="LogEntry"
+                   asp-action="Index"
+                   asp-route-mode="Workout">
                     <div class="menu-action-title">Log Workout</div>
                     <div class="menu-action-sub">You did the hard part — now log it</div>
                 </a>
