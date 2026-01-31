@@ -1,0 +1,87 @@
+﻿@model HomeViewModel
+@{
+    ViewData["Title"] = "Today Meal Plan";
+}
+
+<div class="auth-page">
+    <div class="auth-card menu-card">
+
+        <!-- MAIN -->
+        <section class="auth-main"> 
+            <div class="menu-actions">
+                <h1 class="auth-title">@ViewData["Title"]</h1>
+
+                <!--Different menu will handle editting whats in the fridge-->
+                <a class="menu-action" href="#">
+                    <div class="menu-action-title">Whats in my fridge ? </div>
+                    <div class="menu-action-sub">Check whats in your fridge before generating</div>
+                </a>
+
+                <form asp-controller=""
+                      asp-action=""
+                      asp-route-mode=""
+                      method="post"
+                      class="log-form"> 
+                    <button type="submit" class="btn-primary">
+                        Regenerate meals
+                    </button> 
+                </form>
+
+                <div class="menu-actions-row">
+                    <a class="menu-action menu-meal-row" href="#">
+                        <div class="menu-action-title">Breakfast</div>
+                        <div class="menu-action-sub">
+                            <span class="status-badge status-logged">Edit</span>
+                        </div>
+                    </a>
+
+                    <a class="menu-action menu-meal-row" href="#">
+                        <div class="menu-action-title">Dinner</div>
+                        <div class="menu-action-sub">
+                            <span class="status-badge status-pending">View</span>
+                        </div>
+                    </a>
+
+                    <a class="menu-action menu-meal-row" href="#">
+                        <div class="menu-action-title">Tea</div>
+                        <div class="menu-action-sub">
+                            <span class="status-badge status-pending">View</span>
+                        </div>
+                    </a>
+                </div>
+
+                <h1 class="auth-title">TEA Plan</h1>
+                <div class="log-text-box menu-action"
+                     role="textbox"
+                     aria-readonly="true"
+                     style="white-space: pre-wrap;">
+                    @(
+                                        Model.MealPlan.SuggestedMeal is null
+                                        ? "No suggestion yet."
+                                        : $"{Model.MealPlan.SuggestedMeal.Title}\n\n" +
+                                        $"{Model.MealPlan.SuggestedMeal.Description}\n\n" +
+                                        $"Calories: {Model.MealPlan.SuggestedMeal.Calories} | " +
+                                        $"P: {Model.MealPlan.SuggestedMeal.ProteinGrams}g | " +
+                                        $"C: {Model.MealPlan.SuggestedMeal.CarbsGrams}g | " +
+                                        $"F: {Model.MealPlan.SuggestedMeal.FatGrams}g\n\n" +
+                                        "Ingredients:\n- " + string.Join("\n- ", Model.MealPlan.SuggestedMeal.IngredientsUsed) + "\n\n" +
+                                        "Steps:\n- " + string.Join("\n- ", Model.MealPlan.SuggestedMeal.Steps)
+                                        )
+                </div>
+            </div>
+        </section>
+
+        <!-- SIDE -->
+        <aside class="auth-side menu-side menu-minimised">
+            <div class="side-top">
+                <h2 class="auth-side-title">@Model.UserName</h2>
+                <div class="menu-side-box curved">2000 / 2200</div>
+            </div>
+
+            <p class="auth-side-subtitle">
+                Protein 120/220 • Carb 200/210 • Fat 24/30 • Fiber 13/40
+            </p>
+        </aside>
+
+    </div>
+</div>

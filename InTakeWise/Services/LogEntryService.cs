@@ -5,7 +5,7 @@
 
     public class LogEntryService : ILogEntryService
     {
-        public Task<LogEntry> CreateMealAsync(string userId, string userInput)
+        public Task<LogEntry> LogMealInfoAsync(string userId, string userInput)
         {
             var mealInfo = MealProcessor.MealProcessed(userInput);
 
@@ -24,7 +24,7 @@
 
             return Task.FromResult(log);
         }
-        public Task<LogEntry> CreateWorkoutAsync(string userId, string userInput)
+        public Task<LogEntry> LogWorkoutInfoAsync(string userId, string userInput)
         {
             var WorkInfo = WorkoutProcessor.WorkoutProcessed(userInput);
 

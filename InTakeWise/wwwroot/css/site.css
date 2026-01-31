@@ -246,6 +246,12 @@
     .menu-minimised {
         max-height: 100px !important;
     }
+
+    .log-text-box {
+        width: 100%;
+        margin-bottom: 10px;
+        height: 280px;
+    } 
 }
 
 

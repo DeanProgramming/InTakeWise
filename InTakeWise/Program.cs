@@ -15,6 +15,9 @@ builder.Services.AddDefaultIdentity<IdentityUser>(options => options.SignIn.Requ
     .AddEntityFrameworkStores<ApplicationDbContext>();
 builder.Services.AddControllersWithViews();
 
+
+builder.Services.AddScoped<IFoodItemService, FoodItemService>();
+builder.Services.AddScoped<IMealSuggestionService, DummyMealSuggestionService>();
 builder.Services.AddScoped<ILogEntryService, LogEntryService>();
 
 var app = builder.Build();

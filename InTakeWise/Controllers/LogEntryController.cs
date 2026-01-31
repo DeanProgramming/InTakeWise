@@ -42,14 +42,17 @@ namespace InTakeWise.Controllers
             var user = await _userManager.GetUserAsync(User);
             if (user == null) return Unauthorized();
 
-            var log = await _logEntryService.CreateMealAsync(user.Id, userInput);
+            var log = await _logEntryService.LogMealInfoAsync(user.Id, userInput);
 
             var vm = new HomeViewModel
             {
                 UserName = user.UserName,
-                GeneratedLog = log,
-                UserInput = userInput,
-                Mode = mode
+                Mode = mode,
+                LogInfo =
+                {
+                    GeneratedLog = log,
+                    WorkoutOrEatenMealUserInput = userInput
+                }
             };
 
             return View("Log", vm);
@@ -61,14 +64,17 @@ namespace InTakeWise.Controllers
             var user = await _userManager.GetUserAsync(User);
             if (user == null) return Unauthorized();
 
-            var log = await _logEntryService.CreateWorkoutAsync(user.Id, userInput);
+            var log = await _logEntryService.LogWorkoutInfoAsync(user.Id, userInput);
 
             var vm = new HomeViewModel
             {
                 UserName = user.UserName,
-                GeneratedLog = log,
-                UserInput = userInput,
-                Mode = mode
+                Mode = mode,
+                LogInfo =
+                {
+                    GeneratedLog = log,
+                    WorkoutOrEatenMealUserInput = userInput
+                }
             };
 
             return View("Log", vm);
