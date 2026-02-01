@@ -15,6 +15,14 @@ namespace InTakeWise.Models
         public MacroSummaryViewModel MacroSummary { get; set; } = new();
 
         public MealPlanViewModel MealPlan { get; set; } = new();
+
+        public ShoppingSuggestionViewModel ShoppingSuggestionPlan { get; set; } = new(); 
+    }
+
+    public class ShoppingSuggestionViewModel
+    {
+        public List<FoodItem> ShoppingList { get; set; }
+        public List<ShoppingMealsWeekSuggestion> WeekMealsSummary { get; set; }
     }
 
     public class MealPlanSectionViewModel

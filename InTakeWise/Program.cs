@@ -17,6 +17,7 @@ builder.Services.AddControllersWithViews();
 
 
 builder.Services.AddScoped<IFoodItemService, FoodItemService>();
+builder.Services.AddScoped<IShoppingSuggestionService, ShoppingSuggestionService>();
 builder.Services.AddScoped<IMealSuggestionService, DummyMealSuggestionService>();
 builder.Services.AddScoped<ILogEntryService, LogEntryService>();
 

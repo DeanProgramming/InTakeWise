@@ -250,7 +250,7 @@
     .log-text-box {
         width: 100%;
         margin-bottom: 10px;
-        height: 280px;
+        min-height: 280px;
     } 
 }
 
