@@ -17,6 +17,7 @@ namespace InTakeWise.Models
         public MealPlanViewModel MealPlan { get; set; } = new();
 
         public ShoppingSuggestionViewModel ShoppingSuggestionPlan { get; set; } = new(); 
+        public ItemsInPantryViewModel ItemsInPantry { get; set; } = new(); 
     }
 
     public class ShoppingSuggestionViewModel
@@ -55,5 +56,10 @@ namespace InTakeWise.Models
         public MealSuggestion? SuggestedMeal { get; set; }
 
         public string StatusMessage { get; set; } = "";
+    }
+
+    public class ItemsInPantryViewModel
+    {
+        public List<FoodItem> ItemsAtHome { get; set; } = new();
     }
 }
