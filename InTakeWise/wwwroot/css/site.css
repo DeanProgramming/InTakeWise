@@ -233,6 +233,13 @@
         align-content: center;
     }
 
+    .activity-row {
+        padding: 0;
+        justify-items: anchor-center;
+        align-content: center;
+    }
+
+
     .auth-title,
     .menu-actions {
         margin: 0;
@@ -251,9 +258,32 @@
         width: 100%;
         margin-bottom: 10px;
         min-height: 280px;
-    } 
+    }
+
+    .menu-actions-profile {
+        grid-template-columns: repeat(1, 1fr) !important;
+    }
+
+    .menu-text-box-profile {
+        width: 100%;
+        margin-bottom: 0px;
+        min-height: auto;
+    }
+
+    .menu-action-profile {
+        padding: 11px 16px;
+    }
+
+    .gym-day-selection{
+        height: 210px;
+    }
 }
 
+.side-top-link {
+    display: block; 
+    text-decoration: none;  
+    color: inherit; 
+}
 
 
 .curved {
@@ -294,20 +324,37 @@
 .gym-toggle {
     display: grid;
     grid-template-columns: 1fr 1fr;
-    gap: 12px;
+    gap: 12px; 
 }
+
+.profile-gym-toggle {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+    margin-top: 10px;
+}
+
+.curved-profile-Gym-Button 
+{
+    font-size: 12px;
+    cursor: pointer;
+    user-select: none;
+    background: white;
+} 
 
 /* Active state for gym day */
 .curved-Gym-Button {
     font-size: 12px;
     cursor: pointer;
-    user-select: none;
+    user-select: none; 
 }
 
-    .curved-Gym-Button.is-active {
-        background: rgba(34, 197, 94, 0.35); /* green-ish glow */
-        border-color: rgba(34, 197, 94, 0.55);
-    }
+.curved-Gym-Button.is-active,
+.curved-profile-Gym-Button.is-active,
+.activity-row.is-active {
+    background: rgba(34, 197, 94, 0.35);
+    border-color: rgba(34, 197, 94, 0.55);
+}
 
 /* Logged / pending badges */
 .status-badge {
@@ -329,4 +376,84 @@
     border-color: rgba(37, 99, 235, 0.35);
     background: rgba(37, 99, 235, 0.10);
 }
- 
+
+/* ===== Login-only add-ons (keep your existing Menu CSS) ===== */
+
+.menu-input-tile {
+    display: grid;
+    gap: 10px;
+}
+
+.menu-input {
+    width: 100%;
+    border-radius: 12px;
+    border: 1px solid var(--border);
+    background: rgba(255,255,255,0.95);
+    padding: 12px 12px;
+    font-weight: 700;
+    outline: none;
+}
+
+    .menu-input:focus {
+        border-color: rgba(37, 99, 235, 0.45);
+        box-shadow: 0 0 0 4px var(--ring);
+    }
+
+.menu-check {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    font-weight: 800;
+    color: var(--muted);
+    margin-top: 2px;
+}
+
+.menu-primary-btn {
+    border: none;
+    cursor: pointer;
+    background: var(--primary);
+    color: white;
+    box-shadow: 0 10px 24px rgba(37, 99, 235, 0.25);
+}
+
+    .menu-primary-btn .menu-action-title,
+    .menu-primary-btn .menu-action-sub {
+        color: white;
+    }
+
+    .menu-primary-btn:hover {
+        background: var(--primary-hover);
+    }
+
+.menu-links {
+    display: grid;
+    gap: 8px;
+    margin-top: 4px;
+    text-align: center;
+}
+
+.menu-link {
+    color: var(--primary);
+    font-weight: 900;
+    text-decoration: none;
+}
+
+    .menu-link:hover {
+        text-decoration: underline;
+    }
+
+/* Validation */
+.menu-validation {
+    border-radius: 14px;
+    border: 1px solid rgba(239, 68, 68, 0.35);
+    background: rgba(239, 68, 68, 0.08);
+    padding: 12px 14px;
+    font-weight: 800;
+    color: #991b1b;
+}
+
+.menu-field-error {
+    font-size: 12px;
+    font-weight: 800;
+    color: #991b1b;
+}

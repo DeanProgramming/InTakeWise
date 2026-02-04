@@ -1,0 +1,38 @@
+﻿@using InTakeWise.ViewModels
+@model ProfileStep3ViewModel
+@{
+    ViewData["Title"] = "Prediction";
+}
+
+<div class="auth-page">
+    <div class="auth-card menu-card">
+
+        <section class="auth-main">
+            <div class="menu-actions">
+                <h1 class="auth-title">Your Prediction</h1>
+
+                <div class="menu-action">
+                    <div class="menu-action-title">Current weight</div>
+                    <div class="menu-action-sub">@Model.CurrentWeightKg.ToString("0.0") kg</div>
+                </div>
+
+                <div class="menu-action">
+                    <div class="menu-action-title">Predicted after @Model.Months months</div>
+                    <div class="menu-action-sub">@Model.PredictedWeightKg.ToString("0.0") kg</div>
+                </div>
+
+                <a class="menu-action" asp-controller="Home" asp-action="Index">
+                    <div class="menu-action-title">Close</div>
+                    <div class="menu-action-sub">Back to menu</div>
+                </a>
+            </div>
+        </section>
+
+        <aside class="auth-side menu-side">
+            <div class="side-top">
+                <h2 class="auth-side-title">Step 3 of 3</h2>
+            </div>
+        </aside>
+
+    </div>
+</div>

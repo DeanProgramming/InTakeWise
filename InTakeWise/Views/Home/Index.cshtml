@@ -77,8 +77,20 @@
         <!-- SIDE -->
         <aside class="auth-side menu-side">
             <div class="side-top">
-                <h2 class="auth-side-title">@Model.UserName</h2>
-                <div class="menu-side-box curved">2000 / 2200</div>
+                <!-- Click username => Logout -->
+                <a asp-area="Identity"
+                   asp-page="/Account/Logout"
+                   asp-route-returnUrl="@Url.Action("Index","Home")"
+                   class="side-top-link">
+                    <h2 class="auth-side-title">@Model.UserName</h2>
+                </a>
+
+                <!-- Click pill => Profile setup -->
+                <a asp-controller="ProfileWizard"
+                   asp-action="Step1"
+                   class="side-top-link">
+                    <div class="menu-side-box curved">2000 / 2200</div>
+                </a>
             </div>
 
             <p class="auth-side-subtitle">

@@ -1,0 +1,71 @@
+﻿@using InTakeWise.ViewModels 
+@model ProfileStep1ViewModel
+
+@{
+    ViewData["Title"] = "Profile";
+}
+
+<div class="auth-page">
+    <div class="auth-card menu-card">
+
+        <section class="auth-main">
+            <div class="menu-actions">
+                <h1 class="auth-title">Your Profile</h1>
+
+                <form asp-action="Step1" method="post" class="menu-actions-row menu-actions-profile">
+                    @Html.AntiForgeryToken()
+
+                    <div class="menu-action menu-action-profile">
+                        <div class="menu-action-title">Age</div>
+                        <div class="menu-action-sub">
+                            <input class="log-text-box menu-action menu-text-box-profile" asp-for="Age" type="number" min="0" />
+                            <span asp-validation-for="Age"></span>
+                        </div>
+                    </div>
+
+                    <div class="menu-action menu-action-profile">
+                        <div class="menu-action-title">Height (cm)</div>
+                        <div class="menu-action-sub">
+                            <input class="log-text-box menu-action menu-text-box-profile" asp-for="HeightCm" type="number" step="0.1" min="0" />
+                            <span asp-validation-for="HeightCm"></span>
+                        </div>
+                    </div>
+
+                    <div class="menu-action menu-action-profile">
+                        <div class="menu-action-title">Gender</div>
+                        <div class="menu-action-sub">
+                            <select class="log-text-box menu-action menu-text-box-profile" asp-for="Gender">
+                                <option value="">Select</option>
+                                <option value="Male">Male</option>
+                                <option value="Female">Female</option>
+                                <option value="Other">Other</option>
+                                <option value="PreferNotToSay">Prefer not to say</option>
+                            </select>
+                            <span asp-validation-for="Gender"></span>
+                        </div>
+                    </div>
+
+                    <div class="menu-action menu-action-profile">
+                        <div class="menu-action-title">Weight (kg)</div>
+                        <div class="menu-action-sub">
+                            <input class="log-text-box menu-action menu-text-box-profile" asp-for="WeightKg" type="number" step="0.1" min="0" />
+                            <span asp-validation-for="WeightKg"></span>
+                        </div>
+                    </div>
+
+                    <button type="submit" class="menu-action menu-action-profile">
+                        <div class="menu-action-title">Save & Continue</div>
+                        <div class="menu-action-sub">Next: fitness goals</div>
+                    </button>
+                </form>
+            </div>
+        </section>
+
+        <aside class="auth-side menu-side">
+            <div class="side-top">
+                <h2 class="auth-side-title">Step 1 of 3</h2>
+            </div>
+        </aside>
+
+    </div>
+</div>

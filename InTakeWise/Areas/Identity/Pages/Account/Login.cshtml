@@ -1,0 +1,93 @@
+﻿@page
+@model LoginModel
+@{
+    ViewData["Title"] = "Log in";
+}
+
+<div class="auth-page">
+    <div class="auth-card menu-card">
+
+        <!-- MAIN -->
+        <section class="auth-main">
+            <div class="menu-actions">
+                <h1 class="auth-title">Log in</h1>
+
+                <form id="account" method="post" class="menu-actions" novalidate>
+                    <div asp-validation-summary="ModelOnly" class="menu-validation" role="alert"></div>
+
+                    <!-- Email -->
+                    <div class="menu-action menu-input-tile">
+                        <label asp-for="Input.Email" class="menu-action-title"></label>
+                        <input asp-for="Input.Email"
+                               class="menu-input"
+                               autocomplete="username"
+                               aria-required="true"
+                               placeholder="name@example.com" />
+                        <span asp-validation-for="Input.Email" class="menu-field-error"></span>
+                    </div>
+
+                    <!-- Password -->
+                    <div class="menu-action menu-input-tile">
+                        <label asp-for="Input.Password" class="menu-action-title"></label>
+                        <input asp-for="Input.Password"
+                               class="menu-input"
+                               autocomplete="current-password"
+                               aria-required="true"
+                               placeholder="••••••••" />
+                        <span asp-validation-for="Input.Password" class="menu-field-error"></span>
+
+                        <label class="menu-check">
+                            <input asp-for="Input.RememberMe" />
+                            <span>Remember me</span>
+                        </label>
+                    </div>
+
+                    <button type="submit" class="menu-action menu-primary-btn">
+                        <div class="menu-action-title">Log in</div>
+                        <div class="menu-action-sub">Welcome back</div>
+                    </button>
+
+                    <div class="menu-links">
+                        <a asp-page="./ForgotPassword" class="menu-link">Forgot your password?</a>
+                        <a asp-page="./Register" asp-route-returnUrl="@Model.ReturnUrl" class="menu-link">Create an account</a>
+                        <a asp-page="./ResendEmailConfirmation" class="menu-link">Resend email confirmation</a>
+                    </div>
+                </form>
+            </div>
+        </section>
+
+        <!-- SIDE -->
+        <aside class="auth-side menu-side">
+            <h2 class="auth-side-title">InTakeWise</h2>
+            <p class="auth-side-subtitle">
+                Log meals fast. Track macros. Keep it simple.
+            </p>
+
+            @if ((Model.ExternalLogins?.Count ?? 0) > 0)
+            {
+                <div class="menu-actions">
+                    <div class="menu-side-box curved">Or continue with</div>
+
+                    <form method="post" asp-page="./ExternalLogin" asp-route-returnUrl="@Model.ReturnUrl">
+                        @foreach (var provider in Model.ExternalLogins!)
+                        {
+                            <button type="submit"
+                                    class="menu-action"
+                                    name="provider"
+                                    value="@provider.Name"
+                                    title="Log in using @provider.DisplayName">
+                                <div class="menu-action-title">@provider.DisplayName</div>
+                                <div class="menu-action-sub">Secure sign-in</div>
+                            </button>
+                        }
+                    </form>
+                </div>
+            }
+        </aside>
+
+    </div>
+</div>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+}

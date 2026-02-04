@@ -21,6 +21,14 @@ builder.Services.AddScoped<IShoppingSuggestionService, ShoppingSuggestionService
 builder.Services.AddScoped<IMealSuggestionService, DummyMealSuggestionService>();
 builder.Services.AddScoped<ILogEntryService, LogEntryService>();
 
+builder.Services.AddDistributedMemoryCache();//Temp
+builder.Services.AddSession(options =>//Temp
+{
+    options.IdleTimeout = TimeSpan.FromMinutes(30);
+    options.Cookie.HttpOnly = true;
+    options.Cookie.IsEssential = true;
+});
+
 var app = builder.Build();
 
 // Configure the HTTP request pipeline.
@@ -37,6 +45,11 @@ else
 
 app.UseHttpsRedirection();
 app.UseRouting();
+
+
+app.UseSession();//Temp
+
+
 
 app.UseAuthentication();
 app.UseAuthorization();

@@ -1,0 +1,142 @@
+﻿@using InTakeWise.ViewModels
+@model ProfileStep2ViewModel
+@{
+    ViewData["Title"] = "Fitness Goals";
+}
+
+<div class="auth-page">
+    <div class="auth-card menu-card">
+
+        <section class="auth-main">
+            <div class="menu-actions">
+                <h1 class="auth-title">Fitness Goals</h1>
+
+                <form asp-action="Step2" method="post" class="menu-actions-row menu-actions-profile">
+                    @Html.AntiForgeryToken()
+
+                    <input type="hidden" asp-for="ActivityLevel" id="ActivityLevel" />
+
+                    <div class="menu-action">
+                        <div class="menu-action-title">How active are you?</div>
+                        <div class="menu-action-sub">Choose one</div>
+
+                        <div class="menu-actions-row">
+                            <a href="javascript:void(0)" class="menu-action activity-row"
+                               onclick="setActivity('Low')">
+                                <div class="menu-action-title">Low</div>
+                                <div class="menu-action-sub">Mostly sitting</div>
+                            </a>
+
+                            <a href="javascript:void(0)" class="menu-action activity-row"
+                               onclick="setActivity('Moderate')">
+                                <div class="menu-action-title">Moderate</div>
+                                <div class="menu-action-sub">Some movement</div>
+                            </a>
+
+                            <a href="javascript:void(0)" class="menu-action activity-row"
+                               onclick="setActivity('High')">
+                                <div class="menu-action-title">High</div>
+                                <div class="menu-action-sub">Active job / lots of steps</div>
+                            </a>
+                        </div>
+                    </div>
+
+                    <div class="menu-action gym-day-selection">
+                        <div class="menu-action-title">Which days of the week at gym</div>
+
+                        <input type="hidden" asp-for="WorkoutDaysCsv" id="WorkoutDaysCsv" />
+
+                        <div class="menu-actions-row profile-gym-toggle">
+                            @{
+                                var days = new[]
+                                {
+                                                        "MONDAY",
+                                                        "TUESDAY",
+                                                        "WEDNESDAY",
+                                                        "THURSDAY",
+                                                        "FRIDAY",
+                                                        "SATURDAY",
+                                                        "SUNDAY"
+                                                        };
+
+                                var selected = (Model.WorkoutDaysCsv ?? "")
+                                .Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+                                .ToHashSet(StringComparer.OrdinalIgnoreCase);
+                            }
+
+                            @for (int i = 0; i < days.Length; i++)
+                            {
+                                var d = days[i];
+                                <div class="menu-side-box curved curved-profile-Gym-Button  @(selected.Contains(d) ? "is-active" : "")"
+                                     data-day="@d"
+                                     onclick="toggleWorkoutDay('@d')">
+                                    @d
+                                </div>
+                            }
+                        </div>
+
+                        <span asp-validation-for="WorkoutDaysCsv"></span>
+                    </div>
+
+
+
+                    <button type="submit" class="menu-action">
+                        <div class="menu-action-title">Save & Continue</div>
+                        <div class="menu-action-sub">Next: your prediction</div>
+                    </button>
+                </form>
+            </div>
+        </section>
+
+        <aside class="auth-side menu-side">
+            <div class="side-top">
+                <h2 class="auth-side-title">Step 2 of 3</h2>
+                <div class="menu-action-sub">Selected: <span id="activityLabel">@Model.ActivityLevel</span></div>
+            </div>
+        </aside>
+
+    </div>
+</div>
+
+<script>
+    function setActivity(level) { 
+        document.getElementById('ActivityLevel').value = level;
+        document.getElementById('activityLabel').innerText = level;
+         
+        const buttons = document.querySelectorAll(".activity-row");
+
+        buttons.forEach(btn => {
+            if (btn.getAttribute("onclick")?.includes(`'${level}'`)) {
+                btn.classList.add("is-active");
+            } else {
+                btn.classList.remove("is-active");
+            }
+        });
+    }
+
+    // ensure label matches initial model
+    setActivity('@Model.ActivityLevel'); 
+
+    function toggleWorkoutDay(day) {
+        const hidden = document.getElementById("WorkoutDaysCsv");
+        const current = (hidden.value || "").split(",").map(x => x.trim()).filter(Boolean);
+
+        const set = new Set(current.map(x => x.toUpperCase()));
+        const key = day.toUpperCase();
+
+        const btn = document.querySelector(`.curved-profile-Gym-Button[data-day='${day}']`);
+        if (!btn) return;
+
+        if (set.has(key)) {
+            set.delete(key);
+            btn.classList.remove("is-active");
+        } else {
+            set.add(key);
+            btn.classList.add("is-active");
+        }
+
+        // Keep a stable order Monday -> Sunday
+        const order = ["MONDAY","TUESDAY","WEDNESDAY","THURSDAY","FRIDAY","SATURDAY","SUNDAY"];
+        hidden.value = order.filter(d => set.has(d)).join(",");
+    }
+</script>
