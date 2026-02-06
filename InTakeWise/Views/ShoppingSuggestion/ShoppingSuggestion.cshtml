@@ -79,17 +79,8 @@
             </div>
         </section>
 
-        <!-- SIDE -->
-        <aside class="auth-side menu-side menu-minimised">
-            <div class="side-top">
-                <h2 class="auth-side-title">@Model.UserName</h2>
-                <div class="menu-side-box curved">2000 / 2200</div>
-            </div>
-
-            <p class="auth-side-subtitle">
-                Protein 120/220 • Carb 200/210 • Fat 24/30 • Fiber 13/40
-            </p>
-        </aside>
+        <!-- SIDE --> 
+        @await Component.InvokeAsync("MenuSide", new { variant = "compact" }) 
 
     </div>
 </div>

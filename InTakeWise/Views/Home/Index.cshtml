@@ -75,33 +75,7 @@
         </section>
 
         <!-- SIDE -->
-        <aside class="auth-side menu-side">
-            <div class="side-top">
-                <!-- Click username => Logout -->
-                <a asp-area="Identity"
-                   asp-page="/Account/Logout"
-                   asp-route-returnUrl="@Url.Action("Index","Home")"
-                   class="side-top-link">
-                    <h2 class="auth-side-title">@Model.UserName</h2>
-                </a>
-
-                <!-- Click pill => Profile setup -->
-                <a asp-controller="ProfileWizard"
-                   asp-action="Step1"
-                   class="side-top-link">
-                    <div class="menu-side-box curved">2000 / 2200</div>
-                </a>
-            </div>
-
-            <p class="auth-side-subtitle">
-                Protein 120/220 • Carb 200/210 • Fat 24/30 • Fiber 13/40
-            </p>
-
-            <div class="gym-toggle">
-                <div class="menu-side-box curved curved-Gym-Button is-active">GYM DAY</div>
-                <div class="menu-side-box curved curved-Gym-Button">NON GYM DAY</div>
-            </div>
-        </aside>
+        @await Component.InvokeAsync("MenuSide")
 
     </div>
 </div>

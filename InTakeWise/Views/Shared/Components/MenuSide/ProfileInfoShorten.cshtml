@@ -1,0 +1,28 @@
+﻿@model InTakeWise.ViewModels.MenuSideViewModel
+
+<!-- SIDE -->
+<aside class="auth-side menu-side">
+    <div class="side-top">
+        <a asp-area="Identity"
+           asp-page="/Account/Logout"
+           asp-route-returnUrl="@Url.Action("Index","Home")"
+           class="side-top-link">
+            <h2 class="auth-side-title">@Model.UserName</h2>
+        </a>
+
+        <a asp-controller="ProfileWizard"
+           asp-action="Step1"
+           class="side-top-link">
+            <div class="menu-side-box curved">
+                @Model.CaloriesConsumed / @Model.CaloriesTarget
+            </div>
+        </a>
+    </div>
+
+    <p class="auth-side-subtitle">
+        Protein @Model.ProteinConsumed/@Model.ProteinTarget •
+        Carb @Model.CarbsConsumed/@Model.CarbsTarget •
+        Fat @Model.FatConsumed/@Model.FatTarget •
+        Fiber @Model.FiberConsumed/@Model.FiberTarget
+    </p> 
+</aside>
