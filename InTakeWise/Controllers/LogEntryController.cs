@@ -1,35 +1,35 @@
-﻿ using InTakeWise.Models;
+﻿using InTakeWise.Models;
 using InTakeWise.Services;
+using InTakeWise.ViewModels;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.AspNetCore.Razor.TagHelpers;
-using Microsoft.IdentityModel.Abstractions;
-using System.Diagnostics;
 
 namespace InTakeWise.Controllers
 {
+    [Authorize]
     public class LogEntryController : Controller
     {
         private readonly ILogger<LogEntryController> _logger;
         private readonly UserManager<IdentityUser> _userManager;
         private readonly ILogEntryService _logEntryService;
 
-
-        public LogEntryController(ILogger<LogEntryController> logger, UserManager<IdentityUser> userManager,
-        ILogEntryService logEntryService)
+        public LogEntryController(
+            ILogger<LogEntryController> logger,
+            UserManager<IdentityUser> userManager,
+            ILogEntryService logEntryService)
         {
             _logger = logger;
             _userManager = userManager;
             _logEntryService = logEntryService;
         }
 
-        [Authorize]
+        [HttpGet]
         public async Task<IActionResult> Index(LogType.LoggingType mode)
         {
             var user = await _userManager.GetUserAsync(User);
 
-            return View("Log", new HomeViewModel
+            return View("Log", new LogEntryViewModel
             {
                 UserName = user?.UserName,
                 Mode = mode
@@ -37,6 +37,7 @@ namespace InTakeWise.Controllers
         }
 
         [HttpPost]
+        [ValidateAntiForgeryToken]
         public async Task<IActionResult> Meal(string userInput, LogType.LoggingType mode)
         {
             var user = await _userManager.GetUserAsync(User);
@@ -44,21 +45,17 @@ namespace InTakeWise.Controllers
 
             var log = await _logEntryService.LogMealInfoAsync(user.Id, userInput);
 
-            var vm = new HomeViewModel
+            return View("Log", new LogEntryViewModel
             {
                 UserName = user.UserName,
                 Mode = mode,
-                LogInfo =
-                {
-                    GeneratedLog = log,
-                    WorkoutOrEatenMealUserInput = userInput
-                }
-            };
-
-            return View("Log", vm);
+                UserInput = userInput,
+                GeneratedLog = log
+            });
         }
 
         [HttpPost]
+        [ValidateAntiForgeryToken]
         public async Task<IActionResult> Workout(string userInput, LogType.LoggingType mode)
         {
             var user = await _userManager.GetUserAsync(User);
@@ -66,28 +63,13 @@ namespace InTakeWise.Controllers
 
             var log = await _logEntryService.LogWorkoutInfoAsync(user.Id, userInput);
 
-            var vm = new HomeViewModel
+            return View("Log", new LogEntryViewModel
             {
                 UserName = user.UserName,
                 Mode = mode,
-                LogInfo =
-                {
-                    GeneratedLog = log,
-                    WorkoutOrEatenMealUserInput = userInput
-                }
-            };
-
-            return View("Log", vm);
-        }
-
-
-
-
-
-        [ResponseCache(Duration = 0, Location = ResponseCacheLocation.None, NoStore = true)]
-        public IActionResult Error()
-        {
-            return View(new ErrorViewModel { RequestId = Activity.Current?.Id ?? HttpContext.TraceIdentifier });
+                UserInput = userInput,
+                GeneratedLog = log
+            });
         }
     }
 }

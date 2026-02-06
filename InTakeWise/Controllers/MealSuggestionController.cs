@@ -1,12 +1,13 @@
 ﻿using InTakeWise.Models;
 using InTakeWise.Services;
+using InTakeWise.ViewModels;
 using Microsoft.AspNetCore.Authorization;
-using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
-using System.Diagnostics;
+using System.Security.Claims;
 
 namespace InTakeWise.Controllers
 {
+    [Authorize]
     public class MealSuggestionController : Controller
     {
         private readonly IFoodItemService _foodItemService;
@@ -18,27 +19,30 @@ namespace InTakeWise.Controllers
             _mealService = mealService;
         }
 
-        [Authorize]
         [HttpGet]
         public async Task<IActionResult> Index()
-        { 
-            var userId = User?.Identity?.Name ?? "demo-user";
+        {
+            var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            if (string.IsNullOrWhiteSpace(userId))
+                return Unauthorized();
 
-            var foodService = await _foodItemService.GetFoodItemsAsync(userId);
-            var suggestedMeal = await _mealService.GetSuggestedMealAsync(userId, foodService);
+            var foods = await _foodItemService.GetFoodItemsAsync(userId);
+            var suggestedMeal = await _mealService.GetSuggestedMealAsync(userId, foods);
 
-            var vm = new HomeViewModel
+            var vm = new MealSuggestionViewModel
             {
-                UserName = User?.Identity?.Name ?? "Demo User",
-                MealPlan =
-                {
-                    ItemsAtHome = foodService,
-                    SuggestedMeal = suggestedMeal,
-                    StatusMessage = "Suggested meal generated from your fridge items."
-                }
+                SuggestedMeal = suggestedMeal,
+                StatusMessage = "Suggested meal generated from your fridge items."
             };
 
             return View("MealSuggestion", vm);
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> Regenerate()
+        { 
+            return await Index();
         }
     }
 }

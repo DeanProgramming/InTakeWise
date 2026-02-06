@@ -1,58 +1,65 @@
-﻿using InTakeWise.Models;
+﻿using InTakeWise.Dto;
 using InTakeWise.Services;
+using InTakeWise.ViewModels;
 using Microsoft.AspNetCore.Authorization;
-using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
-using System.Diagnostics;
+using System.Security.Claims;
 
 namespace InTakeWise.Controllers
 {
+    [Authorize]
     public class ShoppingSuggestionController : Controller
     {
         private readonly IFoodItemService _foodItemService;
         private readonly IShoppingSuggestionService _shoppingSuggestionService;
 
-        public ShoppingSuggestionController(IFoodItemService foodService, IShoppingSuggestionService shoppingSuggestionService)
+        public ShoppingSuggestionController(
+            IFoodItemService foodService,
+            IShoppingSuggestionService shoppingSuggestionService)
         {
             _foodItemService = foodService;
             _shoppingSuggestionService = shoppingSuggestionService;
         }
 
-        [Authorize]
-        public async Task<IActionResult> Index()
-        { 
-            var vm = new HomeViewModel
-            {
-                UserName = User?.Identity?.Name ?? "Demo User", 
-            };
-
-            return View("ShoppingSuggestion", vm); 
-        } 
-
-        [HttpPost]
-        public async Task<IActionResult> GetShoppingList()
-        { 
-            var userId = User?.Identity?.Name ?? null;
-            if (userId == null) return Unauthorized();
-
-            var foodService = await _foodItemService.GetFoodItemsAsync(userId);
-            var suggestedShoppingList = await _shoppingSuggestionService.GetShoppingListAsync(userId, foodService);
-            var suggestedWeekMeals = await _shoppingSuggestionService.GetWeekSummaryAsync(userId, foodService, suggestedShoppingList);
-
-
-
-            var vm = new HomeViewModel
-            {
-                UserName = User?.Identity?.Name ?? "Demo User",
-                ShoppingSuggestionPlan =
-                {
-                    ShoppingList = suggestedShoppingList,
-                    WeekMealsSummary = suggestedWeekMeals
-                }
-            };
-
-            return View("ShoppingSuggestion", vm); 
+        public IActionResult Index()
+        {
+            return View("ShoppingSuggestion", new ShoppingSuggestionViewModel());
         }
 
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> GetShoppingList()
+        {
+            var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            if (string.IsNullOrWhiteSpace(userId))
+                return Unauthorized();
+
+            var foods = await _foodItemService.GetFoodItemsAsync(userId);
+
+            var shoppingList = await _shoppingSuggestionService.GetShoppingListAsync(userId, foods);
+            var weekMeals = await _shoppingSuggestionService.GetWeekSummaryAsync(userId, foods, shoppingList);
+
+            var vm = new ShoppingSuggestionViewModel
+            {
+                ShoppingList = shoppingList.Select(x => new ShoppingLineVm
+                {
+                    Name = x.Name,
+                    Quantity = x.Quantity,
+                    Unit = x.Unit
+                }).ToList(),
+
+                WeekMealsSummary = weekMeals.Select(x => new WeeklyMealVm
+                {
+                    Day = x.Day,
+                    Title = x.Title,
+                    Calories = x.Calories,
+                    ProteinGrams = x.ProteinGrams,
+                    CarbsGrams = x.CarbsGrams,
+                    FatGrams = x.FatGrams
+                }).ToList()
+            };
+
+            return View("ShoppingSuggestion", vm);
+        }
     }
 }

@@ -11,7 +11,6 @@
 
             var log = new LogEntry
             {
-                Id = Guid.NewGuid().ToString(),
                 UserId = userId,
                 Type = LogType.LoggingType.Meal,
                 Timestamp = DateTime.UtcNow,
@@ -30,7 +29,6 @@
 
             var log = new LogEntry
             {
-                Id = Guid.NewGuid().ToString(),
                 UserId = userId,
                 Type = LogType.LoggingType.Workout,
                 Timestamp = DateTime.UtcNow,

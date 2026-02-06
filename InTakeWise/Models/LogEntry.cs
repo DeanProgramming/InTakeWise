@@ -1,18 +1,20 @@
-﻿namespace InTakeWise.Models
+﻿using static InTakeWise.Models.LogType;
+
+namespace InTakeWise.Models
 {
     public class LogEntry
     {
-        public string Id { get; set; } = Guid.NewGuid().ToString();
-        public string UserId { get; set; }
-        public LogType.LoggingType Type { get; set; }
-        public DateTime Timestamp { get; set; }
-         
+        public int Id { get; set; }
+
+        public string UserId { get; set; } = default!;
+        public LoggingType Type { get; set; }
+        public DateTime Timestamp { get; set; } = DateTime.UtcNow;
 
         public int? Calories { get; set; }
-
         public int? Protein { get; set; }
         public int? Carbs { get; set; }
         public int? Fat { get; set; }
         public int? Fiber { get; set; }
     }
+
 }

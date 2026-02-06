@@ -1,4 +1,4 @@
-﻿@model HomeViewModel
+﻿@model InTakeWise.ViewModels.LogEntryViewModel
 
 @{
     var isMeal = Model.Mode == LogType.LoggingType.Meal;
@@ -9,52 +9,50 @@
     <div class="auth-card menu-card">
 
         <!-- MAIN -->
-        <section class="auth-main"> 
+        <section class="auth-main">
             <div class="menu-actions">
                 <h1 class="auth-title">@ViewData["Title"]</h1>
 
                 <form asp-controller="LogEntry"
                       asp-action="@(isMeal ? "Meal" : "Workout")"
-                      asp-route-mode="@(Model.Mode)"
                       method="post"
                       class="log-form">
-                      <input type="hidden" name="Mode" value="@Model.Mode" />                    
+                    @Html.AntiForgeryToken()
+
+                    <input type="hidden" name="mode" value="@Model.Mode" />
 
                     <textarea name="userInput"
                               class="log-text-box menu-action"
                               rows="4"
-                              placeholder="@(isMeal ? "Type your meal here..." : "Describe your workout...")">@Model.LogInfo.WorkoutOrEatenMealUserInput</textarea>
+                              placeholder="@(isMeal ? "Type your meal here..." : "Describe your workout...")">@Model.UserInput</textarea>
 
                     <button type="submit" class="btn-primary">
                         Generate
                     </button>
-
                 </form>
 
-                @if (Model.LogInfo.GeneratedLog != null)
+                @if (Model.GeneratedLog != null)
                 {
                     <div class="log-result">
                         <h3>Estimated Result</h3>
-
-                        <p><strong>Calories:</strong> @Model.LogInfo.GeneratedLog.Calories</p>
+                        <p><strong>Calories:</strong> @Model.GeneratedLog.Calories</p>
 
                         @if (isMeal)
                         {
                             <ul class="macro-list">
-                                <li>Protein: @Model.LogInfo.GeneratedLog.Protein</li>
-                                <li>Carbs: @Model.LogInfo.GeneratedLog.Carbs</li>
-                                <li>Fat: @Model.LogInfo.GeneratedLog.Fat</li>
-                                <li>Fiber: @Model.LogInfo.GeneratedLog.Fiber</li>
+                                <li>Protein: @Model.GeneratedLog.Protein</li>
+                                <li>Carbs: @Model.GeneratedLog.Carbs</li>
+                                <li>Fat: @Model.GeneratedLog.Fat</li>
+                                <li>Fiber: @Model.GeneratedLog.Fiber</li>
                             </ul>
                         }
                     </div>
                 }
-
             </div>
         </section>
 
-        <!-- SIDE --> 
-        @await Component.InvokeAsync("MenuSide", new { variant = "compact" }) 
+        <!-- SIDE -->
+        @await Component.InvokeAsync("MenuSide", new { variant = "compact" })
 
     </div>
 </div>

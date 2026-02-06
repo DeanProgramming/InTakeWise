@@ -1,40 +1,44 @@
 ﻿using InTakeWise.Models;
-using InTakeWise.Services;
+using InTakeWise.Dto;
 
 namespace InTakeWise.Services
 {
     public class ShoppingSuggestionService : IShoppingSuggestionService
     {
-        public Task<List<FoodItem>> GetShoppingListAsync(string userID, List<FoodItem> currentInHouse)
+        public Task<List<ShoppingLineDto>> GetShoppingListAsync(string userId, List<FoodItem> currentInHouse)
         {
-            List<FoodItem> foodItems = new List<FoodItem>();
-
-            FoodItem dummyData = new FoodItem();
-            dummyData.Quantity = 1;
-            dummyData.Name = "CHICKEN";
-            dummyData.Unit = "G";
-
-            foodItems.Add(dummyData);
+            var foodItems = new List<ShoppingLineDto>
+            {
+                new ShoppingLineDto
+                {
+                    Name = "CHICKEN",
+                    Quantity = 1,
+                    Unit = "kg"
+                }
+            };
 
             return Task.FromResult(foodItems);
         }
-        public Task<List<ShoppingMealsWeekSuggestion>> GetWeekSummaryAsync(string userID, List<FoodItem> currentInHouse, List<FoodItem> itemsWithShopping)
+
+        public Task<List<WeeklyMealDto>> GetWeekSummaryAsync(
+            string userId,
+            List<FoodItem> currentInHouse,
+            List<ShoppingLineDto> itemsWithShopping)
         {
-            List<ShoppingMealsWeekSuggestion> mealsPotential = new List<ShoppingMealsWeekSuggestion>();
-
-            ShoppingMealsWeekSuggestion shoppingMealsWeekSuggestion = new ShoppingMealsWeekSuggestion();
-
-            shoppingMealsWeekSuggestion.Day = "Monday";
-            shoppingMealsWeekSuggestion.Title = "B: Eggs on toast, D: Chicken and Rice, T: Tuna Salad";
-            shoppingMealsWeekSuggestion.Calories = 500;
-            shoppingMealsWeekSuggestion.ProteinGrams = 25;
-            shoppingMealsWeekSuggestion.CarbsGrams = 150;
-            shoppingMealsWeekSuggestion.FatGrams = 10;
-
-            mealsPotential.Add(shoppingMealsWeekSuggestion);
+            var mealsPotential = new List<WeeklyMealDto>
+            {
+                new WeeklyMealDto
+                {
+                    Day = "Monday",
+                    Title = "B: Eggs on toast, D: Chicken and Rice, T: Tuna Salad",
+                    Calories = 500,
+                    ProteinGrams = 25,
+                    CarbsGrams = 150,
+                    FatGrams = 10
+                }
+            };
 
             return Task.FromResult(mealsPotential);
         }
-    } 
+    }
 }
-

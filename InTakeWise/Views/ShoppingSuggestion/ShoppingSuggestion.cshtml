@@ -1,4 +1,5 @@
-﻿@model HomeViewModel
+﻿@model InTakeWise.ViewModels.ShoppingSuggestionViewModel
+
 @{
     ViewData["Title"] = "Shopping Plan";
 }
@@ -10,8 +11,8 @@
         <section class="auth-main">
             <div class="menu-actions">
                 <h1 class="auth-title">@ViewData["Title"]</h1>
-                 
-                <a class="menu-action" href="#">
+
+                <a class="menu-action" asp-controller="Pantry" asp-action="Index">
                     <div class="menu-action-title">Whats in my fridge ?</div>
                     <div class="menu-action-sub">Check whats in your fridge before generating</div>
                 </a>
@@ -20,10 +21,11 @@
                       asp-action="GetShoppingList"
                       method="post"
                       class="log-form">
+                    @Html.AntiForgeryToken()
                     <button type="submit" class="btn-primary">
                         Generate Shopping List
                     </button>
-                </form> 
+                </form>
 
                 <h1 class="auth-title">TEA Plan</h1>
 
@@ -32,55 +34,43 @@
                      aria-readonly="true"
                      style="white-space: pre-wrap;">
 
-                    @{
-                        var plan = Model.ShoppingSuggestionPlan;
-                        string output;
-
-                        if (plan?.ShoppingList == null || !plan.ShoppingList.Any())
-                        {
-                            output = "No shopping suggestions yet.";
-                        }
-                        else
-                        {
-                            // SHOPPING LIS
-                            output =
-                            "Shopping List:\n" +
-                            string.Join(
-                            "\n",
-                            plan.ShoppingList.Select(item =>
-                            $"- {item.Name} | {item.Quantity} {item.Unit}" +
-                            (item.ExpiryDate.HasValue
-                            ? $" (Expires: {item.ExpiryDate.Value:yyyy-MM-dd})"
-                            : "")
-                            )
-                            );
-
-                            // WEEK MEALS SUMMARY 
-                            if (plan.WeekMealsSummary != null && plan.WeekMealsSummary.Any())
+                    @if (Model.ShoppingList == null || !Model.ShoppingList.Any())
+                    {
+                        <text>No shopping suggestions yet.</text>
+                    }
+                    else
+                    {
+                        <text>Shopping List:</text>
+                        <ul>
+                            @foreach (var item in Model.ShoppingList)
                             {
-                                output +=
-                                "\n\nWeekly Meals Summary:\n" +
-                                string.Join(
-                                "\n",
-                                plan.WeekMealsSummary.Select(meal =>
-                                $"- {meal.Day}: {meal.Title}\n" +
-                                $"  Calories: {meal.Calories} | " +
-                                $"P: {meal.ProteinGrams}g | " +
-                                $"C: {meal.CarbsGrams}g | " +
-                                $"F: {meal.FatGrams}g"
-                                )
-                                );
+                                <li>@item.Name | @item.Quantity @item.Unit</li>
                             }
+                        </ul>
+
+                        @if (Model.WeekMealsSummary != null && Model.WeekMealsSummary.Any())
+                        {
+                            <text>Weekly Meals Summary:</text>
+                            <ul>
+                                @foreach (var meal in Model.WeekMealsSummary)
+                                {
+                                    <li>
+                                        <strong>@meal.Day:</strong> @meal.Title<br />
+                                        Calories: @meal.Calories |
+                                        P: @meal.ProteinGrams g |
+                                        C: @meal.CarbsGrams g |
+                                        F: @meal.FatGrams g
+                                    </li>
+                                }
+                            </ul>
                         }
                     }
-
-                    @output
                 </div>
             </div>
         </section>
 
-        <!-- SIDE --> 
-        @await Component.InvokeAsync("MenuSide", new { variant = "compact" }) 
+        <!-- SIDE -->
+        @await Component.InvokeAsync("MenuSide", new { variant = "compact" })
 
     </div>
 </div>

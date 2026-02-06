@@ -1,7 +1,6 @@
-﻿@model HomeViewModel
+﻿@model InTakeWise.ViewModels.PantryViewModel
 
 @{
-    var isMeal = Model.Mode == LogType.LoggingType.Meal;
     ViewData["Title"] = "Whats in your Pantry";
 }
 
@@ -9,7 +8,7 @@
     <div class="auth-card menu-card">
 
         <!-- MAIN -->
-        <section class="auth-main"> 
+        <section class="auth-main">
             <div class="menu-actions">
                 <h1 class="auth-title">@ViewData["Title"]</h1>
 
@@ -17,28 +16,31 @@
                       asp-action="SavePantryInfo"
                       method="post"
                       class="log-form">
-                    <input type="hidden" name="Mode" value="@Model.Mode" />
+                    @Html.AntiForgeryToken()
 
                     <textarea name="userInput"
                               class="log-text-box menu-action"
-                              rows="6">
-                    @foreach (var item in Model.ItemsInPantry.ItemsAtHome)
+                              rows="10"
+                              style="white-space: pre-wrap;">
+                    @foreach (var item in Model.Items)
                     {
-                        @($"{item.Name} - {item.Quantity} {item.Unit}\n")
+                        var name = item.FoodItem?.Name ?? "(unknown item)";
+                        var expiry = item.ExpiryDate.HasValue ? $" (Expires: {item.ExpiryDate:yyyy-MM-dd})" : "";
+                        @($"{name} - {item.Quantity} {item.Unit}{expiry}\n")
                     }
-                    </textarea>
+                    
+                </textarea>
 
                     <button type="submit" class="btn-primary">
                         Save
                     </button>
-
                 </form>
 
             </div>
         </section>
 
-        <!-- SIDE --> 
-        @await Component.InvokeAsync("MenuSide", new { variant = "compact" }) 
+        <!-- SIDE -->
+        @await Component.InvokeAsync("MenuSide", new { variant = "compact" })
 
     </div>
 </div>

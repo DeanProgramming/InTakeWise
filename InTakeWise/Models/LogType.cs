@@ -9,15 +9,5 @@ namespace InTakeWise.Models
             Meal,
             Workout
         }
-
-        public class LogEntryInputVm
-        {
-            public LogType Type { get; set; }
-
-            [Required]
-            [MinLength(3)]
-            public string Text { get; set; } = "";
-        }
-
     }
 }

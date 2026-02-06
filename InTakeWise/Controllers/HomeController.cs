@@ -23,10 +23,7 @@ namespace InTakeWise.Controllers
         {
             var user = await GetCurrentUserAsync();
 
-            return View(new HomeViewModel
-            {
-                UserName = user?.UserName
-            });
+            return View();
         }
 
         public IActionResult Privacy() => View();
