@@ -20,6 +20,8 @@ builder.Services.AddScoped<IFoodItemService, FoodItemService>();
 builder.Services.AddScoped<IShoppingSuggestionService, ShoppingSuggestionService>();
 builder.Services.AddScoped<IMealSuggestionService, DummyMealSuggestionService>();
 builder.Services.AddScoped<ILogEntryService, LogEntryService>();
+builder.Services.AddScoped<RequireProfileCompletedAttribute>();
+
 
 builder.Services.AddDistributedMemoryCache();//Temp
 builder.Services.AddSession(options =>//Temp

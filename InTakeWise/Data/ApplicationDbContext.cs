@@ -1,4 +1,5 @@
-﻿using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
+﻿using InTakeWise.Models;
+using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
 
 namespace InTakeWise.Data
@@ -9,5 +10,6 @@ namespace InTakeWise.Data
             : base(options)
         {
         }
+        public DbSet<UsersInformation> UsersInformation { get; set; }
     }
 }

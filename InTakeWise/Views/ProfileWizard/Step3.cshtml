@@ -21,10 +21,13 @@
                     <div class="menu-action-sub">@Model.PredictedWeightKg.ToString("0.0") kg</div>
                 </div>
 
-                <a class="menu-action" asp-controller="Home" asp-action="Index">
-                    <div class="menu-action-title">Close</div>
-                    <div class="menu-action-sub">Back to menu</div>
-                </a>
+                <form asp-action="Complete" method="post" class="menu-action">
+                    @Html.AntiForgeryToken()
+                    <button type="submit" class="menu-action" style="width:100%; border:0; background:none;">
+                        <div class="menu-action-title">Finish</div>
+                        <div class="menu-action-sub">Save profile & go to menu</div>
+                    </button>
+                </form> 
             </div>
         </section>
 

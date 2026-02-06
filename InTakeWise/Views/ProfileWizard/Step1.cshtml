@@ -11,14 +11,21 @@
         <section class="auth-main">
             <div class="menu-actions">
                 <h1 class="auth-title">Your Profile</h1>
-
                 <form asp-action="Step1" method="post" class="menu-actions-row menu-actions-profile">
                     @Html.AntiForgeryToken()
 
                     <div class="menu-action menu-action-profile">
+                        <div class="menu-action-title">Username</div>
+                        <div class="menu-action-sub">
+                            <input class="log-text-box menu-action menu-text-box-profile" asp-for="ProfileUserName" />
+                            <span asp-validation-for="ProfileUserName"></span>
+                        </div>
+                    </div>
+
+                    <div class="menu-action menu-action-profile">
                         <div class="menu-action-title">Age</div>
                         <div class="menu-action-sub">
-                            <input class="log-text-box menu-action menu-text-box-profile" asp-for="Age" type="number" min="0" />
+                            <input class="log-text-box menu-action menu-text-box-profile" asp-for="Age" type="number" min="1" />
                             <span asp-validation-for="Age"></span>
                         </div>
                     </div>
@@ -26,20 +33,17 @@
                     <div class="menu-action menu-action-profile">
                         <div class="menu-action-title">Height (cm)</div>
                         <div class="menu-action-sub">
-                            <input class="log-text-box menu-action menu-text-box-profile" asp-for="HeightCm" type="number" step="0.1" min="0" />
-                            <span asp-validation-for="HeightCm"></span>
+                            <input class="log-text-box menu-action menu-action menu-text-box-profile" asp-for="HeightInCM" type="number" min="1" />
+                            <span asp-validation-for="HeightInCM"></span>
                         </div>
                     </div>
 
                     <div class="menu-action menu-action-profile">
                         <div class="menu-action-title">Gender</div>
                         <div class="menu-action-sub">
-                            <select class="log-text-box menu-action menu-text-box-profile" asp-for="Gender">
+                            <select class="log-text-box menu-action menu-text-box-profile" asp-for="Gender"
+                                    asp-items="Html.GetEnumSelectList<InTakeWise.Models.Genders>()">
                                 <option value="">Select</option>
-                                <option value="Male">Male</option>
-                                <option value="Female">Female</option>
-                                <option value="Other">Other</option>
-                                <option value="PreferNotToSay">Prefer not to say</option>
                             </select>
                             <span asp-validation-for="Gender"></span>
                         </div>
@@ -48,8 +52,8 @@
                     <div class="menu-action menu-action-profile">
                         <div class="menu-action-title">Weight (kg)</div>
                         <div class="menu-action-sub">
-                            <input class="log-text-box menu-action menu-text-box-profile" asp-for="WeightKg" type="number" step="0.1" min="0" />
-                            <span asp-validation-for="WeightKg"></span>
+                            <input class="log-text-box menu-action menu-text-box-profile" asp-for="WeightInKg" type="number" min="1" />
+                            <span asp-validation-for="WeightInKg"></span>
                         </div>
                     </div>
 
