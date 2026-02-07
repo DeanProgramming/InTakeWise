@@ -2,6 +2,18 @@
 
 @{
     ViewData["Title"] = "Whats in your Pantry";
+     
+    var text = string.Join(Environment.NewLine,
+        (Model.Items ?? Enumerable.Empty<InTakeWise.Models.PantryItem>())
+        .Select(item =>
+        {
+            var name = item.FoodItem?.Name ?? "(unknown item)";
+            var expiry = item.ExpiryDate.HasValue
+                ? $" (Expires: {item.ExpiryDate.Value:yyyy-MM-dd})"
+                : "";
+            return $"{name} - {item.Quantity} {item.Unit}{expiry}";
+        })
+    );
 }
 
 <div class="auth-page">
@@ -11,6 +23,11 @@
         <section class="auth-main">
             <div class="menu-actions">
                 <h1 class="auth-title">@ViewData["Title"]</h1>
+                 
+                @if (TempData["PantrySaved"] is string msg)
+                {
+                    <div class="menu-action">@msg</div>
+                }
 
                 <form asp-controller="Pantry"
                       asp-action="SavePantryInfo"
@@ -21,15 +38,7 @@
                     <textarea name="userInput"
                               class="log-text-box menu-action"
                               rows="10"
-                              style="white-space: pre-wrap;">
-                    @foreach (var item in Model.Items)
-                    {
-                        var name = item.FoodItem?.Name ?? "(unknown item)";
-                        var expiry = item.ExpiryDate.HasValue ? $" (Expires: {item.ExpiryDate:yyyy-MM-dd})" : "";
-                        @($"{name} - {item.Quantity} {item.Unit}{expiry}\n")
-                    }
-                    
-                </textarea>
+                              style="white-space: pre-wrap;">@text</textarea>
 
                     <button type="submit" class="btn-primary">
                         Save

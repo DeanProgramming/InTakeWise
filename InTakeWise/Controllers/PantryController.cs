@@ -1,9 +1,13 @@
-﻿using InTakeWise.Models;
+﻿using InTakeWise.Data;
+using InTakeWise.Models;
 using InTakeWise.ViewModels;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
+using System.Globalization;
 using System.Security.Claims;
+using System.Text.RegularExpressions;
 
 namespace InTakeWise.Controllers
 {
@@ -12,50 +16,33 @@ namespace InTakeWise.Controllers
     {
         private readonly ILogger<PantryController> _logger;
         private readonly UserManager<IdentityUser> _userManager;
+        private readonly ApplicationDbContext _db;
 
         public PantryController(
             ILogger<PantryController> logger,
-            UserManager<IdentityUser> userManager)
+            UserManager<IdentityUser> userManager,
+            ApplicationDbContext db)
         {
             _logger = logger;
             _userManager = userManager;
+            _db = db;
         }
 
+        [HttpGet]
         public async Task<IActionResult> Index()
         {
-            var user = await _userManager.GetUserAsync(User);
             var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
             if (string.IsNullOrWhiteSpace(userId))
                 return Unauthorized();
 
-            var items = new List<PantryItem>
-            {
-                new PantryItem
-                {
-                    Id = 1,
-                    UserId = userId,
-                    FoodItemId = 101,
-                    Quantity = 1,
-                    Unit = "kg",
-                    ExpiryDate = DateTime.UtcNow.AddDays(3),
-                    FoodItem = new FoodItem { Id = 101, Name = "Chicken Breast", CaloriesPer100g = 165, ProteinPer100g = 31 }
-                },
-                new PantryItem
-                {
-                    Id = 2,
-                    UserId = userId,
-                    FoodItemId = 102,
-                    Quantity = 12,
-                    Unit = "pcs",
-                    ExpiryDate = DateTime.UtcNow.AddDays(10),
-                    FoodItem = new FoodItem { Id = 102, Name = "Eggs", CaloriesPer100g = 155, ProteinPer100g = 13 }
-                }
-            };
+            var items = await _db.PantryItems
+                .AsNoTracking()
+                .Include(x => x.FoodItem)
+                .Where(x => x.UserId == userId)
+                .OrderBy(x => x.FoodItem.Name)
+                .ToListAsync();
 
-            return View("Pantry", new PantryViewModel
-            {
-                Items = items
-            });
+            return View("Pantry", new PantryViewModel { Items = items });
         }
 
         [HttpPost]
@@ -67,24 +54,147 @@ namespace InTakeWise.Controllers
             if (user == null || string.IsNullOrWhiteSpace(userId))
                 return Unauthorized();
 
-            var items = new List<PantryItem>
-            {
-                new PantryItem
-                {
-                    Id = 3,
-                    UserId = userId,
-                    FoodItemId = 201,
-                    Quantity = 500,
-                    Unit = "g",
-                    ExpiryDate = DateTime.UtcNow.AddDays(5),
-                    FoodItem = new FoodItem { Id = 201, Name = "Greek Yogurt", CaloriesPer100g = 59, ProteinPer100g = 10 }
-                }
-            };
+            var parsedLines = ParsePantryInput(userInput);
 
-            return View("Pantry", new PantryViewModel
+            var existingPantry = await _db.PantryItems
+                .Include(x => x.FoodItem)
+                .Where(x => x.UserId == userId)
+                .ToListAsync();
+
+            var keepFoodItemIds = new HashSet<int>();
+
+            foreach (var line in parsedLines)
             {
-                Items = items
-            });
+                var food = await _db.FoodItems
+                    .FirstOrDefaultAsync(f => f.Name.ToLower() == line.Name.ToLower());
+
+                if (food == null)
+                {
+                    food = new FoodItem { Name = line.Name };
+                    _db.FoodItems.Add(food);
+                    await _db.SaveChangesAsync(); 
+                }
+
+                keepFoodItemIds.Add(food.Id);
+
+                var pantryItem = existingPantry.FirstOrDefault(p => p.FoodItemId == food.Id);
+                if (pantryItem == null)
+                {
+                    _db.PantryItems.Add(new PantryItem
+                    {
+                        UserId = userId,
+                        FoodItemId = food.Id,
+                        Quantity = line.Quantity,
+                        Unit = line.Unit ?? "",
+                        ExpiryDate = line.ExpiryDate
+                    });
+                }
+                else
+                {
+                    pantryItem.Quantity = line.Quantity;
+                    pantryItem.Unit = line.Unit ?? "";
+                    pantryItem.ExpiryDate = line.ExpiryDate;
+                }
+            }
+
+            var toRemove = existingPantry
+                .Where(p => !keepFoodItemIds.Contains(p.FoodItemId))
+                .ToList();
+
+            if (toRemove.Count > 0)
+                _db.PantryItems.RemoveRange(toRemove);
+
+            try
+            {
+                await _db.SaveChangesAsync();
+                TempData["PantrySaved"] = "Pantry saved.";
+            }
+            catch (DbUpdateException ex)
+            {
+                _logger.LogError(ex, "Error saving pantry for user {UserId}", userId);
+                TempData["PantrySaved"] = "Could not save pantry (database error).";
+            }
+
+            return RedirectToAction(nameof(Index));
+        }
+
+        private sealed record ParsedPantryLine(string Name, decimal Quantity, string Unit, DateTime? ExpiryDate);
+
+        private static List<ParsedPantryLine> ParsePantryInput(string? input)
+        {
+            var results = new List<ParsedPantryLine>();
+            if (string.IsNullOrWhiteSpace(input))
+                return results;
+
+            var lines = input.Split(new[] { "\r\n", "\n" }, StringSplitOptions.None);
+
+            foreach (var raw in lines)
+            {
+                var line = (raw ?? "").Trim();
+                if (string.IsNullOrWhiteSpace(line)) continue;
+
+                DateTime? expiry = null;
+                var expiryMatch = Regex.Match(line, @"\((?:Expires|Expiry)\s*:\s*(\d{4}-\d{2}-\d{2})\)\s*$",
+                    RegexOptions.IgnoreCase);
+
+                if (expiryMatch.Success)
+                {
+                    var dateText = expiryMatch.Groups[1].Value;
+                    if (DateTime.TryParseExact(dateText, "yyyy-MM-dd", CultureInfo.InvariantCulture,
+                        DateTimeStyles.None, out var dt))
+                    {
+                        expiry = dt.Date;
+                    }
+
+                    line = Regex.Replace(line, @"\s*\((?:Expires|Expiry)\s*:\s*\d{4}-\d{2}-\d{2}\)\s*$", "",
+                        RegexOptions.IgnoreCase).Trim();
+                }
+
+                var parts = line.Split(" - ", 2, StringSplitOptions.TrimEntries);
+                var name = parts[0].Trim();
+
+                decimal qty = 1;
+                string unit = "";
+
+                if (parts.Length == 2)
+                {
+                    var rest = parts[1].Trim();
+
+                    var restParts = rest.Split(' ', 2, StringSplitOptions.TrimEntries);
+
+                    if (restParts.Length >= 1)
+                    {
+                        if (!decimal.TryParse(restParts[0], NumberStyles.Number, CultureInfo.InvariantCulture, out qty))
+                        {
+                            decimal.TryParse(restParts[0], NumberStyles.Number, CultureInfo.CurrentCulture, out qty);
+                        }
+                    }
+
+                    if (restParts.Length == 2)
+                        unit = restParts[1].Trim();
+                }
+
+                if (string.IsNullOrWhiteSpace(name))
+                    continue;
+
+                results.Add(new ParsedPantryLine(name, qty, unit, expiry));
+            }
+
+            var grouped = results
+                .GroupBy(x => x.Name.Trim(), StringComparer.OrdinalIgnoreCase)
+                .Select(g =>
+                {
+                    var last = g.Last();
+                    return new ParsedPantryLine(
+                        Name: g.Key,
+                        Quantity: g.Sum(x => x.Quantity),
+                        Unit: last.Unit,
+                        ExpiryDate: last.ExpiryDate
+                    );
+                })
+                .ToList();
+
+            return grouped;
         }
     }
 }
