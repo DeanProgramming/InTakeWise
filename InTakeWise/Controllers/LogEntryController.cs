@@ -29,11 +29,30 @@ namespace InTakeWise.Controllers
         {
             var user = await _userManager.GetUserAsync(User);
 
-            return View("Log", new LogEntryViewModel
+            var vm = new LogEntryViewModel
             {
                 UserName = user?.UserName,
-                Mode = mode
-            });
+                Mode = mode,
+                UserInput = TempData["LastInput"]?.ToString()
+            };
+
+            if (user != null)
+            {
+                if (mode == LogType.LoggingType.Meal &&
+                    TempData["LastMealLogId"] is string mealIdStr &&
+                    int.TryParse(mealIdStr, out var mealId))
+                {
+                    vm.GeneratedMealLog = await _logEntryService.GetMealByIdAsync(mealId, user.Id);
+                }
+                else if (mode == LogType.LoggingType.Workout &&
+                         TempData["LastWorkoutLogId"] is string workoutIdStr &&
+                         int.TryParse(workoutIdStr, out var workoutId))
+                {
+                    vm.GeneratedWorkoutLog = await _logEntryService.GetWorkoutByIdAsync(workoutId, user.Id);
+                }
+            }
+
+            return View("Log", vm);
         }
 
         [HttpPost]
@@ -43,15 +62,15 @@ namespace InTakeWise.Controllers
             var user = await _userManager.GetUserAsync(User);
             if (user == null) return Unauthorized();
 
+            if (string.IsNullOrWhiteSpace(userInput))
+                return View("Log", new LogEntryViewModel { UserName = user.UserName, Mode = mode });
+
             var log = await _logEntryService.LogMealInfoAsync(user.Id, userInput);
 
-            return View("Log", new LogEntryViewModel
-            {
-                UserName = user.UserName,
-                Mode = mode,
-                UserInput = userInput,
-                GeneratedLog = log
-            });
+            TempData["LastMealLogId"] = log.Id.ToString();
+            TempData["LastInput"] = userInput;
+
+            return RedirectToAction(nameof(Index), new { mode = LogType.LoggingType.Meal });
         }
 
         [HttpPost]
@@ -61,15 +80,15 @@ namespace InTakeWise.Controllers
             var user = await _userManager.GetUserAsync(User);
             if (user == null) return Unauthorized();
 
+            if (string.IsNullOrWhiteSpace(userInput))
+                return View("Log", new LogEntryViewModel { UserName = user.UserName, Mode = mode });
+
             var log = await _logEntryService.LogWorkoutInfoAsync(user.Id, userInput);
 
-            return View("Log", new LogEntryViewModel
-            {
-                UserName = user.UserName,
-                Mode = mode,
-                UserInput = userInput,
-                GeneratedLog = log
-            });
+            TempData["LastWorkoutLogId"] = log.Id.ToString();
+            TempData["LastInput"] = userInput;
+
+            return RedirectToAction(nameof(Index), new { mode = LogType.LoggingType.Workout });
         }
     }
 }

@@ -31,23 +31,26 @@
                     </button>
                 </form>
 
-                @if (Model.GeneratedLog != null)
+                @if (isMeal && Model.GeneratedMealLog != null)
                 {
                     <div class="log-result">
                         <h3>Estimated Result</h3>
-                        <p><strong>Calories:</strong> @Model.GeneratedLog.Calories</p>
-
-                        @if (isMeal)
-                        {
-                            <ul class="macro-list">
-                                <li>Protein: @Model.GeneratedLog.Protein</li>
-                                <li>Carbs: @Model.GeneratedLog.Carbs</li>
-                                <li>Fat: @Model.GeneratedLog.Fat</li>
-                                <li>Fiber: @Model.GeneratedLog.Fiber</li>
-                            </ul>
-                        }
+                        <p><strong>Calories:</strong> @Model.GeneratedMealLog.Calories</p>
+                        <ul class="macro-list">
+                            <li>Protein: @Model.GeneratedMealLog.Protein</li>
+                            <li>Carbs: @Model.GeneratedMealLog.Carbs</li>
+                            <li>Fat: @Model.GeneratedMealLog.Fat</li>
+                            <li>Fiber: @Model.GeneratedMealLog.Fiber</li>
+                        </ul>
                     </div>
                 }
+                else if (!isMeal && Model.GeneratedWorkoutLog != null)
+                {
+                    <div class="log-result">
+                        <h3>Estimated Result</h3>
+                        <p><strong>Calories burned:</strong> @Model.GeneratedWorkoutLog.CaloriesBurned</p>
+                    </div>
+                } 
             </div>
         </section>
 
@@ -56,3 +59,22 @@
 
     </div>
 </div>
+
+@section Scripts {
+    <script>
+        (() => {
+          const mode = '@Model.Mode'; 
+          const key = `InTakeWise.LogDraft.${mode}`;
+          const form = document.querySelector('.log-form');
+          const ta = document.querySelector('textarea[name="userInput"]');
+          if (!ta) return;
+
+          const saved = localStorage.getItem(key);
+          if (!ta.value && saved) ta.value = saved;
+
+          ta.addEventListener('input', () => localStorage.setItem(key, ta.value));
+
+          form?.addEventListener('submit', () => localStorage.removeItem(key));
+        })();
+    </script>
+}

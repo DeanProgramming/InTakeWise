@@ -1,4 +1,0 @@
-﻿namespace InTakeWise.Models
-{
-
-}

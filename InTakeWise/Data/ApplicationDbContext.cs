@@ -17,7 +17,8 @@ namespace InTakeWise.Data
         public DbSet<PantryItem> PantryItems => Set<PantryItem>();
         public DbSet<ShoppingList> ShoppingLists => Set<ShoppingList>();
         public DbSet<ShoppingListItem> ShoppingListItems => Set<ShoppingListItem>();
-        public DbSet<LogEntry> LogEntries => Set<LogEntry>();
+        public DbSet<MealLogEntry> MealLogs => Set<MealLogEntry>();
+        public DbSet<WorkoutLogEntry> WorkoutLogs => Set<WorkoutLogEntry>();
 
         protected override void OnModelCreating(ModelBuilder b)
         {
@@ -59,9 +60,18 @@ namespace InTakeWise.Data
                 .WithMany()
                 .HasForeignKey(x => x.FoodItemId)
                 .OnDelete(DeleteBehavior.Restrict);
-             
-            b.Entity<LogEntry>()
-                .HasIndex(x => new { x.UserId, x.Timestamp });
+            
+            b.Entity<MealLogEntry>(e =>
+            {
+                e.ToTable("MealLogs");
+                e.HasIndex(x => new { x.UserId, x.Timestamp });
+            });
+
+            b.Entity<WorkoutLogEntry>(e =>
+            {
+                e.ToTable("WorkoutLogs");
+                e.HasIndex(x => new { x.UserId, x.Timestamp });
+            });
         }
     }
 }

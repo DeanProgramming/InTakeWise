@@ -3,8 +3,10 @@ namespace InTakeWise.Services
 {
     public interface ILogEntryService
     {
-        Task<LogEntry> LogMealInfoAsync(string userId, string userInput);
+        Task<MealLogEntry> LogMealInfoAsync(string userId, string userInput);
+        Task<WorkoutLogEntry> LogWorkoutInfoAsync(string userId, string userInput);
 
-        Task<LogEntry> LogWorkoutInfoAsync(string id, string userInput);
+        Task<MealLogEntry?> GetMealByIdAsync(int id, string userId);
+        Task<WorkoutLogEntry?> GetWorkoutByIdAsync(int id, string userId);
     } 
 }

@@ -1,19 +1,27 @@
 ﻿namespace InTakeWise.Services
 {
+    using InTakeWise.Data;
     using InTakeWise.Models;
-    using InTakeWise.Services;
+    using Microsoft.EntityFrameworkCore;
 
     public class LogEntryService : ILogEntryService
     {
-        public Task<LogEntry> LogMealInfoAsync(string userId, string userInput)
+        private readonly ApplicationDbContext _db;
+
+        public LogEntryService(ApplicationDbContext db)
+        {
+            _db = db;
+        }
+
+        public async Task<MealLogEntry> LogMealInfoAsync(string userId, string userInput)
         {
             var mealInfo = MealProcessor.MealProcessed(userInput);
 
-            var log = new LogEntry
+            var log = new MealLogEntry
             {
                 UserId = userId,
-                Type = LogType.LoggingType.Meal,
                 Timestamp = DateTime.UtcNow,
+                RawInput = userInput,
                 Calories = mealInfo.Calories,
                 Protein = mealInfo.Protein,
                 Carbs = mealInfo.Carbs,
@@ -21,21 +29,32 @@
                 Fiber = mealInfo.Fiber
             };
 
-            return Task.FromResult(log);
+            _db.MealLogs.Add(log);
+            await _db.SaveChangesAsync();
+            return log;
         }
-        public Task<LogEntry> LogWorkoutInfoAsync(string userId, string userInput)
-        {
-            var WorkInfo = WorkoutProcessor.WorkoutProcessed(userInput);
 
-            var log = new LogEntry
+        public async Task<WorkoutLogEntry> LogWorkoutInfoAsync(string userId, string userInput)
+        {
+            var workInfo = WorkoutProcessor.WorkoutProcessed(userInput);
+
+            var log = new WorkoutLogEntry
             {
                 UserId = userId,
-                Type = LogType.LoggingType.Workout,
                 Timestamp = DateTime.UtcNow,
-                Calories = WorkInfo
+                RawInput = userInput,
+                CaloriesBurned = workInfo
             };
 
-            return Task.FromResult(log);
+            _db.WorkoutLogs.Add(log);
+            await _db.SaveChangesAsync();
+            return log;
         }
+
+        public Task<MealLogEntry?> GetMealByIdAsync(int id, string userId) =>
+            _db.MealLogs.AsNoTracking().FirstOrDefaultAsync(x => x.Id == id && x.UserId == userId);
+
+        public Task<WorkoutLogEntry?> GetWorkoutByIdAsync(int id, string userId) =>
+            _db.WorkoutLogs.AsNoTracking().FirstOrDefaultAsync(x => x.Id == id && x.UserId == userId);
     }
 }

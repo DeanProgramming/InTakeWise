@@ -4,6 +4,7 @@ using InTakeWise.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -11,9 +12,11 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace InTakeWise.Data.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    partial class ApplicationDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260207095509_LoggingInformation")]
+    partial class LoggingInformation
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -55,7 +58,7 @@ namespace InTakeWise.Data.Migrations
                     b.ToTable("FoodItems");
                 });
 
-            modelBuilder.Entity("InTakeWise.Models.MealLogEntry", b =>
+            modelBuilder.Entity("InTakeWise.Models.LogEntry", b =>
                 {
                     b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
@@ -78,11 +81,11 @@ namespace InTakeWise.Data.Migrations
                     b.Property<int?>("Protein")
                         .HasColumnType("int");
 
-                    b.Property<string>("RawInput")
-                        .HasColumnType("nvarchar(max)");
-
                     b.Property<DateTime>("Timestamp")
                         .HasColumnType("datetime2");
+
+                    b.Property<int>("Type")
+                        .HasColumnType("int");
 
                     b.Property<string>("UserId")
                         .IsRequired()
@@ -92,7 +95,7 @@ namespace InTakeWise.Data.Migrations
 
                     b.HasIndex("UserId", "Timestamp");
 
-                    b.ToTable("MealLogs", (string)null);
+                    b.ToTable("LogEntries");
                 });
 
             modelBuilder.Entity("InTakeWise.Models.PantryItem", b =>
@@ -253,34 +256,6 @@ namespace InTakeWise.Data.Migrations
                         .IsUnique();
 
                     b.ToTable("UsersInformation");
-                });
-
-            modelBuilder.Entity("InTakeWise.Models.WorkoutLogEntry", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
-
-                    b.Property<int?>("CaloriesBurned")
-                        .HasColumnType("int");
-
-                    b.Property<string>("RawInput")
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<DateTime>("Timestamp")
-                        .HasColumnType("datetime2");
-
-                    b.Property<string>("UserId")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(450)");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("UserId", "Timestamp");
-
-                    b.ToTable("WorkoutLogs", (string)null);
                 });
 
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityRole", b =>
