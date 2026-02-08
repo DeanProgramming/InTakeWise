@@ -36,19 +36,18 @@ namespace InTakeWise.Controllers
 
             var foods = await _foodItemService.GetFoodItemsAsync(userId);
 
-            var shoppingList = await _shoppingSuggestionService.GetShoppingListAsync(userId, foods);
-            var weekMeals = await _shoppingSuggestionService.GetWeekSummaryAsync(userId, foods, shoppingList);
+            var plan = await _shoppingSuggestionService.GenerateWeekPlanAsync(userId, foods);
 
             var vm = new ShoppingSuggestionViewModel
             {
-                ShoppingList = shoppingList.Select(x => new ShoppingLineVm
+                ShoppingList = plan.ShoppingList.Select(x => new ShoppingLineVm
                 {
                     Name = x.Name,
                     Quantity = x.Quantity,
                     Unit = x.Unit
                 }).ToList(),
 
-                WeekMealsSummary = weekMeals.Select(x => new WeeklyMealVm
+                WeekMealsSummary = plan.WeekMealsSummary.Select(x => new WeeklyMealVm
                 {
                     Day = x.Day,
                     Title = x.Title,

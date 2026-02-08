@@ -15,8 +15,6 @@ namespace InTakeWise.Data
         public DbSet<UsersInformation> UsersInformation => Set<UsersInformation>();
         public DbSet<FoodItem> FoodItems => Set<FoodItem>();
         public DbSet<PantryItem> PantryItems => Set<PantryItem>();
-        public DbSet<ShoppingList> ShoppingLists => Set<ShoppingList>();
-        public DbSet<ShoppingListItem> ShoppingListItems => Set<ShoppingListItem>();
         public DbSet<MealLogEntry> MealLogs => Set<MealLogEntry>();
         public DbSet<WorkoutLogEntry> WorkoutLogs => Set<WorkoutLogEntry>();
 
@@ -43,24 +41,7 @@ namespace InTakeWise.Data
                 .WithMany()
                 .HasForeignKey(x => x.FoodItemId)
                 .OnDelete(DeleteBehavior.Restrict);
-
-            // ShoppingList relationships
-            b.Entity<ShoppingList>()
-                .HasMany(x => x.Items)
-                .WithOne(x => x.ShoppingList)
-                .HasForeignKey(x => x.ShoppingListId)
-                .OnDelete(DeleteBehavior.Cascade);
-
-            b.Entity<ShoppingListItem>()
-                .Property(x => x.Quantity)
-                .HasPrecision(18, 2);
-
-            b.Entity<ShoppingListItem>()
-                .HasOne(x => x.FoodItem)
-                .WithMany()
-                .HasForeignKey(x => x.FoodItemId)
-                .OnDelete(DeleteBehavior.Restrict);
-            
+                        
             b.Entity<MealLogEntry>(e =>
             {
                 e.ToTable("MealLogs");
