@@ -25,53 +25,50 @@ namespace InTakeWise.Controllers
         }
 
         [HttpGet]
-        public async Task<IActionResult> Index(LogType.LoggingType mode)
+        public async Task<IActionResult> Index(LogType.LoggingType mode, TimeOfDay meal = TimeOfDay.Breakfast)
         {
             var user = await _userManager.GetUserAsync(User);
+            if (user == null) return Unauthorized();
 
             var vm = new LogEntryViewModel
             {
-                UserName = user?.UserName,
+                UserName = user.UserName,
                 Mode = mode,
-                UserInput = TempData["LastInput"]?.ToString()
+                SelectedTimeOfDay = meal,
             };
 
-            if (user != null)
+            if (mode == LogType.LoggingType.Meal)
             {
-                if (mode == LogType.LoggingType.Meal &&
-                    TempData["LastMealLogId"] is string mealIdStr &&
-                    int.TryParse(mealIdStr, out var mealId))
-                {
-                    vm.GeneratedMealLog = await _logEntryService.GetMealByIdAsync(mealId, user.Id);
-                }
-                else if (mode == LogType.LoggingType.Workout &&
-                         TempData["LastWorkoutLogId"] is string workoutIdStr &&
-                         int.TryParse(workoutIdStr, out var workoutId))
-                {
-                    vm.GeneratedWorkoutLog = await _logEntryService.GetWorkoutByIdAsync(workoutId, user.Id);
-                }
+                vm.GeneratedMealLog = await _logEntryService.GetTodayMealAsync(user.Id, meal);
+                vm.UserInput = vm.GeneratedMealLog?.RawInput ?? "";
+            }
+            else if (mode == LogType.LoggingType.Workout &&
+                     TempData["LastWorkoutLogId"] is string workoutIdStr &&
+                     int.TryParse(workoutIdStr, out var workoutId))
+            {
+                vm.GeneratedWorkoutLog = await _logEntryService.GetWorkoutByIdAsync(workoutId, user.Id);
+                vm.UserInput = vm.GeneratedWorkoutLog?.RawInput ?? "";
             }
 
             return View("Log", vm);
         }
 
+
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> Meal(string userInput, LogType.LoggingType mode)
+        public async Task<IActionResult> Meal(string userInput, LogType.LoggingType mode, TimeOfDay logTime)
         {
             var user = await _userManager.GetUserAsync(User);
             if (user == null) return Unauthorized();
 
             if (string.IsNullOrWhiteSpace(userInput))
-                return View("Log", new LogEntryViewModel { UserName = user.UserName, Mode = mode });
+                return View("Log", new LogEntryViewModel { UserName = user.UserName, Mode = mode, SelectedTimeOfDay = logTime });
 
-            var log = await _logEntryService.LogMealInfoAsync(user.Id, userInput);
+            await _logEntryService.LogMealInfoAsync(user.Id, userInput, logTime);
 
-            TempData["LastMealLogId"] = log.Id.ToString();
-            TempData["LastInput"] = userInput;
-
-            return RedirectToAction(nameof(Index), new { mode = LogType.LoggingType.Meal });
+            return RedirectToAction(nameof(Index), new { mode = LogType.LoggingType.Meal, meal = logTime });
         }
+
 
         [HttpPost]
         [ValidateAntiForgeryToken]

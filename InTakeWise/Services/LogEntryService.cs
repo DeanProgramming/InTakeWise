@@ -3,6 +3,7 @@
     using InTakeWise.Data;
     using InTakeWise.Models;
     using Microsoft.EntityFrameworkCore;
+    using Microsoft.IdentityModel.Abstractions;
 
     public class LogEntryService : ILogEntryService
     {
@@ -13,13 +14,14 @@
             _db = db;
         }
 
-        public async Task<MealLogEntry> LogMealInfoAsync(string userId, string userInput)
+        public async Task<MealLogEntry> LogMealInfoAsync(string userId, string userInput, TimeOfDay logTime)
         {
             var mealInfo = MealProcessor.MealProcessed(userInput);
 
             var log = new MealLogEntry
             {
                 UserId = userId,
+                TimeEat = logTime,
                 Timestamp = DateTime.UtcNow,
                 RawInput = userInput,
                 Calories = mealInfo.Calories,
@@ -33,6 +35,27 @@
             await _db.SaveChangesAsync();
             return log;
         }
+
+        public async Task<MealLogEntry?> GetTodayMealAsync(string userId, TimeOfDay timeOfDay)
+        {
+            var tz = TimeZoneInfo.FindSystemTimeZoneById("Europe/London");
+
+            var nowLocal = TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, tz);
+            var startLocal = nowLocal.Date;
+            var endLocal = startLocal.AddDays(1);
+
+            var startUtc = TimeZoneInfo.ConvertTimeToUtc(startLocal, tz);
+            var endUtc = TimeZoneInfo.ConvertTimeToUtc(endLocal, tz);
+
+            return await _db.MealLogs.AsNoTracking()
+                .Where(x => x.UserId == userId
+                            && x.TimeEat == timeOfDay
+                            && x.Timestamp >= startUtc
+                            && x.Timestamp < endUtc)
+                .OrderByDescending(x => x.Timestamp)
+                .FirstOrDefaultAsync();
+        }
+
 
         public async Task<WorkoutLogEntry> LogWorkoutInfoAsync(string userId, string userInput)
         {

@@ -1,11 +1,9 @@
-﻿
-using InTakeWise.Models;
+﻿using InTakeWise.Models;
 
 namespace InTakeWise.Services
 {
     public interface IMealSuggestionService
     {
-        Task<MealSuggestion> GetSuggestedMealAsync(string userId, List<FoodItem> items);
+        Task<TodayMealPlan> GetTodayPlanAsync(string userId, List<FoodItem> items);
     }
-
 }

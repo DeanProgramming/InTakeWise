@@ -20,19 +20,20 @@ namespace InTakeWise.Controllers
         }
 
         [HttpGet]
-        public async Task<IActionResult> Index()
+        public async Task<IActionResult> Index(string meal = "Breakfast")
         {
             var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
             if (string.IsNullOrWhiteSpace(userId))
                 return Unauthorized();
 
             var foods = await _foodItemService.GetFoodItemsAsync(userId);
-            var suggestedMeal = await _mealService.GetSuggestedMealAsync(userId, foods);
+            var plan = await _mealService.GetTodayPlanAsync(userId, foods);
 
             var vm = new MealSuggestionViewModel
             {
-                SuggestedMeal = suggestedMeal,
-                StatusMessage = "Suggested meal generated from your fridge items."
+                Plan = plan,
+                SelectedMeal = meal,
+                StatusMessage = "Today's meals generated from your fridge items."
             };
 
             return View("MealSuggestion", vm);
@@ -40,9 +41,10 @@ namespace InTakeWise.Controllers
 
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> Regenerate()
+        public async Task<IActionResult> Regenerate(string meal = "Breakfast")
         { 
-            return await Index();
+            return await Index(meal);
         }
     }
+
 }

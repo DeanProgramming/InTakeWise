@@ -12,6 +12,47 @@
         <section class="auth-main">
             <div class="menu-actions">
                 <h1 class="auth-title">@ViewData["Title"]</h1>
+                 
+                @if (isMeal)
+                {
+                    <div class="menu-actions-row">
+                        <a class="menu-action menu-meal-row"
+                           asp-action="Index"
+                           asp-route-mode="@Model.Mode"
+                           asp-route-meal="@TimeOfDay.Breakfast">
+                            <div class="menu-action-title">Breakfast</div>
+                            <div class="menu-action-sub">
+                                <span class="status-badge @(Model.SelectedTimeOfDay == TimeOfDay.Breakfast ? "status-logged" : "status-pending")">
+                                    @(Model.SelectedTimeOfDay == TimeOfDay.Breakfast ? "Selected" : "View")
+                                </span>
+                            </div>
+                        </a>
+
+                        <a class="menu-action menu-meal-row"
+                           asp-action="Index"
+                           asp-route-mode="@Model.Mode"
+                           asp-route-meal="@TimeOfDay.Dinner">
+                            <div class="menu-action-title">Dinner</div>
+                            <div class="menu-action-sub">
+                                <span class="status-badge @(Model.SelectedTimeOfDay == TimeOfDay.Dinner ? "status-logged" : "status-pending")">
+                                    @(Model.SelectedTimeOfDay == TimeOfDay.Dinner ? "Selected" : "View")
+                                </span>
+                            </div>
+                        </a>
+
+                        <a class="menu-action menu-meal-row"
+                           asp-action="Index"
+                           asp-route-mode="@Model.Mode"
+                           asp-route-meal="@TimeOfDay.Tea">
+                            <div class="menu-action-title">Tea</div>
+                            <div class="menu-action-sub">
+                                <span class="status-badge @(Model.SelectedTimeOfDay == TimeOfDay.Tea ? "status-logged" : "status-pending")">
+                                    @(Model.SelectedTimeOfDay == TimeOfDay.Tea ? "Selected" : "View")
+                                </span>
+                            </div>
+                        </a>
+                    </div>
+                }
 
                 <form asp-controller="LogEntry"
                       asp-action="@(isMeal ? "Meal" : "Workout")"
@@ -20,6 +61,11 @@
                     @Html.AntiForgeryToken()
 
                     <input type="hidden" name="mode" value="@Model.Mode" />
+                     
+                    @if (isMeal)
+                    {
+                        <input type="hidden" name="logTime" value="@Model.SelectedTimeOfDay" />
+                    }
 
                     <textarea name="userInput"
                               class="log-text-box menu-action"
@@ -30,7 +76,7 @@
                         Generate
                     </button>
                 </form>
-
+                 
                 @if (isMeal && Model.GeneratedMealLog != null)
                 {
                     <div class="log-result">
@@ -50,7 +96,7 @@
                         <h3>Estimated Result</h3>
                         <p><strong>Calories burned:</strong> @Model.GeneratedWorkoutLog.CaloriesBurned</p>
                     </div>
-                } 
+                }
             </div>
         </section>
 
@@ -63,18 +109,21 @@
 @section Scripts {
     <script>
         (() => {
-          const mode = '@Model.Mode'; 
-          const key = `InTakeWise.LogDraft.${mode}`;
-          const form = document.querySelector('.log-form');
-          const ta = document.querySelector('textarea[name="userInput"]');
-          if (!ta) return;
+            const mode = '@Model.Mode';
+            const isMeal = '@(isMeal ? "true" : "false")' === "true";
+            const tod = isMeal ? '@Model.SelectedTimeOfDay' : 'Workout';
+            const key = `InTakeWise.LogDraft.${mode}.${tod}`;
 
-          const saved = localStorage.getItem(key);
-          if (!ta.value && saved) ta.value = saved;
+            const form = document.querySelector('.log-form');
+            const ta = document.querySelector('textarea[name="userInput"]');
+            if (!ta) return;
+             
+            const draft = localStorage.getItem(key);
+            if (draft !== null) ta.value = draft;
 
-          ta.addEventListener('input', () => localStorage.setItem(key, ta.value));
-
-          form?.addEventListener('submit', () => localStorage.removeItem(key));
+            ta.addEventListener('input', () => localStorage.setItem(key, ta.value));
+             
+            form?.addEventListener('submit', () => localStorage.removeItem(key));
         })();
     </script>
 }

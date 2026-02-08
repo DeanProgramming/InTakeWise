@@ -11,5 +11,8 @@ namespace InTakeWise.ViewModels
 
         public MealLogEntry? GeneratedMealLog { get; set; }
         public WorkoutLogEntry? GeneratedWorkoutLog { get; set; }
+
+
+        public TimeOfDay SelectedTimeOfDay { get; set; }
     }
 }

@@ -25,61 +25,62 @@
                     <button type="submit" class="btn-primary">
                         Regenerate meals
                     </button>
-                </form>
 
+                </form>
                 <div class="menu-actions-row">
-                    <a class="menu-action menu-meal-row" href="#">
+                    <a class="menu-action menu-meal-row" asp-action="Index" asp-route-meal="Breakfast">
                         <div class="menu-action-title">Breakfast</div>
                         <div class="menu-action-sub">
-                            <span class="status-badge status-logged">Edit</span>
+                            <span class="status-badge @(Model.SelectedMeal == "Breakfast" ? "status-logged" : "status-pending")">
+                                @(Model.SelectedMeal == "Breakfast" ? "Selected" : "View")
+                            </span>
                         </div>
                     </a>
 
-                    <a class="menu-action menu-meal-row" href="#">
+                    <a class="menu-action menu-meal-row" asp-action="Index" asp-route-meal="Dinner">
                         <div class="menu-action-title">Dinner</div>
                         <div class="menu-action-sub">
-                            <span class="status-badge status-pending">View</span>
+                            <span class="status-badge @(Model.SelectedMeal == "Dinner" ? "status-logged" : "status-pending")">
+                                @(Model.SelectedMeal == "Dinner" ? "Selected" : "View")
+                            </span>
                         </div>
                     </a>
 
-                    <a class="menu-action menu-meal-row" href="#">
+                    <a class="menu-action menu-meal-row" asp-action="Index" asp-route-meal="Tea">
                         <div class="menu-action-title">Tea</div>
                         <div class="menu-action-sub">
-                            <span class="status-badge status-pending">View</span>
+                            <span class="status-badge @(Model.SelectedMeal == "Tea" ? "status-logged" : "status-pending")">
+                                @(Model.SelectedMeal == "Tea" ? "Selected" : "View")
+                            </span>
                         </div>
                     </a>
-                </div>
+                </div>               
 
-                <h1 class="auth-title">TEA Plan</h1>
+                <h1 class="auth-title">@Model.SelectedMeal Plan</h1>
 
-                <div class="log-text-box menu-action"
-                     role="textbox"
-                     aria-readonly="true"
-                     style="white-space: pre-wrap;">
+                @if (Model.SelectedMealSuggestion is null)
+                {
+                    <text>No suggestion yet.</text>
+                }
+                else
+                {
+                    var m = Model.SelectedMealSuggestion;
 
-                    @if (Model.SuggestedMeal is null)
-                    {
-                        <text>No suggestion yet.</text>
-                    }
-                    else
-                    {
-                        var m = Model.SuggestedMeal;
+                    <text>@m.Title</text>
+                    <text>
 
-                        <text>@m.Title</text>
-                        <text>
+                        @m.Description
 
-                            @m.Description
+                        Calories: @m.Calories | P: @m.ProteinGrams g | C: @m.CarbsGrams g | F: @m.FatGrams g
 
-                            Calories: @m.Calories | P: @m.ProteinGrams g | C: @m.CarbsGrams g | F: @m.FatGrams g
+                        Ingredients:
+                        - @string.Join("\n- ", m.IngredientsUsed)
 
-                            Ingredients:
-                            - @string.Join("\n- ", m.IngredientsUsed)
+                        Steps:
+                        - @string.Join("\n- ", m.Steps)
+                    </text>
+                }
 
-                            Steps:
-                            - @string.Join("\n- ", m.Steps)
-                        </text>
-                    }
-                </div>
             </div>
         </section>
 
