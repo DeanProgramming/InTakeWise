@@ -4,6 +4,7 @@ namespace InTakeWise.Services
     public interface ILogEntryService
     {
         Task<MealLogEntry?> GetTodayMealAsync(string userId, TimeOfDay timeOfDay);
+        Task<bool> GetCompletedTodayMealAsync(string userId, TimeOfDay timeOfDay);
 
         Task<MealLogEntry> LogMealInfoAsync(string userId, string userInput, TimeOfDay logTime);
         Task<WorkoutLogEntry> LogWorkoutInfoAsync(string userId, string userInput);

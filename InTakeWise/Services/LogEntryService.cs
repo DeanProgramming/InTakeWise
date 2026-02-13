@@ -56,6 +56,17 @@
                 .FirstOrDefaultAsync();
         }
 
+        public async Task<bool> GetCompletedTodayMealAsync(string userId, TimeOfDay timeOfDay)
+        {
+            MealLogEntry? meal = await GetTodayMealAsync(userId, timeOfDay);
+
+            if (meal == null)
+            {
+                return false;
+            }
+             
+            return true;
+        } 
 
         public async Task<WorkoutLogEntry> LogWorkoutInfoAsync(string userId, string userInput)
         {

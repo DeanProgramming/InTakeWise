@@ -1,4 +1,6 @@
-﻿@{
+﻿@model InTakeWise.ViewModels.HomeViewModel
+
+@{
     ViewData["Title"] = "Menu";
 }
 
@@ -9,26 +11,44 @@
         <section class="auth-main">
             <div class="menu-actions">
                 <h1 class="auth-title">Today’s Meals</h1>
-
+                 
                 <div class="menu-actions-row">
-                    <a class="menu-action menu-meal-row" href="#">
+                    <a class="menu-action menu-meal-row"
+                       asp-controller="LogEntry"
+                       asp-action="Index"
+                       asp-route-mode="Meal"
+                       asp-route-meal="@TimeOfDay.Breakfast">
                         <div class="menu-action-title">Breakfast</div>
                         <div class="menu-action-sub">
-                            <span class="status-badge status-logged">Logged</span>
+                            <span class="status-badge @(Model.LoggedBreakfast ? "status-logged" : "status-pending")">
+                                @(Model.LoggedBreakfast ? "Logged" : "Log Now")
+                            </span>
                         </div>
                     </a>
 
-                    <a class="menu-action menu-meal-row" href="#">
+                    <a class="menu-action menu-meal-row"
+                       asp-controller="LogEntry"
+                       asp-action="Index"
+                       asp-route-mode="Meal" 
+                       asp-route-meal="@TimeOfDay.Dinner">
                         <div class="menu-action-title">Dinner</div>
                         <div class="menu-action-sub">
-                            <span class="status-badge status-pending">Log now</span>
+                            <span class="status-badge @(Model.LoggedDinner ? "status-logged" : "status-pending")">
+                                @(Model.LoggedDinner? "Logged" : "Log Now")
+                            </span>
                         </div>
                     </a>
 
-                    <a class="menu-action menu-meal-row" href="#">
+                    <a class="menu-action menu-meal-row"
+                       asp-controller="LogEntry"
+                       asp-action="Index"
+                       asp-route-mode="Meal"
+                       asp-route-meal="@TimeOfDay.Tea">
                         <div class="menu-action-title">Tea</div>
                         <div class="menu-action-sub">
-                            <span class="status-badge status-pending">Log now</span>
+                            <span class="status-badge @(Model.LoggedTea ? "status-logged" : "status-pending")">
+                                @(Model.LoggedTea ? "Logged" : "Log Now")
+                            </span>
                         </div>
                     </a>
                 </div>

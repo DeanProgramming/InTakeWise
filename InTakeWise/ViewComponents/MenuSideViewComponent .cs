@@ -30,11 +30,13 @@ namespace InTakeWise.ViewComponents
                 .AsNoTracking()
                 .FirstOrDefaultAsync(x => x.UserId == user.Id);
 
+            
+
             if (profile == null)
             {
                 return View(new MenuSideViewModel
                 {
-                    UserName = user.UserName,
+                    UserName = profile.ProfileUserName,
                     CaloriesTarget = 0,
                     ProteinTarget = 0,
                     CarbsTarget = 0,
@@ -49,7 +51,7 @@ namespace InTakeWise.ViewComponents
 
             var vm = new MenuSideViewModel
             {
-                UserName = user.UserName,
+                UserName = profile.ProfileUserName,
                 IsGymDayToday = isGymDayToday,
 
                 CaloriesTarget = isGymDayToday ? profile.CaloriesTargetGymDay : profile.CaloriesTargetNonGymDay,

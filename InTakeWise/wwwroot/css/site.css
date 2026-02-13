@@ -215,6 +215,10 @@
         max-height: 162.5px;
     }
 
+    .small-menu {
+        padding-bottom: 5px !important;
+    }
+
     .auth-side-subtitle {
         margin: 9px 0;
         font-size: 11px;
@@ -276,6 +280,34 @@
 
     .gym-day-selection{
         height: 210px;
+    }
+
+
+    .floating-back-btn {
+        position: fixed;
+        right: 10px;
+        bottom: calc(14px + env(safe-area-inset-bottom, 0px));
+        z-index: 9999;
+        display: inline-flex;
+        align-items: center;
+        padding: 8px 25px;
+        border-radius: 999px;
+        font-weight: 900;
+        text-decoration: none;
+        background: #054585a8;
+        color: #fff;
+        box-shadow: 0 18px 40px rgba(0, 0, 0, 0.22);
+        transition: transform 0.08s ease, background 0.15s ease, box-shadow 0.15s ease;
+    } 
+
+    .floating-back-btn:hover {
+        background: var(--primary-hover);
+        transform: translateY(-1px);
+    }
+
+    .floating-back-btn:focus-visible {
+        outline: none;
+        box-shadow: 0 0 0 4px var(--ring), 0 18px 40px rgba(0, 0, 0, 0.22);
     }
 }
 
