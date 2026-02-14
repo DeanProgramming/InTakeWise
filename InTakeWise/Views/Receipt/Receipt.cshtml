@@ -1,0 +1,49 @@
+﻿@model InTakeWise.ViewModels.ReceiptViewModel
+
+@{
+    ViewData["Title"] = "Analyse Receipt";
+}
+
+<div class="auth-page">
+    <div class="auth-card menu-card">
+
+        <section class="auth-main">
+            <div class="menu-actions">
+                <h1 class="auth-title">@ViewData["Title"]</h1>
+
+                <!-- DUMMY: no real photo yet -->
+                <form asp-controller="Receipt"
+                      asp-action="TakePhoto"
+                      method="post"
+                      class="log-form">
+                    @Html.AntiForgeryToken()
+                    <button type="submit" class="btn-primary">
+                        Take photo
+                    </button>
+                </form>
+
+                <form asp-controller="Receipt"
+                      asp-action="SaveToPantryInfo"
+                      method="post"
+                      class="log-form">
+                    @Html.AntiForgeryToken()
+
+                    <textarea asp-for="DecodedInfo"
+                              class="log-text-box menu-action"
+                              rows="10"
+                              style="white-space: pre-wrap;"
+                              placeholder="Items will appear here..."></textarea>
+
+                    <button type="submit" class="btn-primary">
+                        Save
+                    </button>
+                </form>
+
+            </div>
+        </section>
+
+        @await Component.InvokeAsync("MenuSide", new { variant = "compact" })
+    </div>
+</div>
+
+@await Component.InvokeAsync("FloatingBackButton", new { controller = "Home", action = "Index", text = "BACK" })

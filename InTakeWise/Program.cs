@@ -48,10 +48,7 @@ else
 app.UseHttpsRedirection();
 app.UseRouting();
 
-
 app.UseSession();//Temp
-
-
 
 app.UseAuthentication();
 app.UseAuthorization();
