@@ -1,8 +1,29 @@
-﻿@model InTakeWise.ViewComponents.FloatingBackButtonVm
+﻿@model InTakeWise.ViewModels.FloatingBackButtonViewModel
 
 <a class="floating-back-btn"
-   asp-controller="@Model.Controller"
-   asp-action="@Model.Action"
-   aria-label="Back to Home">
+   href="@Model.FallbackUrl"
+   data-fallback="@Model.FallbackUrl"
+   aria-label="Go back">
     <span>@Model.Text</span>
 </a>
+
+<script>
+    (() => {
+      const btn = document.querySelector('.floating-back-btn[data-fallback]');
+      if (!btn) return;
+
+      btn.addEventListener('click', (e) => { 
+        try {
+          const ref = document.referrer;
+          const sameOrigin = ref && new URL(ref).origin === window.location.origin;
+
+          if (window.history.length > 1 && sameOrigin) {
+            e.preventDefault();
+            window.history.back();
+          }
+        } catch {
+
+        }
+      });
+    })();
+</script>

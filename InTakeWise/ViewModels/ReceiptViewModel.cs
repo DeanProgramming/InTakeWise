@@ -2,6 +2,6 @@
 {
     public class ReceiptViewModel
     {
-        public string DecodedInfo { get; set; } = "";
+        public string DecodedInfo { get; set; } = ""; 
     }
 }

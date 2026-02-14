@@ -106,8 +106,7 @@
     </div>
 </div>
 
-@await Component.InvokeAsync("FloatingBackButton", new { controller = "Home", action = "Index", text = "BACK" })
-
+@await Component.InvokeAsync("FloatingBackButton", new {text = "BACK", fallbackUrl = Url.Action("Index", "Home")})
 
 @section Scripts {
     <script>

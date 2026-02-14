@@ -29,8 +29,8 @@ namespace InTakeWise.Controllers
         }
 
         [HttpGet]
-        public IActionResult Index()
-        {
+        public IActionResult Index(string redirect)
+        { 
             return View("Receipt", new ReceiptViewModel());
         }
 
@@ -99,7 +99,7 @@ namespace InTakeWise.Controllers
                 }
                 else
                 {
-                    pantryItem.Quantity = line.Quantity;
+                    pantryItem.Quantity = line.Quantity + pantryItem.Quantity;
                     pantryItem.Unit = line.Unit ?? "";
                     pantryItem.ExpiryDate = line.ExpiryDate;
                 }

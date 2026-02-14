@@ -4,26 +4,15 @@ namespace InTakeWise.ViewComponents
 {
     public class FloatingBackButtonViewComponent : ViewComponent
     {
-        public IViewComponentResult Invoke(
-            string controller = "Home",
-            string action = "Index",
-            string text = "Back")
+        public IViewComponentResult Invoke(string text = "BACK", string fallbackUrl = null)
         {
-            var vm = new FloatingBackButtonVm
+            var vm = new InTakeWise.ViewModels.FloatingBackButtonViewModel
             {
-                Controller = controller,
-                Action = action,
-                Text = text
+                Text = text,
+                FallbackUrl = fallbackUrl ?? Url.Action("Index", "Home")
             };
 
             return View(vm);
         }
-    }
-
-    public class FloatingBackButtonVm
-    {
-        public string Controller { get; set; } = "Home";
-        public string Action { get; set; } = "Index";
-        public string Text { get; set; } = "Back";
-    }
+    } 
 }

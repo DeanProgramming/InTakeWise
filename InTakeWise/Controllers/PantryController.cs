@@ -91,7 +91,7 @@ namespace InTakeWise.Controllers
                 }
                 else
                 {
-                    pantryItem.Quantity = line.Quantity;
+                    pantryItem.Quantity = line.Quantity + pantryItem.Quantity;
                     pantryItem.Unit = line.Unit ?? "";
                     pantryItem.ExpiryDate = line.ExpiryDate;
                 }

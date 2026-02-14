@@ -21,8 +21,18 @@
 
         <!-- MAIN -->
         <section class="auth-main">
-            <div class="menu-actions">
+            <div class="menu-actions"> 
+
+                <a class="menu-action"
+                   asp-controller="Receipt"
+                   asp-action="Index"
+                   asp-route-redirect="Pantry">
+                    <div class="menu-action-title">Receipt to Pantry</div>
+                    <div class="menu-action-sub">Take a photo of the Receipt</div>
+                </a>
+
                 <h1 class="auth-title">@ViewData["Title"]</h1>
+
                  
                 @if (TempData["PantrySaved"] is string msg)
                 {
@@ -54,4 +64,4 @@
     </div>
 </div>
 
-@await Component.InvokeAsync("FloatingBackButton", new { controller = "Home", action = "Index", text = "BACK" })
+@await Component.InvokeAsync("FloatingBackButton", new {text = "BACK", fallbackUrl = Url.Action("Index", "Home")})
