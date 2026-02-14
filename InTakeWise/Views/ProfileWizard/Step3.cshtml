@@ -17,14 +17,14 @@
 
                 <h1 class="auth-title">@Model.Months Month Prediction</h1>
 
-                <form asp-action="Complete" method="post" class="menu-actions">
+                <form asp-action="Complete" method="post" class="menu-actions" mode="step3 = @Model">
                     @Html.AntiForgeryToken()
-                     
-                    <input type="hidden" asp-for="currentFitnessGoal" id="ChosenFitnessGoal" />
+
+                    <input type="hidden" asp-for="CurrentFitnessGoal" id="ChosenFitnessGoal" /> 
 
                     @foreach (var goal in Enum.GetValues<FitnessGoal>())
                     {
-                        var isSelected = Model.currentFitnessGoal == goal;
+                        var isSelected = Model.CurrentFitnessGoal == goal;
 
                         var w = Model.PredictedWeightKgByGoal[goal];
                         var bf = Model.FatPercentageByGoal[goal];
@@ -41,14 +41,11 @@
 
                             <div class="menu-action-sub goal-sub">
                                 <div class="goal-sub-metrics">
-
-                                    <!-- LEFT: Title + Description -->
                                     <div class="goal-left">
                                         <div class="menu-action-title">@Model.GoalLabel(goal)</div>
                                         <div class="goal-desc">@GoalDesc(goal)</div>
                                     </div>
 
-                                    <!-- RIGHT: Weight change + BF change -->
                                     <div class="goal-right">
                                         <div class="goal-metric-row">
                                             <div class="goal-metric-name">Weight</div>
@@ -88,7 +85,7 @@
             <div class="side-top">
                 <h2 class="auth-side-title">Step 3 of 3</h2>
                 <div class="menu-action-sub">
-                    Selected: <span id="goalLabel">@Model.GoalLabel(Model.currentFitnessGoal)</span>
+                    Selected: <span id="goalLabel">@Model.GoalLabel(Model.CurrentFitnessGoal)</span>
                 </div>
             </div>
         </aside>
@@ -97,19 +94,33 @@
 </div>
 
 <script>
+    const rows = Array.from(document.querySelectorAll(".fitness-goal-tab"));
+
     function setGoal(goal) {
       document.getElementById("ChosenFitnessGoal").value = goal;
 
-      document.querySelectorAll("fitness-goal-tab").forEach(row => {
+      rows.forEach(row => {
         row.classList.toggle("is-selected", row.dataset.goal === goal);
       });
-    }
-     
 
-    (function init() {
-        setGoal('@Model.currentFitnessGoal');
-    })();
+      // Update sidebar label from the clicked row
+      const selected = rows.find(r => r.dataset.goal === goal);
+      if (selected) {
+        const title = selected.querySelector(".menu-action-title")?.textContent ?? goal;
+        document.getElementById("goalLabel").textContent = title;
+      }
+    }
+
+    rows.forEach(row => {
+      row.addEventListener("click", (e) => {
+        e.preventDefault();
+        setGoal(row.dataset.goal);
+      });
+    });
+
+    setGoal("@Model.CurrentFitnessGoal");
 </script>
+
 
 
 @functions {

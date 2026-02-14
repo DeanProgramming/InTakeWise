@@ -126,7 +126,7 @@ namespace InTakeWise.Controllers
                 CurrentFatPercentage = startBf,
                 PredictedWeightKgByGoal = predictedByGoal,
                 FatPercentageByGoal = fatByGoal,
-                currentFitnessGoal = existing.ChosenFitnessGoal,
+                CurrentFitnessGoal = existing.ChosenFitnessGoal,
                 Months = months
             });
         }
@@ -134,10 +134,10 @@ namespace InTakeWise.Controllers
 
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> Complete()
+        public async Task<IActionResult> Complete(ProfileStep3ViewModel step3)
         {
             var step1 = HttpContext.Session.GetObject<ProfileStep1ViewModel>(Step1Key);
-            var step2 = HttpContext.Session.GetObject<ProfileStep2ViewModel>(Step2Key);
+            var step2 = HttpContext.Session.GetObject<ProfileStep2ViewModel>(Step2Key); 
 
             if (step1 == null || step2 == null)
                 return RedirectToAction(nameof(Step1));
@@ -163,6 +163,7 @@ namespace InTakeWise.Controllers
             existing.WeightInKg = step1.WeightInKg;
             existing.EveryDayFitnessLevel = step2.EveryDayFitnessLevel;
             existing.ChosenGymDays = step2.ChosenGymDays;
+            existing.ChosenFitnessGoal = step3.CurrentFitnessGoal;
 
             // Dummy macros
             existing.CaloriesTargetGymDay = gymCalories;

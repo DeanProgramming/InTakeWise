@@ -36,7 +36,8 @@ namespace InTakeWise.ViewModels
         public double CurrentFatPercentage { get; set; }
         public Dictionary<FitnessGoal, double> PredictedWeightKgByGoal { get; set; } = new();
         public Dictionary<FitnessGoal, double> FatPercentageByGoal { get; set; } = new();
-        public FitnessGoal currentFitnessGoal = FitnessGoal.Maintain; 
+        public FitnessGoal CurrentFitnessGoal { get; set; } = FitnessGoal.Maintain;
+
 
         public int Months { get; set; }
          
