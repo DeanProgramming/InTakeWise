@@ -91,16 +91,16 @@ namespace InTakeWise.Controllers
             var step1 = HttpContext.Session.GetObject<ProfileStep1ViewModel>(Step1Key);
             var step2 = HttpContext.Session.GetObject<ProfileStep2ViewModel>(Step2Key);
 
+            var user = await _userManager.GetUserAsync(User);
+            if (user == null) return Challenge();
+
+            var existing = await _db.UsersInformation.AsNoTracking()
+                .FirstOrDefaultAsync(x => x.UserId == user.Id);
+
+            if (existing == null) return RedirectToAction(nameof(Step1));
+
             if (step1 == null || step2 == null)
-            {
-                var user = await _userManager.GetUserAsync(User);
-                if (user == null) return Challenge();
-
-                var existing = await _db.UsersInformation.AsNoTracking()
-                    .FirstOrDefaultAsync(x => x.UserId == user.Id);
-
-                if (existing == null) return RedirectToAction(nameof(Step1));
-
+            {  
                 step1 = MapToStep1(existing);
                 step2 = MapToStep2(existing);
 
@@ -108,12 +108,25 @@ namespace InTakeWise.Controllers
                 HttpContext.Session.SetObject(Step2Key, step2);
             }
 
-            var predicted = PredictWeight(step1, step2, months);
+            var predictedByGoal = Enum.GetValues<FitnessGoal>()
+                .ToDictionary(
+                    goal => goal,
+                    goal => PredictWeight(step1, step2, months, goal)
+                );
+
+            var startBf = EstimateBodyFatPercentFromBmi(step1);
+
+            var fatByGoal = Enum.GetValues<FitnessGoal>()
+                .ToDictionary(g => g,
+                        g => PredictBodyFatPercent(step1, step2, months, step1.WeightInKg, g, startBf));
 
             return View(new ProfileStep3ViewModel
             {
                 CurrentWeightKg = step1.WeightInKg,
-                PredictedWeightKg = predicted,
+                CurrentFatPercentage = startBf,
+                PredictedWeightKgByGoal = predictedByGoal,
+                FatPercentageByGoal = fatByGoal,
+                currentFitnessGoal = existing.ChosenFitnessGoal,
                 Months = months
             });
         }
@@ -172,22 +185,132 @@ namespace InTakeWise.Controllers
             return RedirectToAction("Index", "Home");
         }
 
-        private static double PredictWeight(ProfileStep1ViewModel p, ProfileStep2ViewModel g, int months)
-        {
-            var baseLoss = g.EveryDayFitnessLevel switch
+        private static double PredictWeight(ProfileStep1ViewModel p, ProfileStep2ViewModel g, int months, FitnessGoal fitnessGoal)
+        { 
+            var goalMonthlyDelta = fitnessGoal switch
             {
-                FitnessLevel.Low => 0.5,
+                FitnessGoal.HeavyCut => -1.5,
+                FitnessGoal.LightCut => -0.75,
+                FitnessGoal.Maintain => 0.0,
+                FitnessGoal.LightBulk => 0.5,
+                FitnessGoal.HeavyBulk => 1.0,
+                _ => 0.0
+            };
+             
+            var fitnessMultiplier = g.EveryDayFitnessLevel switch
+            {
+                FitnessLevel.Low => 0.9,
                 FitnessLevel.Medium => 1.0,
-                FitnessLevel.High => 1.5,
+                FitnessLevel.High => 1.1,
                 _ => 1.0
             };
-
+             
             var gymDays = CountBits((int)g.ChosenGymDays);
             var gymBonus = Math.Clamp(gymDays, 0, 7) * 0.1;
 
-            var monthlyLoss = baseLoss + gymBonus;
-            return Math.Max(p.WeightInKg - (monthlyLoss * months), 0);
+            var direction = Math.Sign(goalMonthlyDelta); // -1 cut, +1 bulk, 0 maintain
+            var monthlyDelta = (goalMonthlyDelta * fitnessMultiplier) + (gymBonus * direction);
+
+            var predicted = p.WeightInKg + (monthlyDelta * months);
+            return Math.Max(predicted, 0);
         }
+
+        private static double PredictBodyFatPercent(
+            ProfileStep1ViewModel p,
+            ProfileStep2ViewModel g,
+            int months,
+            double currentWeight,
+            FitnessGoal goal,
+            double startBfPercent)
+        {
+            months = Math.Max(months, 0);
+
+            var startWeight = (double)currentWeight;
+            var startFatMass = startWeight * startBfPercent / 100.0;
+
+            var predictedWeight = PredictWeight(p, g, months, goal); 
+            if (predictedWeight <= 0.0) return 0.0;
+
+            // Maintain can "recomp" if training (fat down, lean up)
+            if (goal == FitnessGoal.Maintain)
+            {
+                var gymDays = CountBits((int)g.ChosenGymDays);
+                var recomp = gymDays >= 3 ? 0.20 : 0.0; // kg/month (dummy)
+
+                var fatMass = Math.Max(startFatMass - (recomp * months), 0);
+                var leanMass = (startWeight - startFatMass) + (recomp * months);
+                var w = fatMass + leanMass;
+
+                return Math.Clamp(fatMass / w * 100.0, 2.0, 60.0);
+            }
+
+            var (fatFrac, leanFrac) = GetFatLeanSplit(p, g, goal);
+
+            var weightChange = predictedWeight - startWeight;
+            var fatMassNew = startFatMass + (weightChange * fatFrac);
+
+            // Essential fat floor (dummy-safe clamp)
+            var minBf = p.Gender == Genders.Male ? 4.0
+                      : p.Gender == Genders.Female ? 12.0
+                      : 8.0;
+
+            var minFatMass = predictedWeight * minBf / 100.0;
+            fatMassNew = Math.Max(fatMassNew, minFatMass);
+            fatMassNew = Math.Min(fatMassNew, predictedWeight);
+
+            var bf = fatMassNew / predictedWeight * 100.0;
+            return Math.Clamp(bf, minBf, 60.0);
+        }
+
+        private static (double fatFrac, double leanFrac) GetFatLeanSplit(
+            ProfileStep1ViewModel p,
+            ProfileStep2ViewModel g,
+            FitnessGoal goal)
+        {
+            // fraction of the weight change that is FAT vs LEAN (dummy assumptions)
+            var (fat, lean) = goal switch
+            {
+                FitnessGoal.HeavyCut => (0.85, 0.15),
+                FitnessGoal.LightCut => (0.90, 0.10),
+                FitnessGoal.LightBulk => (0.35, 0.65),
+                FitnessGoal.HeavyBulk => (0.45, 0.55),
+                _ => (0.50, 0.50)
+            };
+
+            var gymDays = CountBits((int)g.ChosenGymDays);
+            var adj = Math.Clamp(gymDays * 0.01, 0.0, 0.05); // up to 5%
+
+            if (goal is FitnessGoal.HeavyCut or FitnessGoal.LightCut)
+            {
+                fat = Math.Clamp(fat + adj, 0.75, 0.97); // more gym = better lean retention
+                lean = 1.0 - fat;
+            }
+            else if (goal is FitnessGoal.LightBulk or FitnessGoal.HeavyBulk)
+            {
+                lean = Math.Clamp(lean + adj, 0.40, 0.85); // more gym = more lean gain
+                fat = 1.0 - lean;
+            }
+
+            return (fat, lean);
+        }
+
+
+        private static double EstimateBodyFatPercentFromBmi(ProfileStep1ViewModel p)
+        {
+            var h = p.HeightInCM / 100.0;
+            var bmi = p.WeightInKg / (h * h);
+
+            var sex = p.Gender switch
+            {
+                Genders.Male => 1.0,
+                Genders.Female => 0.0,
+                _ => 0.5
+            };
+
+            var bf = (1.20 * bmi) + (0.23 * p.Age) - (10.8 * sex) - 5.4;
+            return Math.Clamp(bf, 2.0, 60.0);
+        }
+
 
         private static int CountBits(int n)
         {
@@ -209,7 +332,6 @@ namespace InTakeWise.Controllers
         {
             EveryDayFitnessLevel = u.EveryDayFitnessLevel,
             ChosenGymDays = u.ChosenGymDays
-        };
-
+        };  
     }
 }

@@ -33,7 +33,22 @@ namespace InTakeWise.ViewModels
     public class ProfileStep3ViewModel
     {
         public double CurrentWeightKg { get; set; }
-        public double PredictedWeightKg { get; set; }
+        public double CurrentFatPercentage { get; set; }
+        public Dictionary<FitnessGoal, double> PredictedWeightKgByGoal { get; set; } = new();
+        public Dictionary<FitnessGoal, double> FatPercentageByGoal { get; set; } = new();
+        public FitnessGoal currentFitnessGoal = FitnessGoal.Maintain; 
+
         public int Months { get; set; }
+         
+        public string GoalLabel(FitnessGoal goal) => goal switch
+        {
+            FitnessGoal.HeavyCut => "Heavy Cut",
+            FitnessGoal.LightCut => "Light Cut",
+            FitnessGoal.Maintain => "Maintain",
+            FitnessGoal.LightBulk => "Light Bulk",
+            FitnessGoal.HeavyBulk => "Heavy Bulk",
+            _ => goal.ToString()
+        }; 
+
     }
 }

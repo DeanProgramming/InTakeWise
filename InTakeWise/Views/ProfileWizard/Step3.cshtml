@@ -1,4 +1,5 @@
 ﻿@using InTakeWise.ViewModels
+@using InTakeWise.Models
 @model ProfileStep3ViewModel
 @{
     ViewData["Title"] = "Prediction";
@@ -9,33 +10,155 @@
 
         <section class="auth-main">
             <div class="menu-actions">
-                <h1 class="auth-title">Your Prediction</h1>
 
                 <div class="menu-action">
-                    <div class="menu-action-title">Current weight</div>
-                    <div class="menu-action-sub">@Model.CurrentWeightKg.ToString("0.0") kg</div>
+                    <div class="menu-action-title">Current weight - @Model.CurrentWeightKg.ToString("0.0") kg</div>
                 </div>
 
-                <div class="menu-action">
-                    <div class="menu-action-title">Predicted after @Model.Months months</div>
-                    <div class="menu-action-sub">@Model.PredictedWeightKg.ToString("0.0") kg</div>
-                </div>
+                <h1 class="auth-title">@Model.Months Month Prediction</h1>
 
-                <form asp-action="Complete" method="post" class="menu-action">
+                <form asp-action="Complete" method="post" class="menu-actions">
                     @Html.AntiForgeryToken()
-                    <button type="submit" class="menu-action" style="width:100%; border:0; background:none;">
+                     
+                    <input type="hidden" asp-for="currentFitnessGoal" id="ChosenFitnessGoal" />
+
+                    @foreach (var goal in Enum.GetValues<FitnessGoal>())
+                    {
+                        var isSelected = Model.currentFitnessGoal == goal;
+
+                        var w = Model.PredictedWeightKgByGoal[goal];
+                        var bf = Model.FatPercentageByGoal[goal];
+
+                        var dw = w - Model.CurrentWeightKg;
+                        var dbf = bf - Model.CurrentFatPercentage;
+
+                        var wGood = GoodWeightDelta(goal, dw, Model.Months);
+                        var bfGood = GoodBodyFatDelta(goal, dbf, Model.Months);
+                        <a href="javascript:void(0)"
+                           class="menu-action menu-goal-row goal-row fitness-goal-tab @(isSelected ? "is-selected" : "") "
+                           data-goal="@goal"
+                           onclick="setGoal('@goal')">
+
+                            <div class="menu-action-sub goal-sub">
+                                <div class="goal-sub-metrics">
+
+                                    <!-- LEFT: Title + Description -->
+                                    <div class="goal-left">
+                                        <div class="menu-action-title">@Model.GoalLabel(goal)</div>
+                                        <div class="goal-desc">@GoalDesc(goal)</div>
+                                    </div>
+
+                                    <!-- RIGHT: Weight change + BF change -->
+                                    <div class="goal-right">
+                                        <div class="goal-metric-row">
+                                            <div class="goal-metric-name">Weight</div>
+                                            <div class="goal-metric-value">
+                                                @w.ToString("0.0") kg
+                                                <span class="delta-pill @DeltaClass(wGood)">
+                                                    @Arrow(dw) @Sign(dw)@dw.ToString("0.0") kg
+                                                </span>
+                                            </div>
+                                        </div>
+
+                                        <div class="goal-metric-row">
+                                            <div class="goal-metric-name">Body fat</div>
+                                            <div class="goal-metric-value">
+                                                @bf.ToString("0.0")%
+                                                <span class="delta-pill @DeltaClass(bfGood)">
+                                                    @Arrow(dbf) @Sign(dbf)@dbf.ToString("0.0")%
+                                                </span>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                </div>
+                            </div>
+                        </a>
+                    }
+
+                    <button type="submit" class="menu-action">
                         <div class="menu-action-title">Finish</div>
                         <div class="menu-action-sub">Save profile & go to menu</div>
-                    </button>
-                </form> 
+                    </button> 
+                </form>
             </div>
         </section>
 
         <aside class="auth-side menu-side">
             <div class="side-top">
                 <h2 class="auth-side-title">Step 3 of 3</h2>
+                <div class="menu-action-sub">
+                    Selected: <span id="goalLabel">@Model.GoalLabel(Model.currentFitnessGoal)</span>
+                </div>
             </div>
         </aside>
 
     </div>
 </div>
+
+<script>
+    function setGoal(goal) {
+      document.getElementById("ChosenFitnessGoal").value = goal;
+
+      document.querySelectorAll("fitness-goal-tab").forEach(row => {
+        row.classList.toggle("is-selected", row.dataset.goal === goal);
+      });
+    }
+     
+
+    (function init() {
+        setGoal('@Model.currentFitnessGoal');
+    })();
+</script>
+
+
+@functions {
+    private static string Sign(double v) => v >= 0 ? "+" : "";
+    private static string Arrow(double v) => v >= 0 ? "▲" : "▼";
+
+    private static bool GoodWeightDelta(FitnessGoal goal, double dw, int months)
+    {
+        months = Math.Max(months, 1);
+        var tol = 0.5 * months;
+
+        return goal switch
+        {
+            FitnessGoal.HeavyCut or FitnessGoal.LightCut => dw < 0,
+            FitnessGoal.LightBulk or FitnessGoal.HeavyBulk => dw > 0,
+            FitnessGoal.Maintain => Math.Abs(dw) <= tol,
+            _ => true
+        };
+    }
+
+    private static bool GoodBodyFatDelta(FitnessGoal goal, double dbf, int months)
+    {
+        months = Math.Max(months, 1);
+
+        var allowedGain = goal switch
+        {
+            FitnessGoal.LightBulk => 0.3 * months,
+            FitnessGoal.HeavyBulk => 0.6 * months,
+            _ => 0.0
+        };
+
+        return goal switch
+        {
+            FitnessGoal.HeavyCut or FitnessGoal.LightCut => dbf < 0,
+            FitnessGoal.Maintain => dbf <= 0.1 * months,
+            FitnessGoal.LightBulk or FitnessGoal.HeavyBulk => dbf <= allowedGain,
+            _ => true
+        };
+    }
+
+    private static string DeltaClass(bool good) => good ? "delta-good" : "delta-bad";
+
+    string GoalDesc(FitnessGoal g) => g switch
+    {
+        FitnessGoal.HeavyCut => "Strength may drop; body fat drops fast.",
+        FitnessGoal.LightCut => "Best strength retention; steady body fat loss.",
+        FitnessGoal.Maintain => "Keep strength and weight stable; small body fat changes.",
+        FitnessGoal.LightBulk => "Build muscle with minimal fat gain; strength improves steadily.",
+        FitnessGoal.HeavyBulk => "Max muscle/strength gain; expect more fat gain too.",
+        _ => ""
+    };
+}

@@ -5,6 +5,7 @@ namespace InTakeWise.Models
 {
     public enum Genders { Male, Female, Other, PreferNotToSay }
     public enum FitnessLevel { Low, Medium, High }
+    public enum FitnessGoal { HeavyCut, LightCut, Maintain, LightBulk, HeavyBulk }
 
     [Flags]
     public enum GymDays
@@ -46,6 +47,8 @@ namespace InTakeWise.Models
         public FitnessLevel EveryDayFitnessLevel { get; set; }
         [Required]
         public GymDays ChosenGymDays { get; set; } = GymDays.None;
+        [Required]
+        public FitnessGoal ChosenFitnessGoal { get; set; } = FitnessGoal.Maintain;
 
 
         // Gym day targets
