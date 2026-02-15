@@ -1,4 +1,4 @@
-﻿@model InTakeWise.ViewModels.FloatingBackButtonViewModel
+﻿﻿@model InTakeWise.ViewModels.FloatingBackButtonViewModel
 
 <a class="floating-back-btn"
    href="@Model.FallbackUrl"
@@ -12,18 +12,29 @@
       const btn = document.querySelector('.floating-back-btn[data-fallback]');
       if (!btn) return;
 
-      btn.addEventListener('click', (e) => { 
+      let locked = false;
+
+      btn.addEventListener('click', (e) => {
+        if (locked) { 
+          e.preventDefault();
+          return;
+        }
+        locked = true;
+
         try {
           const ref = document.referrer;
-          const sameOrigin = ref && new URL(ref).origin === window.location.origin;
+          if (!ref) return;  
 
-          if (window.history.length > 1 && sameOrigin) {
+          const refUrl = new URL(ref);
+          const sameOrigin = refUrl.origin === window.location.origin;
+          const samePage = refUrl.href === window.location.href;
+
+          if (sameOrigin && !samePage && window.history.length > 1) {
             e.preventDefault();
             window.history.back();
-          }
-        } catch {
-
+          } 
+        } catch { 
         }
-      });
+      }, { once: true });  
     })();
 </script>
