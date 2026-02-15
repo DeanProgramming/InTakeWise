@@ -147,8 +147,7 @@ namespace InTakeWise.Controllers
 
             var existing = await _db.UsersInformation
                 .FirstOrDefaultAsync(x => x.UserId == user.Id);
-
-            const int gymCalories = 2200, nonGymCalories = 2000;
+             
 
             if (existing == null)
             {
@@ -165,18 +164,9 @@ namespace InTakeWise.Controllers
             existing.ChosenGymDays = step2.ChosenGymDays;
             existing.ChosenFitnessGoal = step3.CurrentFitnessGoal;
 
-            // Dummy macros
-            existing.CaloriesTargetGymDay = gymCalories;
-            existing.ProteinTargetGymDay = 160;
-            existing.CarbsTargetGymDay = 220;
-            existing.FatTargetGymDay = 70;
-            existing.FiberTargetGymDay = 30;
+            var (gymCalories, nonGymCalories) = ComputeCaloriesFromRoughEstimate(step1, step2, step3.CurrentFitnessGoal);
 
-            existing.CaloriesTargetNonGymDay = nonGymCalories;
-            existing.ProteinTargetNonGymDay = 150;
-            existing.CarbsTargetNonGymDay = 200;
-            existing.FatTargetNonGymDay = 65;
-            existing.FiberTargetNonGymDay = 30;
+            SetMacroTargets(ref existing, step1.WeightInKg, step3.CurrentFitnessGoal, gymCalories, nonGymCalories); 
 
             await _db.SaveChangesAsync();
 
@@ -312,6 +302,180 @@ namespace InTakeWise.Controllers
             return Math.Clamp(bf, 2.0, 60.0);
         }
 
+        static double ProteinPerKg(FitnessGoal g) => g switch
+        {
+            FitnessGoal.HeavyCut => 2.2,
+            FitnessGoal.LightCut => 2.0,
+            FitnessGoal.Maintain => 1.8,
+            FitnessGoal.LightBulk => 1.7,
+            FitnessGoal.HeavyBulk => 1.6,
+            _ => 1.8
+        };
+
+        static double FatPerKg(FitnessGoal g) => g switch
+        {
+            FitnessGoal.HeavyCut or FitnessGoal.LightCut => 0.7,
+            FitnessGoal.Maintain => 0.8,
+            FitnessGoal.LightBulk or FitnessGoal.HeavyBulk => 0.9,
+            _ => 0.8
+        };
+
+        static int ClampInt(int v, int lo, int hi) => Math.Max(lo, Math.Min(hi, v));
+
+        static int FiberFromCalories(int cals)
+            => ClampInt((int)Math.Round(14.0 * (cals / 1000.0)), 25, 45);
+
+        static int CarbsFrom(int calories, int p, int f)
+        {
+            var remaining = calories - (p * 4) - (f * 9);
+            return Math.Max(0, (int)Math.Round(remaining / 4.0));
+        }
+
+        private static void SetMacroTargets(
+            ref UsersInformation existing,
+            double weightKg,
+            FitnessGoal goal,
+            int gymCalories,
+            int nonGymCalories,
+            bool carbBumpOnGymDays = true)
+        {
+
+
+            var protein = (int)Math.Round(weightKg * ProteinPerKg(goal));
+            protein = ClampInt(protein, 90, 220);
+
+            // Fat scaled by bodyweight with a minimum floor
+            var fatBase = (int)Math.Round(weightKg * FatPerKg(goal));
+            var fatMin = Math.Max((int)Math.Round(weightKg * 0.6), 40);
+            var fatGym = Math.Max(fatBase, fatMin);
+            var fatNonGym = Math.Max(fatBase, fatMin);
+
+            var fiberGym = FiberFromCalories(gymCalories);
+            var fiberNonGym = FiberFromCalories(nonGymCalories);
+
+
+
+            var carbsGym = CarbsFrom(gymCalories, protein, fatGym);
+            var carbsNonGym = CarbsFrom(nonGymCalories, protein, fatNonGym);
+
+            if (carbBumpOnGymDays && carbsGym > 0)
+            {
+                var bump = (int)Math.Round(carbsGym * 0.15);
+                var bumpCals = bump * 4;
+
+                var fatReduction = (int)Math.Round(bumpCals / 9.0);
+                var newFatGym = Math.Max(fatGym - fatReduction, fatMin);
+
+                fatGym = newFatGym;
+                carbsGym = CarbsFrom(gymCalories, protein, fatGym);
+            }
+
+            existing.CaloriesTargetGymDay = gymCalories;
+            existing.ProteinTargetGymDay = protein;
+            existing.FatTargetGymDay = fatGym;
+            existing.CarbsTargetGymDay = carbsGym;
+            existing.FiberTargetGymDay = fiberGym;
+
+            existing.CaloriesTargetNonGymDay = nonGymCalories;
+            existing.ProteinTargetNonGymDay = protein;
+            existing.FatTargetNonGymDay = fatNonGym;
+            existing.CarbsTargetNonGymDay = carbsNonGym;
+            existing.FiberTargetNonGymDay = fiberNonGym;
+        }
+
+        private static (int gymCalories, int nonGymCalories) ComputeCaloriesFromRoughEstimate(
+            ProfileStep1ViewModel p,
+            ProfileStep2ViewModel g,
+            FitnessGoal goal)
+        { 
+            var goalMonthlyDelta = goal switch
+            {
+                FitnessGoal.HeavyCut => -1.5,
+                FitnessGoal.LightCut => -0.75,
+                FitnessGoal.Maintain => 0.0,
+                FitnessGoal.LightBulk => 0.5,
+                FitnessGoal.HeavyBulk => 1.0,
+                _ => 0.0
+            };
+
+            var fitnessMultiplier = g.EveryDayFitnessLevel switch
+            {
+                FitnessLevel.Low => 0.9,
+                FitnessLevel.Medium => 1.0,
+                FitnessLevel.High => 1.1,
+                _ => 1.0
+            };
+
+            var gymDays = Math.Clamp(CountBits((int)g.ChosenGymDays), 0, 7);
+            var gymBonus = gymDays * 0.1;
+
+            var direction = Math.Sign(goalMonthlyDelta); 
+            var monthlyDeltaKg = (goalMonthlyDelta * fitnessMultiplier) + (gymBonus * direction);
+             
+            var kcalPerDayFromGoal = (monthlyDeltaKg * 7700.0) / 30.0;  
+             
+            var tdee = EstimateTdee(p, g);
+             
+            var avgTarget = tdee + kcalPerDayFromGoal;
+             
+            var minCalories = p.Gender == Genders.Female ? 1200 : 1500;
+            avgTarget = Math.Max(avgTarget, minCalories);
+             
+            var nonGymDays = 7 - gymDays;
+
+            if (gymDays == 0 || nonGymDays == 0)
+            {
+                var c = (int)Math.Round(avgTarget);
+                c = Math.Max(c, minCalories);
+                return (c, c);
+            }
+             
+            var shift = (int)Math.Round(Math.Clamp(tdee * 0.06, 120, 300));  
+
+            var weeklyTarget = avgTarget * 7.0;
+
+            var gymCalories = (int)Math.Round(avgTarget + shift);
+            var nonGymCalories = (int)Math.Round((weeklyTarget - (gymCalories * gymDays)) / nonGymDays);
+             
+            if (nonGymCalories < minCalories)
+            {
+                nonGymCalories = minCalories;
+                gymCalories = (int)Math.Round((weeklyTarget - (nonGymCalories * nonGymDays)) / gymDays);
+            }
+
+            gymCalories = Math.Max(gymCalories, minCalories);
+
+            return (gymCalories, nonGymCalories);
+        }
+
+        private static double EstimateTdee(ProfileStep1ViewModel p, ProfileStep2ViewModel g)
+        {
+            // Mifflin–St Jeor BMR
+            var w = (double)p.WeightInKg;
+            var h = (double)p.HeightInCM;
+            var a = (double)p.Age;
+
+            var bmr = p.Gender switch
+            {
+                Genders.Male => 10 * w + 6.25 * h - 5 * a + 5,
+                Genders.Female => 10 * w + 6.25 * h - 5 * a - 161,
+                _ => 10 * w + 6.25 * h - 5 * a - 78
+            };
+             
+            var af = g.EveryDayFitnessLevel switch
+            {
+                FitnessLevel.Low => 1.35,
+                FitnessLevel.Medium => 1.50,
+                FitnessLevel.High => 1.65,
+                _ => 1.50
+            };
+             
+            var gymDays = Math.Clamp(CountBits((int)g.ChosenGymDays), 0, 7);
+            af = Math.Clamp(af + gymDays * 0.02, 1.25, 1.90);
+
+            return bmr * af;
+        } 
+
 
         private static int CountBits(int n)
         {
@@ -334,5 +498,6 @@ namespace InTakeWise.Controllers
             EveryDayFitnessLevel = u.EveryDayFitnessLevel,
             ChosenGymDays = u.ChosenGymDays
         };  
+
     }
 }
