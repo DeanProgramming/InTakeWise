@@ -12,10 +12,10 @@
         public int FatTarget { get; set; }
         public int FiberTarget { get; set; }
 
-        public int CaloriesConsumed { get; set; } = 1500;
-        public int ProteinConsumed { get; set; } = 120;
-        public int CarbsConsumed { get; set; } = 200;
-        public int FatConsumed { get; set; } = 24;
-        public int FiberConsumed { get; set; } = 13;
+        public int CaloriesConsumed { get; set; }
+        public int ProteinConsumed { get; set; }
+        public int CarbsConsumed { get; set; }
+        public int FatConsumed { get; set; }
+        public int FiberConsumed { get; set; }
     }
 }

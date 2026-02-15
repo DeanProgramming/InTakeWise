@@ -29,24 +29,53 @@ namespace InTakeWise.ViewComponents
             var profile = await _db.UsersInformation
                 .AsNoTracking()
                 .FirstOrDefaultAsync(x => x.UserId == user.Id);
+             
+            var todayUtc = DateTime.UtcNow.Date;
+            var tomorrowUtc = todayUtc.AddDays(1);
 
-            
-
+            var totals = await _db.MealLogs
+                .AsNoTracking()
+                .Where(x => x.UserId == user.Id && x.Timestamp >= todayUtc && x.Timestamp < tomorrowUtc)
+                .GroupBy(_ => 1)
+                .Select(g => new
+                {
+                    Calories = g.Sum(x => x.Calories ?? 0),
+                    Protein = g.Sum(x => x.Protein ?? 0),
+                    Carbs = g.Sum(x => x.Carbs ?? 0),
+                    Fat = g.Sum(x => x.Fat ?? 0),
+                    Fiber = g.Sum(x => x.Fiber ?? 0),
+                })
+                .FirstOrDefaultAsync();
+             
             if (profile == null)
             {
-                return View(new MenuSideViewModel
+                var vmNoProfile = new MenuSideViewModel
                 {
-                    UserName = profile.ProfileUserName,
+                    UserName = user.UserName,  
                     CaloriesTarget = 0,
                     ProteinTarget = 0,
                     CarbsTarget = 0,
                     FatTarget = 0,
                     FiberTarget = 0,
-                    IsGymDayToday = false
-                });
-            }
+                    IsGymDayToday = false,
 
-            var todayFlag = DayOfWeekToGymDay(DateTime.Today.DayOfWeek);
+                    CaloriesConsumed = totals?.Calories ?? 0,
+                    ProteinConsumed = totals?.Protein ?? 0,
+                    CarbsConsumed = totals?.Carbs ?? 0,
+                    FatConsumed = totals?.Fat ?? 0,
+                    FiberConsumed = totals?.Fiber ?? 0,
+                };
+
+                var viewNameNoProfile = variant?.ToLowerInvariant() switch
+                {
+                    "compact" => "ProfileInfoShorten",
+                    _ => "ProfileInfo"
+                };
+
+                return View(viewNameNoProfile, vmNoProfile);
+            }
+             
+            var todayFlag = DayOfWeekToGymDay(DateTime.UtcNow.DayOfWeek);
             var isGymDayToday = todayFlag != GymDays.None && (profile.ChosenGymDays & todayFlag) != 0;
 
             var vm = new MenuSideViewModel
@@ -59,7 +88,12 @@ namespace InTakeWise.ViewComponents
                 CarbsTarget = isGymDayToday ? profile.CarbsTargetGymDay : profile.CarbsTargetNonGymDay,
                 FatTarget = isGymDayToday ? profile.FatTargetGymDay : profile.FatTargetNonGymDay,
                 FiberTarget = isGymDayToday ? profile.FiberTargetGymDay : profile.FiberTargetNonGymDay,
-                 
+
+                CaloriesConsumed = totals?.Calories ?? 0,
+                ProteinConsumed = totals?.Protein ?? 0,
+                CarbsConsumed = totals?.Carbs ?? 0,
+                FatConsumed = totals?.Fat ?? 0,
+                FiberConsumed = totals?.Fiber ?? 0,
             };
 
             var viewName = variant?.ToLowerInvariant() switch
@@ -68,7 +102,7 @@ namespace InTakeWise.ViewComponents
                 _ => "ProfileInfo"
             };
 
-            return View(viewName, vm); 
+            return View(viewName, vm);
         }
 
         private static GymDays DayOfWeekToGymDay(DayOfWeek d) => d switch
