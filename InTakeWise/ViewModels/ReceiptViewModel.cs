@@ -2,6 +2,6 @@
 {
     public class ReceiptViewModel
     {
-        public string DecodedInfo { get; set; } = ""; 
+        public List<PantryItemInputViewModel> Items { get; set; } = new();
     }
 }
