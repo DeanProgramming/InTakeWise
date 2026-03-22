@@ -5,9 +5,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
-using System.Globalization;
 using System.Security.Claims;
-using System.Text.RegularExpressions;
 
 namespace InTakeWise.Controllers
 {
@@ -42,63 +40,170 @@ namespace InTakeWise.Controllers
                 .OrderBy(x => x.FoodItem.Name)
                 .ToListAsync();
 
-            return View("Pantry", new PantryViewModel { Items = items });
+            var model = new PantryViewModel
+            {
+                Items = items.Select(x => new PantryItemInputViewModel
+                {
+                    Id = x.Id,
+                    FoodItemId = x.FoodItemId,
+                    Name = x.FoodItem?.Name ?? "",
+                    Quantity = x.Quantity,
+                    Unit = x.Unit ?? ""
+                }).ToList()
+            };
+
+            model.Items.Add(new PantryItemInputViewModel());
+
+            return View("Pantry", model);
         }
 
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> SavePantryInfo(string userInput)
+        public async Task<IActionResult> SavePantryInfo(PantryViewModel model)
         {
             var user = await _userManager.GetUserAsync(User);
             var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+
             if (user == null || string.IsNullOrWhiteSpace(userId))
                 return Unauthorized();
 
-            var parsedLines = ParsePantryInput(userInput);
+            model.Items ??= new List<PantryItemInputViewModel>();
+
+            var rows = model.Items
+                .Where(x =>
+                    !string.IsNullOrWhiteSpace(x.Name) ||
+                    x.Quantity.HasValue ||
+                    !string.IsNullOrWhiteSpace(x.Unit) ||
+                    x.Id > 0)
+                .ToList();
+
+            if (!rows.Any(x => x.Id == 0 &&
+                               string.IsNullOrWhiteSpace(x.Name) &&
+                               !x.Quantity.HasValue &&
+                               string.IsNullOrWhiteSpace(x.Unit)))
+            {
+                model.Items = rows.ToList();
+            }
+
+            if (!ModelState.IsValid)
+            {
+                if (!model.Items.Any() ||
+                    !string.IsNullOrWhiteSpace(model.Items.Last().Name) ||
+                    model.Items.Last().Quantity.HasValue ||
+                    !string.IsNullOrWhiteSpace(model.Items.Last().Unit))
+                {
+                    model.Items.Add(new PantryItemInputViewModel());
+                }
+
+                return View("Pantry", model);
+            }
+
+            var mergedRows = new List<PantryItemInputViewModel>();
+
+            foreach (var group in rows
+                .Where(x => !string.IsNullOrWhiteSpace(x.Name))
+                .GroupBy(x => x.Name.Trim(), StringComparer.OrdinalIgnoreCase))
+            {
+                UnitInfo? firstUnit = null;
+                decimal totalBaseQuantity = 0m;
+
+                foreach (var row in group)
+                {
+                    var parsedUnit = ParseUnit(row.Unit);
+                    var qty = row.Quantity ?? 0m;
+
+                    if (firstUnit == null)
+                    {
+                        firstUnit = parsedUnit;
+                    }
+                    else if (!string.Equals(firstUnit.Family, parsedUnit.Family, StringComparison.OrdinalIgnoreCase))
+                    {
+                        ModelState.AddModelError("", $"'{group.Key}' has incompatible units ('{firstUnit.NormalizedUnit}' and '{parsedUnit.NormalizedUnit}').");
+                        continue;
+                    }
+
+                    totalBaseQuantity += qty * parsedUnit.FactorToBase;
+                }
+
+                if (firstUnit == null)
+                    continue;
+
+                var converted = ConvertFromBase(totalBaseQuantity, firstUnit.Family, firstUnit.NormalizedUnit);
+
+                mergedRows.Add(new PantryItemInputViewModel
+                {
+                    Id = group.Where(x => x.Id > 0).Select(x => x.Id).FirstOrDefault(),
+                    FoodItemId = group.Where(x => x.FoodItemId > 0).Select(x => x.FoodItemId).FirstOrDefault(),
+                    Name = group.Key,
+                    Quantity = converted.Quantity,
+                    Unit = converted.Unit
+                });
+            }
+
+            if (!ModelState.IsValid)
+            {
+                if (!model.Items.Any() ||
+                    !string.IsNullOrWhiteSpace(model.Items.Last().Name) ||
+                    model.Items.Last().Quantity.HasValue ||
+                    !string.IsNullOrWhiteSpace(model.Items.Last().Unit))
+                {
+                    model.Items.Add(new PantryItemInputViewModel());
+                }
+
+                return View("Pantry", model);
+            }
 
             var existingPantry = await _db.PantryItems
                 .Include(x => x.FoodItem)
                 .Where(x => x.UserId == userId)
                 .ToListAsync();
 
-            var keepFoodItemIds = new HashSet<int>();
+            var keepIds = new HashSet<int>();
 
-            foreach (var line in parsedLines)
+            foreach (var row in mergedRows)
             {
+                var trimmedName = row.Name.Trim();
+
                 var food = await _db.FoodItems
-                    .FirstOrDefaultAsync(f => f.Name.ToLower() == line.Name.ToLower());
+                    .FirstOrDefaultAsync(f => f.Name.ToLower() == trimmedName.ToLower());
 
                 if (food == null)
                 {
-                    food = new FoodItem { Name = line.Name };
+                    food = new FoodItem { Name = trimmedName };
                     _db.FoodItems.Add(food);
-                    await _db.SaveChangesAsync(); 
+                    await _db.SaveChangesAsync();
                 }
 
-                keepFoodItemIds.Add(food.Id);
+                var existing = row.Id > 0
+                    ? existingPantry.FirstOrDefault(x => x.Id == row.Id)
+                    : null;
 
-                var pantryItem = existingPantry.FirstOrDefault(p => p.FoodItemId == food.Id);
-                if (pantryItem == null)
+                existing ??= existingPantry.FirstOrDefault(x =>
+                    x.FoodItem != null &&
+                    x.FoodItem.Name.Equals(trimmedName, StringComparison.OrdinalIgnoreCase));
+
+                if (existing == null)
                 {
                     _db.PantryItems.Add(new PantryItem
                     {
                         UserId = userId,
                         FoodItemId = food.Id,
-                        Quantity = line.Quantity,
-                        Unit = line.Unit ?? "",
-                        ExpiryDate = line.ExpiryDate
+                        Quantity = row.Quantity ?? 0,
+                        Unit = row.Unit?.Trim() ?? ""
                     });
                 }
                 else
                 {
-                    pantryItem.Quantity = line.Quantity + pantryItem.Quantity;
-                    pantryItem.Unit = line.Unit ?? "";
-                    pantryItem.ExpiryDate = line.ExpiryDate;
+                    existing.FoodItemId = food.Id;
+                    existing.Quantity = row.Quantity ?? 0;
+                    existing.Unit = row.Unit?.Trim() ?? "";
+
+                    keepIds.Add(existing.Id);
                 }
             }
 
             var toRemove = existingPantry
-                .Where(p => !keepFoodItemIds.Contains(p.FoodItemId))
+                .Where(x => !keepIds.Contains(x.Id))
                 .ToList();
 
             if (toRemove.Count > 0)
@@ -118,83 +223,70 @@ namespace InTakeWise.Controllers
             return RedirectToAction(nameof(Index));
         }
 
-        private sealed record ParsedPantryLine(string Name, decimal Quantity, string Unit, DateTime? ExpiryDate);
+        private sealed record UnitInfo(string NormalizedUnit, string Family, decimal FactorToBase);
 
-        private static List<ParsedPantryLine> ParsePantryInput(string? input)
+        private static UnitInfo ParseUnit(string? rawUnit)
         {
-            var results = new List<ParsedPantryLine>();
-            if (string.IsNullOrWhiteSpace(input))
-                return results;
+            var unit = (rawUnit ?? "").Trim().ToLowerInvariant();
 
-            var lines = input.Split(new[] { "\r\n", "\n" }, StringSplitOptions.None);
-
-            foreach (var raw in lines)
+            return unit switch
             {
-                var line = (raw ?? "").Trim();
-                if (string.IsNullOrWhiteSpace(line)) continue;
+                "mg" or "milligram" or "milligrams"
+                    => new UnitInfo("mg", "mass", 0.001m),
 
-                DateTime? expiry = null;
-                var expiryMatch = Regex.Match(line, @"\((?:Expires|Expiry)\s*:\s*(\d{4}-\d{2}-\d{2})\)\s*$",
-                    RegexOptions.IgnoreCase);
+                "g" or "gram" or "grams"
+                    => new UnitInfo("g", "mass", 1m),
 
-                if (expiryMatch.Success)
-                {
-                    var dateText = expiryMatch.Groups[1].Value;
-                    if (DateTime.TryParseExact(dateText, "yyyy-MM-dd", CultureInfo.InvariantCulture,
-                        DateTimeStyles.None, out var dt))
-                    {
-                        expiry = dt.Date;
-                    }
+                "kg" or "kilogram" or "kilograms"
+                    => new UnitInfo("kg", "mass", 1000m),
 
-                    line = Regex.Replace(line, @"\s*\((?:Expires|Expiry)\s*:\s*\d{4}-\d{2}-\d{2}\)\s*$", "",
-                        RegexOptions.IgnoreCase).Trim();
-                }
+                "ml" or "millilitre" or "millilitres" or "milliliter" or "milliliters"
+                    => new UnitInfo("ml", "volume", 1m),
 
-                var parts = line.Split(" - ", 2, StringSplitOptions.TrimEntries);
-                var name = parts[0].Trim();
+                "l" or "litre" or "litres" or "liter" or "liters"
+                    => new UnitInfo("l", "volume", 1000m),
 
-                decimal qty = 1;
-                string unit = "";
+                "tin" or "tins"
+                    => new UnitInfo("tins", "count:tins", 1m),
 
-                if (parts.Length == 2)
-                {
-                    var rest = parts[1].Trim();
+                "can" or "cans"
+                    => new UnitInfo("cans", "count:cans", 1m),
 
-                    var restParts = rest.Split(' ', 2, StringSplitOptions.TrimEntries);
+                "pack" or "packs"
+                    => new UnitInfo("packs", "count:packs", 1m),
 
-                    if (restParts.Length >= 1)
-                    {
-                        if (!decimal.TryParse(restParts[0], NumberStyles.Number, CultureInfo.InvariantCulture, out qty))
-                        {
-                            decimal.TryParse(restParts[0], NumberStyles.Number, CultureInfo.CurrentCulture, out qty);
-                        }
-                    }
+                "bottle" or "bottles"
+                    => new UnitInfo("bottles", "count:bottles", 1m),
 
-                    if (restParts.Length == 2)
-                        unit = restParts[1].Trim();
-                }
+                "item" or "items" or "piece" or "pieces" or "unit" or "units"
+                    => new UnitInfo("items", "count:items", 1m),
 
-                if (string.IsNullOrWhiteSpace(name))
-                    continue;
+                _ => new UnitInfo(unit, $"custom:{unit}", 1m)
+            };
+        }
 
-                results.Add(new ParsedPantryLine(name, qty, unit, expiry));
+        private static (decimal Quantity, string Unit) ConvertFromBase(decimal totalBase, string family, string fallbackUnit)
+        {
+            if (family == "mass")
+            {
+                if (totalBase >= 1000m)
+                    return (decimal.Round(totalBase / 1000m, 3), "kg");
+
+                if (totalBase >= 1m)
+                    return (decimal.Round(totalBase, 3), "g");
+
+                return (decimal.Round(totalBase * 1000m, 3), "mg");
             }
 
-            var grouped = results
-                .GroupBy(x => x.Name.Trim(), StringComparer.OrdinalIgnoreCase)
-                .Select(g =>
-                {
-                    var last = g.Last();
-                    return new ParsedPantryLine(
-                        Name: g.Key,
-                        Quantity: g.Sum(x => x.Quantity),
-                        Unit: last.Unit,
-                        ExpiryDate: last.ExpiryDate
-                    );
-                })
-                .ToList();
+            if (family == "volume")
+            {
+                if (totalBase >= 1000m)
+                    return (decimal.Round(totalBase / 1000m, 3), "l");
 
-            return grouped;
+                return (decimal.Round(totalBase, 3), "ml");
+            }
+
+            return (decimal.Round(totalBase, 3), fallbackUnit);
         }
     }
 }

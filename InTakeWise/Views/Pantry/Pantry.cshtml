@@ -1,27 +1,15 @@
 ﻿@model InTakeWise.ViewModels.PantryViewModel
+@using System.Globalization
 
 @{
     ViewData["Title"] = "Whats in your Pantry";
-     
-    var text = string.Join(Environment.NewLine,
-        (Model.Items ?? Enumerable.Empty<InTakeWise.Models.PantryItem>())
-        .Select(item =>
-        {
-            var name = item.FoodItem?.Name ?? "(unknown item)";
-            var expiry = item.ExpiryDate.HasValue
-                ? $" (Expires: {item.ExpiryDate.Value:yyyy-MM-dd})"
-                : "";
-            return $"{name} - {item.Quantity} {item.Unit}{expiry}";
-        })
-    );
 }
 
 <div class="auth-page">
     <div class="auth-card menu-card">
 
-        <!-- MAIN -->
         <section class="auth-main">
-            <div class="menu-actions"> 
+            <div class="menu-actions">
 
                 <a class="menu-action"
                    asp-controller="Receipt"
@@ -33,35 +21,197 @@
 
                 <h1 class="auth-title">@ViewData["Title"]</h1>
 
-                 
                 @if (TempData["PantrySaved"] is string msg)
                 {
-                    <div class="menu-action">@msg</div>
+                    <div class="menu-action">
+                        <div class="menu-action-title">Saved</div>
+                        <div class="menu-action-sub">@msg</div>
+                    </div>
                 }
 
-                <form asp-controller="Pantry"
+                <form id="pantryForm"
+                      asp-controller="Pantry"
                       asp-action="SavePantryInfo"
                       method="post"
-                      class="log-form">
+                      class="pantry-form">
                     @Html.AntiForgeryToken()
 
-                    <textarea name="userInput"
-                              class="log-text-box menu-action"
-                              rows="10"
-                              style="white-space: pre-wrap;">@text</textarea>
+                    @if (!ViewData.ModelState.IsValid)
+                    {
+                        <div asp-validation-summary="ModelOnly" class="menu-validation"></div>
+                    }
 
-                    <button type="submit" class="btn-primary">
-                        Save
-                    </button>
+                    <div id="pantryRows" class="pantry-list">
+                        @for (int i = 0; i < Model.Items.Count - 1; i++)
+                        {
+                            var item = Model.Items[i];
+                            var quantityValue = item.Quantity.HasValue
+                            ? item.Quantity.Value.ToString(CultureInfo.InvariantCulture)
+                            : "";
+
+                            <div class="menu-action pantry-card" data-row>
+                                <input type="hidden" name="Items[@i].Id" value="@item.Id" data-field="Id" />
+                                <input type="hidden" name="Items[@i].FoodItemId" value="@item.FoodItemId" data-field="FoodItemId" />
+
+                                <div class="pantry-fields">
+                                    <div class="pantry-field pantry-field-name">
+                                        <label class="pantry-label">Food</label>
+                                        <input type="text"
+                                               name="Items[@i].Name"
+                                               value="@item.Name"
+                                               data-field="Name"
+                                               class="menu-input pantry-input"
+                                               placeholder="Food item" />
+                                        @Html.ValidationMessage($"Items[{i}].Name", "", new { @class = "menu-field-error" })
+                                    </div>
+
+                                    <div class="pantry-field pantry-field-qty">
+                                        <label class="pantry-label">Amount</label>
+                                        <input type="number"
+                                               name="Items[@i].Quantity"
+                                               value="@quantityValue"
+                                               data-field="Quantity"
+                                               class="menu-input pantry-input"
+                                               placeholder="Amount"
+                                               min="0.01"
+                                               step="0.01" />
+                                        @Html.ValidationMessage($"Items[{i}].Quantity", "", new { @class = "menu-field-error" })
+                                    </div>
+
+                                    <div class="pantry-field pantry-field-unit">
+                                        <label class="pantry-label">Unit</label>
+                                        <input type="text"
+                                               name="Items[@i].Unit"
+                                               value="@item.Unit"
+                                               data-field="Unit"
+                                               class="menu-input pantry-input"
+                                               placeholder="Unit (g, kg, ml, tins)" />
+                                        @Html.ValidationMessage($"Items[{i}].Unit", "", new { @class = "menu-field-error" })
+                                    </div>
+
+                                    <div class="pantry-field pantry-field-delete">
+                                        <label class="pantry-label pantry-label-ghost">Action</label>
+                                        <button type="button"
+                                                class="pantry-btn pantry-btn-delete"
+                                                onclick="removeRow(this)">
+                                            Delete
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        }
+                    </div>
+
+                    <div class="pantry-bottom-actions">
+                        <button type="button" class="menu-action pantry-add-btn" onclick="addRow()">
+                            <span class="menu-action-title">Add Item</span>
+                            <span class="menu-action-sub">Create another pantry row</span>
+                        </button>
+
+                        <button type="submit" class="menu-action menu-primary-btn pantry-save-btn">
+                            <span class="menu-action-title">Save Pantry</span>
+                            <span class="menu-action-sub">Update your pantry items</span>
+                        </button>
+                    </div>
                 </form>
 
             </div>
         </section>
 
-        <!-- SIDE -->
         @await Component.InvokeAsync("MenuSide", new { variant = "compact" })
 
     </div>
 </div>
 
-@await Component.InvokeAsync("FloatingBackButton", new {text = "BACK", fallbackUrl = Url.Action("Index", "Home")})
+@await Component.InvokeAsync("FloatingBackButton", new { text = "BACK", fallbackUrl = Url.Action("Index", "Home") })
+
+<script>
+    function addRow() {
+        const container = document.getElementById("pantryRows");
+        const index = container.querySelectorAll("[data-row]").length;
+
+        const row = document.createElement("div");
+        row.className = "menu-action pantry-card";
+        row.setAttribute("data-row", "");
+
+        row.innerHTML = `
+            <input type="hidden" name="Items[${index}].Id" value="0" data-field="Id" />
+            <input type="hidden" name="Items[${index}].FoodItemId" value="0" data-field="FoodItemId" />
+
+            <div class="pantry-fields">
+                <div class="pantry-field pantry-field-name">
+                    <label class="pantry-label">Food</label>
+                    <input type="text"
+                           name="Items[${index}].Name"
+                           value=""
+                           data-field="Name"
+                           class="menu-input pantry-input"
+                           placeholder="Food item" />
+                    <span class="menu-field-error" data-valmsg-field="Name"></span>
+                </div>
+
+                <div class="pantry-field pantry-field-qty">
+                    <label class="pantry-label">Amount</label>
+                    <input type="number"
+                           name="Items[${index}].Quantity"
+                           value=""
+                           data-field="Quantity"
+                           class="menu-input pantry-input"
+                           placeholder="Amount"
+                           min="0.01"
+                           step="0.01" />
+                    <span class="menu-field-error" data-valmsg-field="Quantity"></span>
+                </div>
+
+                <div class="pantry-field pantry-field-unit">
+                    <label class="pantry-label">Unit</label>
+                    <input type="text"
+                           name="Items[${index}].Unit"
+                           value=""
+                           data-field="Unit"
+                           class="menu-input pantry-input"
+                           placeholder="Unit (g, kg, ml, tins)" />
+                    <span class="menu-field-error" data-valmsg-field="Unit"></span>
+                </div>
+
+                <div class="pantry-field pantry-field-delete">
+                    <label class="pantry-label pantry-label-ghost">Action</label>
+                    <button type="button"
+                            class="pantry-btn pantry-btn-delete"
+                            onclick="removeRow(this)">
+                        Delete
+                    </button>
+                </div>
+            </div>
+        `;
+
+        container.appendChild(row);
+        reindexRows();
+    }
+
+    function removeRow(button) {
+        const row = button.closest("[data-row]");
+        if (row) {
+            row.remove();
+            reindexRows();
+        }
+    }
+
+    function reindexRows() {
+        const rows = document.querySelectorAll("#pantryRows [data-row]");
+
+        rows.forEach((row, index) => {
+            row.querySelectorAll("[data-field]").forEach(field => {
+                field.name = `Items[${index}].${field.dataset.field}`;
+            });
+
+            row.querySelectorAll("[data-valmsg-field]").forEach(span => {
+                span.setAttribute("data-valmsg-for", `Items[${index}].${span.dataset.valmsgField}`);
+            });
+        });
+    }
+
+    document.getElementById("pantryForm").addEventListener("submit", function () {
+        reindexRows();
+    });
+</script>
