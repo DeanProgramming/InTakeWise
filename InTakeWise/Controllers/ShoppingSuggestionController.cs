@@ -1,9 +1,9 @@
-﻿using InTakeWise.Dto;
+﻿using System.Net;
+using System.Security.Claims;
 using InTakeWise.Services;
 using InTakeWise.ViewModels;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using System.Security.Claims;
 
 namespace InTakeWise.Controllers
 {
@@ -12,15 +12,19 @@ namespace InTakeWise.Controllers
     {
         private readonly IFoodItemService _foodItemService;
         private readonly IShoppingSuggestionService _shoppingSuggestionService;
+        private readonly ILogger<ShoppingSuggestionController> _logger;
 
         public ShoppingSuggestionController(
-            IFoodItemService foodService,
-            IShoppingSuggestionService shoppingSuggestionService)
+            IFoodItemService foodItemService,
+            IShoppingSuggestionService shoppingSuggestionService,
+            ILogger<ShoppingSuggestionController> logger)
         {
-            _foodItemService = foodService;
+            _foodItemService = foodItemService;
             _shoppingSuggestionService = shoppingSuggestionService;
+            _logger = logger;
         }
 
+        [HttpGet]
         public IActionResult Index()
         {
             return View("ShoppingSuggestion", new ShoppingSuggestionViewModel());
@@ -30,35 +34,70 @@ namespace InTakeWise.Controllers
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> GetShoppingList()
         {
+            var vm = new ShoppingSuggestionViewModel();
+
             var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
             if (string.IsNullOrWhiteSpace(userId))
                 return Unauthorized();
 
-            var foods = await _foodItemService.GetFoodItemsAsync(userId);
-
-            var plan = await _shoppingSuggestionService.GenerateWeekPlanAsync(userId, foods);
-
-            var vm = new ShoppingSuggestionViewModel
+            try
             {
-                ShoppingList = plan.ShoppingList.Select(x => new ShoppingLineVm
-                {
-                    Name = x.Name,
-                    Quantity = x.Quantity,
-                    Unit = x.Unit
-                }).ToList(),
+                var pantryItems = await _foodItemService.GetFoodItemsAsync(userId);
+                var plan = await _shoppingSuggestionService.GenerateWeekPlanAsync(userId, pantryItems);
 
-                WeekMealsSummary = plan.WeekMealsSummary.Select(x => new WeeklyMealVm
+                vm.ShoppingList = plan.ShoppingList ?? new();
+                vm.WeekMealsSummary = plan.WeekMealsSummary ?? new();
+
+                return View("ShoppingSuggestion", vm);
+            }
+            catch (TaskCanceledException ex)
+            {
+                _logger.LogError(ex, "OpenAI call timed out while generating shopping plan.");
+                vm.Error = "The request timed out. Please try again.";
+                return View("ShoppingSuggestion", vm);
+            }
+            catch (InvalidOperationException ex)
+            {
+                _logger.LogWarning(ex, "Shopping plan generation could not be completed.");
+                vm.Error = ex.Message;
+                return View("ShoppingSuggestion", vm);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "OpenAI call failed while generating shopping plan.");
+
+                var statusCode = TryGetStatusCode(ex);
+
+                vm.Error = statusCode switch
                 {
-                    Day = x.Day,
-                    Title = x.Title,
-                    Calories = x.Calories,
-                    ProteinGrams = x.ProteinGrams,
-                    CarbsGrams = x.CarbsGrams,
-                    FatGrams = x.FatGrams
-                }).ToList()
+                    401 => "Authentication failed (invalid or revoked API key). Check OPENAI_API_KEY and try again.",
+                    403 => "Permission denied. Your key or project may not have access, or your region/IP may be restricted.",
+                    429 => "Rate limit or quota exceeded. Check your billing and usage limits, then try again.",
+                    500 or 503 => "OpenAI service is having trouble. Please retry in a moment.",
+                    _ => "Something went wrong while generating the shopping plan. Check logs for details."
+                };
+
+                return View("ShoppingSuggestion", vm);
+            }
+        }
+
+        private static int? TryGetStatusCode(Exception ex)
+        {
+            var t = ex.GetType();
+            var prop =
+                t.GetProperty("StatusCode") ??
+                t.GetProperty("Status") ??
+                t.GetProperty("HttpStatusCode");
+
+            if (prop == null) return null;
+
+            var val = prop.GetValue(ex);
+            return val switch
+            {
+                int i => i,
+                HttpStatusCode code => (int)code,
+                _ => null
             };
-
-            return View("ShoppingSuggestion", vm);
         }
     }
 }

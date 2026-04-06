@@ -1,11 +1,9 @@
-﻿
-using InTakeWise.Models;
+﻿using InTakeWise.Models;
 
 namespace InTakeWise.Services
 {
     public interface IFoodItemService
     {
-        Task<List<FoodItem>> GetFoodItemsAsync(string userId);
+        Task<List<UserFoodItemDto>> GetFoodItemsAsync(string userId);
     }
-
 }

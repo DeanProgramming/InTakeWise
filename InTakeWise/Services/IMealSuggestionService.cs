@@ -4,6 +4,6 @@ namespace InTakeWise.Services
 {
     public interface IMealSuggestionService
     {
-        Task<TodayMealPlan> GetTodayPlanAsync(string userId, List<FoodItem> items);
+        Task<TodayMealPlan> GetTodayPlanAsync(string userId, List<UserFoodItemDto> items);
     }
 }

@@ -1,78 +1,175 @@
-﻿@model InTakeWise.ViewModels.ShoppingSuggestionViewModel
+﻿@using System.Text.RegularExpressions
+@model InTakeWise.ViewModels.ShoppingSuggestionViewModel
 
 @{
     ViewData["Title"] = "Shopping Plan";
+    var hasShopping = Model?.ShoppingList != null && Model.ShoppingList.Any();
+    var hasMeals = Model?.WeekMealsSummary != null && Model.WeekMealsSummary.Any();
+    var hasResults = hasShopping || hasMeals;
 }
 
 <div class="auth-page">
     <div class="auth-card menu-card">
 
-        <!-- MAIN -->
         <section class="auth-main">
             <div class="menu-actions">
                 <h1 class="auth-title">@ViewData["Title"]</h1>
 
                 <a class="menu-action" asp-controller="Pantry" asp-action="Index">
-                    <div class="menu-action-title">Whats in my fridge ?</div>
-                    <div class="menu-action-sub">Check whats in your fridge before generating</div>
+                    <div class="menu-action-title">What's in my fridge?</div>
+                    <div class="menu-action-sub">Check what you already have before generating</div>
                 </a>
 
-                <form asp-controller="ShoppingSuggestion"
+                <form id="generatePlanForm"
+                      asp-controller="ShoppingSuggestion"
                       asp-action="GetShoppingList"
                       method="post"
                       class="log-form">
                     @Html.AntiForgeryToken()
-                    <button type="submit" class="btn-primary">
-                        Generate Shopping List
+
+                    <button id="generatePlanBtn" type="submit" class="menu-action menu-primary-btn shopping-generate-btn">
+                        <span id="generatePlanBtnText">
+                            <span class="menu-action-title">Generate Shopping List</span>
+                            <span class="menu-action-sub">Build a 7-day meal plan around your pantry</span>
+                        </span>
+                        <span id="generatePlanSpinner" class="shopping-spinner" aria-hidden="true"></span>
                     </button>
                 </form>
 
-                <h1 class="auth-title">TEA Plan</h1>
-
-                <div class="log-text-box menu-action"
-                     role="textbox"
-                     aria-readonly="true"
-                     style="white-space: pre-wrap;">
-
-                    @if (Model.ShoppingList == null || !Model.ShoppingList.Any())
-                    {
-                        <text>No shopping suggestions yet.</text>
-                    }
-                    else
-                    {
-                        <text>Shopping List:</text>
-                        <ul>
-                            @foreach (var item in Model.ShoppingList)
-                            {
-                                <li>@item.Name | @item.Quantity @item.Unit</li>
-                            }
-                        </ul>
-
-                        @if (Model.WeekMealsSummary != null && Model.WeekMealsSummary.Any())
-                        {
-                            <text>Weekly Meals Summary:</text>
-                            <ul>
-                                @foreach (var meal in Model.WeekMealsSummary)
-                                {
-                                    <li>
-                                        <strong>@meal.Day:</strong> @meal.Title<br />
-                                        Calories: @meal.Calories |
-                                        P: @meal.ProteinGrams g |
-                                        C: @meal.CarbsGrams g |
-                                        F: @meal.FatGrams g
-                                    </li>
-                                }
-                            </ul>
-                        }
-                    }
+                <div id="loadingPanel" class="menu-action shopping-loading-panel" hidden>
+                    <div class="menu-action-title">Generating your weekly plan...</div>
+                    <div class="menu-action-sub">
+                        Checking your pantry, profile and macro targets, then building meals and a shopping list.
+                    </div>
                 </div>
+
+                @if (!string.IsNullOrWhiteSpace(Model?.Error))
+                {
+                    <div class="menu-validation" role="alert">
+                        @Model.Error
+                    </div>
+                }
+
+                <h2 class="auth-title shopping-section-title">Weekly Plan</h2>
+
+                @if (!hasResults)
+                {
+                    <div class="menu-action shopping-empty-state">
+                        <div class="menu-action-title">No shopping suggestions yet</div>
+                        <div class="menu-action-sub">Generate a plan to see your shopping list and daily meals.</div>
+                    </div>
+                }
+                else
+                {
+                    @if (hasShopping)
+                    {
+                        <section class="menu-action shopping-results-card">
+                            <div class="shopping-card-header">
+                                <h3 class="shopping-card-title">Shopping List</h3>
+                                <span class="status-badge status-pending">@Model!.ShoppingList.Count item(s)</span>
+                            </div>
+
+                            <div class="shopping-list-grid">
+                                @foreach (var item in Model!.ShoppingList)
+                                {
+                                    <div class="shopping-list-item">
+                                        <div class="shopping-list-name">@item.Name</div>
+                                        <div class="shopping-list-meta">@item.Quantity @item.Unit</div>
+                                    </div>
+                                }
+                            </div>
+                        </section>
+                    }
+
+                    @if (hasMeals)
+                    {
+                        <section class="menu-action shopping-results-card">
+                            <div class="shopping-card-header">
+                                <h3 class="shopping-card-title">Meal Plan</h3>
+                                <span class="status-badge status-logged">@Model!.WeekMealsSummary.Count day(s)</span>
+                            </div>
+
+                            <div class="shopping-meal-grid">
+                                @foreach (var meal in Model!.WeekMealsSummary)
+                                {
+                                    <article class="shopping-meal-card">
+                                        <div class="shopping-meal-top">
+                                            <h4 class="shopping-meal-day">
+                                                @(meal.IsGymDay ? $"{meal.Day} (Gym Day)" : meal.Day)
+                                            </h4>
+                                        </div>
+
+                                        @{
+                                            var formattedMealTitle = Regex.Replace(
+                                            meal.Title?.Trim() ?? "",
+                                            @"\s*(Late Snack|Breakfast|Lunch|Dinner|Snack):",
+                                            m => (m.Index == 0 ? "" : "\n") + m.Groups[1].Value + ":");
+
+                                            var mealLines = formattedMealTitle
+                                            .Split('\n', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+                                        }
+
+                                        <div class="shopping-meal-lines">
+                                            @foreach (var line in mealLines)
+                                            {
+                                                <div class="shopping-meal-line">@line</div>
+                                            }
+                                        </div>
+
+                                        <div class="shopping-macro-grid">
+                                            <div class="shopping-macro-box">
+                                                <span class="shopping-macro-label">Calories</span>
+                                                <strong class="shopping-macro-value">@meal.Calories</strong>
+                                            </div>
+                                            <div class="shopping-macro-box">
+                                                <span class="shopping-macro-label">Protein</span>
+                                                <strong class="shopping-macro-value">@meal.ProteinGrams g</strong>
+                                            </div>
+                                            <div class="shopping-macro-box">
+                                                <span class="shopping-macro-label">Carbs</span>
+                                                <strong class="shopping-macro-value">@meal.CarbsGrams g</strong>
+                                            </div>
+                                            <div class="shopping-macro-box">
+                                                <span class="shopping-macro-label">Fat</span>
+                                                <strong class="shopping-macro-value">@meal.FatGrams g</strong>
+                                            </div>
+                                        </div>
+                                    </article>
+                                }
+                            </div>
+                        </section>
+                    }
+                }
             </div>
         </section>
 
-        <!-- SIDE -->
         @await Component.InvokeAsync("MenuSide", new { variant = "compact" })
-
     </div>
 </div>
 
-@await Component.InvokeAsync("FloatingBackButton", new {text = "BACK", fallbackUrl = Url.Action("Index", "Home")})
+@await Component.InvokeAsync("FloatingBackButton", new { text = "BACK", fallbackUrl = Url.Action("Index", "Home") })
+
+<script>
+    (function () {
+        const form = document.getElementById("generatePlanForm");
+        const button = document.getElementById("generatePlanBtn");
+        const buttonText = document.getElementById("generatePlanBtnText");
+        const spinner = document.getElementById("generatePlanSpinner");
+        const loadingPanel = document.getElementById("loadingPanel");
+
+        if (!form || !button || !buttonText || !spinner || !loadingPanel) return;
+
+        form.addEventListener("submit", function () {
+            button.disabled = true;
+            button.classList.add("is-loading");
+            spinner.classList.add("show");
+            loadingPanel.hidden = false;
+
+            const title = buttonText.querySelector(".menu-action-title");
+            const sub = buttonText.querySelector(".menu-action-sub");
+
+            if (title) title.textContent = "Generating...";
+            if (sub) sub.textContent = "Please wait while your weekly plan is prepared.";
+        });
+    })();
+</script>

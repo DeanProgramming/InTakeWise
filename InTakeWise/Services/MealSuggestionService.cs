@@ -4,7 +4,7 @@ namespace InTakeWise.Services
 {
     public class DummyMealSuggestionService : IMealSuggestionService
     {
-        public Task<TodayMealPlan> GetTodayPlanAsync(string userId, List<FoodItem> items)
+        public Task<TodayMealPlan> GetTodayPlanAsync(string userId, List<UserFoodItemDto> items)
         {
             var plan = new TodayMealPlan
             {
