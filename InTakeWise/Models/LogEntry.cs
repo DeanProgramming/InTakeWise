@@ -6,7 +6,8 @@ namespace InTakeWise.Models
     {
         Breakfast,
         Dinner,
-        Tea
+        Tea,
+        Snack
     }
 
     public abstract class LogEntryBase
@@ -29,6 +30,9 @@ namespace InTakeWise.Models
 
     public class WorkoutLogEntry : LogEntryBase
     {
+        public string? ActivityType { get; set; }
+        public int? DurationMinutes { get; set; }
+        public string? Intensity { get; set; }
         public int? CaloriesBurned { get; set; }
     }
 }

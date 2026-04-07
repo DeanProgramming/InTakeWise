@@ -1,22 +1,24 @@
-﻿namespace InTakeWise.Services
-{
-    using InTakeWise.Data;
-    using InTakeWise.Models;
-    using Microsoft.EntityFrameworkCore;
-    using Microsoft.IdentityModel.Abstractions;
+﻿using InTakeWise.Data;
+using InTakeWise.Dto;
+using InTakeWise.Models;
+using Microsoft.EntityFrameworkCore;
 
+namespace InTakeWise.Services
+{
     public class LogEntryService : ILogEntryService
     {
         private readonly ApplicationDbContext _db;
+        private readonly IAiLogParser _aiLogParser;
 
-        public LogEntryService(ApplicationDbContext db)
+        public LogEntryService(ApplicationDbContext db, IAiLogParser aiLogParser)
         {
             _db = db;
+            _aiLogParser = aiLogParser;
         }
 
         public async Task<MealLogEntry> LogMealInfoAsync(string userId, string userInput, TimeOfDay logTime)
         {
-            var mealInfo = MealProcessor.MealProcessed(userInput);
+            var mealInfo = await _aiLogParser.AnalyzeMealAsync(userInput);
 
             var log = new MealLogEntry
             {
@@ -38,14 +40,7 @@
 
         public async Task<MealLogEntry?> GetTodayMealAsync(string userId, TimeOfDay timeOfDay)
         {
-            var tz = TimeZoneInfo.FindSystemTimeZoneById("Europe/London");
-
-            var nowLocal = TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, tz);
-            var startLocal = nowLocal.Date;
-            var endLocal = startLocal.AddDays(1);
-
-            var startUtc = TimeZoneInfo.ConvertTimeToUtc(startLocal, tz);
-            var endUtc = TimeZoneInfo.ConvertTimeToUtc(endLocal, tz);
+            var (startUtc, endUtc) = GetTodayLondonRangeUtc();
 
             return await _db.MealLogs.AsNoTracking()
                 .Where(x => x.UserId == userId
@@ -59,25 +54,26 @@
         public async Task<bool> GetCompletedTodayMealAsync(string userId, TimeOfDay timeOfDay)
         {
             MealLogEntry? meal = await GetTodayMealAsync(userId, timeOfDay);
-
-            if (meal == null)
-            {
-                return false;
-            }
-             
-            return true;
-        } 
+            return meal != null;
+        }
 
         public async Task<WorkoutLogEntry> LogWorkoutInfoAsync(string userId, string userInput)
         {
-            var workInfo = WorkoutProcessor.WorkoutProcessed(userInput);
+            var profile = await _db.UsersInformation
+                .AsNoTracking()
+                .FirstOrDefaultAsync(x => x.UserId == userId);
+
+            var workInfo = await _aiLogParser.AnalyzeWorkoutAsync(userInput, profile);
 
             var log = new WorkoutLogEntry
             {
                 UserId = userId,
                 Timestamp = DateTime.UtcNow,
                 RawInput = userInput,
-                CaloriesBurned = workInfo
+                CaloriesBurned = workInfo.CaloriesBurned,
+                ActivityType = workInfo.ActivityType,
+                DurationMinutes = workInfo.DurationMinutes,
+                Intensity = workInfo.Intensity
             };
 
             _db.WorkoutLogs.Add(log);
@@ -85,10 +81,95 @@
             return log;
         }
 
+        public async Task<DailyLogSummaryDto?> GetTodaySummaryAsync(string userId)
+        {
+            if (string.IsNullOrWhiteSpace(userId))
+                return null;
+
+            var profile = await _db.UsersInformation
+                .AsNoTracking()
+                .FirstOrDefaultAsync(x => x.UserId == userId);
+
+            if (profile == null)
+                return null;
+
+            var tz = TimeZoneInfo.FindSystemTimeZoneById("Europe/London");
+            var nowLocal = TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, tz);
+
+            var (startUtc, endUtc) = GetTodayLondonRangeUtc();
+
+            var meals = await _db.MealLogs
+                .AsNoTracking()
+                .Where(x => x.UserId == userId
+                            && x.Timestamp >= startUtc
+                            && x.Timestamp < endUtc)
+                .ToListAsync();
+
+            var workouts = await _db.WorkoutLogs
+                .AsNoTracking()
+                .Where(x => x.UserId == userId
+                            && x.Timestamp >= startUtc
+                            && x.Timestamp < endUtc)
+                .ToListAsync();
+
+            var isGymDay = IsGymDay(profile.ChosenGymDays, nowLocal.DayOfWeek);
+
+            var summary = new DailyLogSummaryDto
+            {
+                IsGymDay = isGymDay,
+
+                CaloriesTarget = isGymDay ? profile.CaloriesTargetGymDay : profile.CaloriesTargetNonGymDay,
+                ProteinTarget = isGymDay ? profile.ProteinTargetGymDay : profile.ProteinTargetNonGymDay,
+                CarbsTarget = isGymDay ? profile.CarbsTargetGymDay : profile.CarbsTargetNonGymDay,
+                FatTarget = isGymDay ? profile.FatTargetGymDay : profile.FatTargetNonGymDay,
+                FiberTarget = isGymDay ? profile.FiberTargetGymDay : profile.FiberTargetNonGymDay,
+
+                CaloriesEaten = meals.Sum(x => x.Calories ?? 0),
+                ProteinEaten = meals.Sum(x => x.Protein ?? 0),
+                CarbsEaten = meals.Sum(x => x.Carbs ?? 0),
+                FatEaten = meals.Sum(x => x.Fat ?? 0),
+                FiberEaten = meals.Sum(x => x.Fiber ?? 0),
+
+                CaloriesBurned = workouts.Sum(x => x.CaloriesBurned ?? 0)
+            };
+
+            return summary;
+        }
+
         public Task<MealLogEntry?> GetMealByIdAsync(int id, string userId) =>
             _db.MealLogs.AsNoTracking().FirstOrDefaultAsync(x => x.Id == id && x.UserId == userId);
 
         public Task<WorkoutLogEntry?> GetWorkoutByIdAsync(int id, string userId) =>
             _db.WorkoutLogs.AsNoTracking().FirstOrDefaultAsync(x => x.Id == id && x.UserId == userId);
+
+        private static (DateTime StartUtc, DateTime EndUtc) GetTodayLondonRangeUtc()
+        {
+            var tz = TimeZoneInfo.FindSystemTimeZoneById("Europe/London");
+            var nowLocal = TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, tz);
+            var startLocal = nowLocal.Date;
+            var endLocal = startLocal.AddDays(1);
+
+            var startUtc = TimeZoneInfo.ConvertTimeToUtc(startLocal, tz);
+            var endUtc = TimeZoneInfo.ConvertTimeToUtc(endLocal, tz);
+
+            return (startUtc, endUtc);
+        }
+
+        private static bool IsGymDay(GymDays chosenGymDays, DayOfWeek dayOfWeek)
+        {
+            var dayFlag = dayOfWeek switch
+            {
+                DayOfWeek.Monday => GymDays.Monday,
+                DayOfWeek.Tuesday => GymDays.Tuesday,
+                DayOfWeek.Wednesday => GymDays.Wednesday,
+                DayOfWeek.Thursday => GymDays.Thursday,
+                DayOfWeek.Friday => GymDays.Friday,
+                DayOfWeek.Saturday => GymDays.Saturday,
+                DayOfWeek.Sunday => GymDays.Sunday,
+                _ => GymDays.None
+            };
+
+            return dayFlag != GymDays.None && (chosenGymDays & dayFlag) != 0;
+        }
     }
 }

@@ -35,6 +35,7 @@ namespace InTakeWise.Controllers
                 UserName = user.UserName,
                 Mode = mode,
                 SelectedTimeOfDay = meal,
+                DailySummary = await _logEntryService.GetTodaySummaryAsync(user.Id)
             };
 
             if (mode == LogType.LoggingType.Meal)
@@ -53,7 +54,6 @@ namespace InTakeWise.Controllers
             return View("Log", vm);
         }
 
-
         [HttpPost]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Meal(string userInput, LogType.LoggingType mode, TimeOfDay logTime)
@@ -62,13 +62,21 @@ namespace InTakeWise.Controllers
             if (user == null) return Unauthorized();
 
             if (string.IsNullOrWhiteSpace(userInput))
-                return View("Log", new LogEntryViewModel { UserName = user.UserName, Mode = mode, SelectedTimeOfDay = logTime });
+            {
+                return View("Log", new LogEntryViewModel
+                {
+                    UserName = user.UserName,
+                    Mode = mode,
+                    SelectedTimeOfDay = logTime,
+                    DailySummary = await _logEntryService.GetTodaySummaryAsync(user.Id),
+                    GeneratedMealLog = await _logEntryService.GetTodayMealAsync(user.Id, logTime)
+                });
+            }
 
             await _logEntryService.LogMealInfoAsync(user.Id, userInput, logTime);
 
             return RedirectToAction(nameof(Index), new { mode = LogType.LoggingType.Meal, meal = logTime });
         }
-
 
         [HttpPost]
         [ValidateAntiForgeryToken]
@@ -78,7 +86,14 @@ namespace InTakeWise.Controllers
             if (user == null) return Unauthorized();
 
             if (string.IsNullOrWhiteSpace(userInput))
-                return View("Log", new LogEntryViewModel { UserName = user.UserName, Mode = mode });
+            {
+                return View("Log", new LogEntryViewModel
+                {
+                    UserName = user.UserName,
+                    Mode = mode,
+                    DailySummary = await _logEntryService.GetTodaySummaryAsync(user.Id)
+                });
+            }
 
             var log = await _logEntryService.LogWorkoutInfoAsync(user.Id, userInput);
 

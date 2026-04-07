@@ -1,4 +1,5 @@
-﻿using InTakeWise.Models;
+﻿using InTakeWise.Dto;
+using InTakeWise.Models;
 namespace InTakeWise.Services
 {
     public interface ILogEntryService
@@ -11,5 +12,6 @@ namespace InTakeWise.Services
 
         Task<MealLogEntry?> GetMealByIdAsync(int id, string userId);
         Task<WorkoutLogEntry?> GetWorkoutByIdAsync(int id, string userId);
+        Task<DailyLogSummaryDto?> GetTodaySummaryAsync(string userId);
     } 
 }

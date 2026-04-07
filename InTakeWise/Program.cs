@@ -2,6 +2,7 @@ using InTakeWise.Data;
 using InTakeWise.Services;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
+using OpenAI.Chat;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -20,6 +21,22 @@ builder.Services.AddScoped<IFoodItemService, FoodItemService>();
 builder.Services.AddScoped<IShoppingSuggestionService, ShoppingSuggestionService>();
 builder.Services.AddScoped<IMealSuggestionService, DummyMealSuggestionService>();
 builder.Services.AddScoped<ILogEntryService, LogEntryService>();
+
+builder.Services.AddSingleton(sp =>
+{
+    var config = sp.GetRequiredService<IConfiguration>();
+
+    var apiKey = config["OpenAI:ApiKey"] ?? Environment.GetEnvironmentVariable("OPENAI_API_KEY");
+    if (string.IsNullOrWhiteSpace(apiKey))
+        throw new InvalidOperationException("OPENAI_API_KEY is missing.");
+
+    var model = config["OpenAI:LoggingModel"] ?? "gpt-5.1";
+
+    return new ChatClient(model: model, apiKey: apiKey);
+});
+
+builder.Services.AddScoped<IAiLogParser, OpenAiLogParser>();
+
 builder.Services.AddScoped<RequireProfileCompletedAttribute>();
 
 
