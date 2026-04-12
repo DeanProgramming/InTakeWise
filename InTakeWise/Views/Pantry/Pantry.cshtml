@@ -14,7 +14,7 @@
                 <a class="menu-action"
                    asp-controller="Receipt"
                    asp-action="Index"
-                   asp-route-redirect="Pantry">
+                   asp-route-returnUrl="@Url.Action("Index", "Pantry", new { returnUrl = Model.ReturnUrl })">
                     <div class="menu-action-title">Receipt to Pantry</div>
                     <div class="menu-action-sub">Take a photo of the Receipt</div>
                 </a>
@@ -35,6 +35,8 @@
                       method="post"
                       class="pantry-form">
                     @Html.AntiForgeryToken()
+
+                    <input type="hidden" asp-for="ReturnUrl" />
 
                     @if (!ViewData.ModelState.IsValid)
                     {
@@ -123,7 +125,11 @@
     </div>
 </div>
 
-@await Component.InvokeAsync("FloatingBackButton", new { text = "BACK", fallbackUrl = Url.Action("Index", "Home") })
+@await Component.InvokeAsync("FloatingBackButton", new
+{
+    text = "BACK",
+    fallbackUrl = Model.ReturnUrl ?? Url.Action("Index", "Home")
+})
 
 <script>
     function addRow() {

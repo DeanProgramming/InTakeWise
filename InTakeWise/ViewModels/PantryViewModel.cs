@@ -5,6 +5,7 @@ namespace InTakeWise.ViewModels
 {
     public class PantryViewModel
     {
+        public string? ReturnUrl { get; set; }
         public List<PantryItemInputViewModel> Items { get; set; } = new();
     }
 

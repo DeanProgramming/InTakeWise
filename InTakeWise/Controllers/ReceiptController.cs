@@ -4,10 +4,10 @@ using InTakeWise.ViewModels;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.WebUtilities;
 using Microsoft.EntityFrameworkCore;
 using System.Globalization;
 using System.Security.Claims;
-using System.Text.RegularExpressions;
 
 namespace InTakeWise.Controllers
 {
@@ -29,16 +29,20 @@ namespace InTakeWise.Controllers
         }
 
         [HttpGet]
-        public IActionResult Index(string redirect)
+        public IActionResult Index(string? returnUrl = null)
         {
-            var model = new ReceiptViewModel();
+            var model = new ReceiptViewModel
+            {
+                ReturnUrl = GetSafeReturnUrl(returnUrl)
+            };
+
             EnsureBlankRow(model);
             return View("Receipt", model);
         }
 
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public IActionResult TakePhoto()
+        public IActionResult TakePhoto(string? returnUrl = null)
         {
             var dummy = string.Join(Environment.NewLine, new[]
             {
@@ -51,6 +55,7 @@ namespace InTakeWise.Controllers
 
             var model = new ReceiptViewModel
             {
+                ReturnUrl = GetSafeReturnUrl(returnUrl),
                 Items = ParseReceiptInput(dummy)
             };
 
@@ -69,6 +74,7 @@ namespace InTakeWise.Controllers
             if (user == null || string.IsNullOrWhiteSpace(userId))
                 return Unauthorized();
 
+            model.ReturnUrl = GetSafeReturnUrl(model.ReturnUrl);
             model.Items ??= new List<PantryItemInputViewModel>();
 
             var rows = model.Items
@@ -186,7 +192,6 @@ namespace InTakeWise.Controllers
                 }
 
                 var baseTotal = 0m;
-                UnitInfo? targetUnit = null;
 
                 foreach (var pantryItem in existingMatches)
                 {
@@ -199,7 +204,6 @@ namespace InTakeWise.Controllers
                         break;
                     }
 
-                    targetUnit ??= parsedExistingUnit;
                     baseTotal += pantryItem.Quantity * parsedExistingUnit.FactorToBase;
                 }
 
@@ -243,7 +247,41 @@ namespace InTakeWise.Controllers
                 return View("Receipt", model);
             }
 
-            return RedirectToAction("Index", "Pantry");
+            return RedirectToAction("Index", "Pantry", new
+            {
+                returnUrl = GetPantryParentReturnUrl(model.ReturnUrl)
+            });
+        }
+
+        private string GetSafeReturnUrl(string? returnUrl)
+        {
+            return Url.IsLocalUrl(returnUrl)
+                ? returnUrl!
+                : Url.Action("Index", "Home")!;
+        }
+
+        private string GetPantryParentReturnUrl(string? receiptReturnUrl)
+        {
+            var safeDefault = Url.Action("Index", "Home")!;
+            var safeReturnUrl = GetSafeReturnUrl(receiptReturnUrl);
+
+            var pantryPath = Url.Action("Index", "Pantry") ?? "/Pantry";
+            var absolute = new Uri(new Uri($"{Request.Scheme}://{Request.Host}"), safeReturnUrl);
+
+            if (!absolute.AbsolutePath.Equals(pantryPath, StringComparison.OrdinalIgnoreCase))
+                return safeReturnUrl;
+
+            var query = QueryHelpers.ParseQuery(absolute.Query);
+
+            if (query.TryGetValue("returnUrl", out var nested))
+            {
+                var nestedReturnUrl = nested.FirstOrDefault();
+
+                if (Url.IsLocalUrl(nestedReturnUrl))
+                    return nestedReturnUrl!;
+            }
+
+            return safeDefault;
         }
 
         private static bool RowHasAnyValue(PantryItemInputViewModel item)

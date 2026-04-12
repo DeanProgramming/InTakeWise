@@ -18,6 +18,8 @@
                       class="log-form">
                     @Html.AntiForgeryToken()
 
+                    <input type="hidden" name="returnUrl" value="@Model.ReturnUrl" />
+
                     <button type="submit" class="menu-action pantry-add-btn">
                         <span class="menu-action-title">Take Photo</span>
                         <span class="menu-action-sub">Scan a receipt and extract the items</span>
@@ -30,6 +32,8 @@
                       method="post"
                       class="pantry-form">
                     @Html.AntiForgeryToken()
+
+                    <input type="hidden" name="returnUrl" value="@Model.ReturnUrl" />
 
                     @if (!ViewData.ModelState.IsValid)
                     {
@@ -116,7 +120,11 @@
     </div>
 </div>
 
-@await Component.InvokeAsync("FloatingBackButton", new { text = "BACK", fallbackUrl = Url.Action("Index", "Home") })
+@await Component.InvokeAsync("FloatingBackButton", new
+{
+    text = "BACK",
+    fallbackUrl = Model.ReturnUrl ?? Url.Action("Index", "Home")
+})
 
 <script>
     function addRow() {

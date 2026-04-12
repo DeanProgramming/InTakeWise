@@ -15,7 +15,10 @@
             <div class="menu-actions">
                 <h1 class="auth-title">@ViewData["Title"]</h1>
 
-                <a class="menu-action" asp-controller="Pantry" asp-action="Index">
+                <a class="menu-action"
+                   asp-controller="Pantry"
+                   asp-action="Index"
+                   asp-route-returnUrl="@Url.Action("Index", "ShoppingSuggestion")">
                     <div class="menu-action-title">What's in my fridge?</div>
                     <div class="menu-action-sub">Check what you already have before generating</div>
                 </a>

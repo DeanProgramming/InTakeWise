@@ -7,11 +7,10 @@
 <div class="auth-page">
     <div class="auth-card menu-card">
 
-        <!-- MAIN -->
         <section class="auth-main">
             <div class="menu-actions">
                 <h1 class="auth-title">Today’s Meals</h1>
-                 
+
                 <div class="menu-actions-row">
                     <a class="menu-action menu-meal-row"
                        asp-controller="LogEntry"
@@ -29,12 +28,12 @@
                     <a class="menu-action menu-meal-row"
                        asp-controller="LogEntry"
                        asp-action="Index"
-                       asp-route-mode="Meal" 
+                       asp-route-mode="Meal"
                        asp-route-meal="@TimeOfDay.Dinner">
                         <div class="menu-action-title">Dinner</div>
                         <div class="menu-action-sub">
                             <span class="status-badge @(Model.LoggedDinner ? "status-logged" : "status-pending")">
-                                @(Model.LoggedDinner? "Logged" : "Log Now")
+                                @(Model.LoggedDinner ? "Logged" : "Log Now")
                             </span>
                         </div>
                     </a>
@@ -58,27 +57,27 @@
                    asp-action="Index">
                     <div class="menu-action-title">View Recommended Meal</div>
                     <div class="menu-action-sub">Planned for you • ~15 min cook time</div>
-                </a> 
+                </a>
 
-                <a class="menu-action" 
-                    asp-controller="LogEntry" 
-                    asp-action="Index"
-                    asp-route-mode="Meal">
-                    <div class="menu-action-title">Log Meal </div>
+                <a class="menu-action"
+                   asp-controller="LogEntry"
+                   asp-action="Index"
+                   asp-route-mode="Meal">
+                    <div class="menu-action-title">Log Meal</div>
                     <div class="menu-action-sub">You did the hard part — now log it</div>
                 </a>
 
-                <a class="menu-action" 
-                    asp-controller="LogEntry"
+                <a class="menu-action"
+                   asp-controller="LogEntry"
                    asp-action="Index"
                    asp-route-mode="Workout">
                     <div class="menu-action-title">Log Workout</div>
                     <div class="menu-action-sub">You did the hard part — now log it</div>
                 </a>
-                
+
                 <a class="menu-action"
                    asp-controller="ShoppingSuggestion"
-                   asp-action="Index"> 
+                   asp-action="Index">
                     <div class="menu-action-title">Recommend a week’s shopping</div>
                     <div class="menu-action-sub">Tell us what’s in your fridge and we’ll generate the rest</div>
                 </a>
@@ -86,21 +85,21 @@
                 <a class="menu-action"
                    asp-controller="Receipt"
                    asp-action="Index"
-                   asp-route-redirect="">
+                   asp-route-returnUrl="@Url.Action("Index", "Home")">
                     <div class="menu-action-title">Receipt to Pantry</div>
                     <div class="menu-action-sub">Take a photo of the Receipt</div>
                 </a>
 
                 <a class="menu-action"
                    asp-controller="Pantry"
-                   asp-action="Index">
-                    <div class="menu-action-title">Whats in my Pantry ? </div>
+                   asp-action="Index"
+                   asp-route-returnUrl="@Url.Action("Index", "Home")">
+                    <div class="menu-action-title">Whats in my Pantry ?</div>
                     <div class="menu-action-sub">Tell us what’s in your Pantry</div>
                 </a>
             </div>
         </section>
 
-        <!-- SIDE -->
         @await Component.InvokeAsync("MenuSide")
 
     </div>

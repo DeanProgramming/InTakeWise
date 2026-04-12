@@ -2,39 +2,6 @@
 
 <a class="floating-back-btn"
    href="@Model.FallbackUrl"
-   data-fallback="@Model.FallbackUrl"
    aria-label="Go back">
     <span>@Model.Text</span>
 </a>
-
-<script>
-    (() => {
-      const btn = document.querySelector('.floating-back-btn[data-fallback]');
-      if (!btn) return;
-
-      let locked = false;
-
-      btn.addEventListener('click', (e) => {
-        if (locked) { 
-          e.preventDefault();
-          return;
-        }
-        locked = true;
-
-        try {
-          const ref = document.referrer;
-          if (!ref) return;  
-
-          const refUrl = new URL(ref);
-          const sameOrigin = refUrl.origin === window.location.origin;
-          const samePage = refUrl.href === window.location.href;
-
-          if (sameOrigin && !samePage && window.history.length > 1) {
-            e.preventDefault();
-            window.history.back();
-          } 
-        } catch { 
-        }
-      }, { once: true });  
-    })();
-</script>

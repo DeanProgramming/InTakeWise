@@ -27,7 +27,7 @@ namespace InTakeWise.Controllers
         }
 
         [HttpGet]
-        public async Task<IActionResult> Index()
+        public async Task<IActionResult> Index(string? returnUrl = null)
         {
             var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
             if (string.IsNullOrWhiteSpace(userId))
@@ -42,6 +42,10 @@ namespace InTakeWise.Controllers
 
             var model = new PantryViewModel
             {
+                ReturnUrl = Url.IsLocalUrl(returnUrl)
+                    ? returnUrl
+                    : Url.Action("Index", "Home"),
+
                 Items = items.Select(x => new PantryItemInputViewModel
                 {
                     Id = x.Id,
@@ -66,6 +70,10 @@ namespace InTakeWise.Controllers
 
             if (user == null || string.IsNullOrWhiteSpace(userId))
                 return Unauthorized();
+
+            model.ReturnUrl = Url.IsLocalUrl(model.ReturnUrl)
+                ? model.ReturnUrl
+                : Url.Action("Index", "Home");
 
             model.Items ??= new List<PantryItemInputViewModel>();
 
@@ -220,7 +228,7 @@ namespace InTakeWise.Controllers
                 TempData["PantrySaved"] = "Could not save pantry (database error).";
             }
 
-            return RedirectToAction(nameof(Index));
+            return RedirectToAction(nameof(Index), new { returnUrl = model.ReturnUrl });
         }
 
         private sealed record UnitInfo(string NormalizedUnit, string Family, decimal FactorToBase);

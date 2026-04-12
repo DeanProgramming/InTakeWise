@@ -1,4 +1,5 @@
-﻿using Microsoft.AspNetCore.Mvc;
+﻿using InTakeWise.ViewModels;
+using Microsoft.AspNetCore.Mvc;
 
 namespace InTakeWise.ViewComponents
 {
@@ -6,13 +7,13 @@ namespace InTakeWise.ViewComponents
     {
         public IViewComponentResult Invoke(string text = "BACK", string fallbackUrl = null)
         {
-            var vm = new InTakeWise.ViewModels.FloatingBackButtonViewModel
+            var vm = new FloatingBackButtonViewModel
             {
                 Text = text,
-                FallbackUrl = fallbackUrl ?? Url.Action("Index", "Home")
+                FallbackUrl = fallbackUrl ?? Url.Action("Index", "Home") ?? "/"
             };
 
             return View(vm);
         }
-    } 
+    }
 }
