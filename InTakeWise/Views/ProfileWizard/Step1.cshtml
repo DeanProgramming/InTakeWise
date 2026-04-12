@@ -17,7 +17,7 @@
                     <div class="menu-action menu-action-profile">
                         <div class="menu-action-title">Username</div>
                         <div class="menu-action-sub">
-                            <input class="log-text-box menu-action menu-text-box-profile" asp-for="ProfileUserName" />
+                            <input class="menu-action menu-text-box-profile" asp-for="ProfileUserName" />
                             <span asp-validation-for="ProfileUserName"></span>
                         </div>
                     </div>
@@ -25,7 +25,7 @@
                     <div class="menu-action menu-action-profile">
                         <div class="menu-action-title">Age</div>
                         <div class="menu-action-sub">
-                            <input class="log-text-box menu-action menu-text-box-profile" asp-for="Age" type="number" min="1" />
+                            <input class="menu-action menu-text-box-profile" asp-for="Age" type="number" min="1" />
                             <span asp-validation-for="Age"></span>
                         </div>
                     </div>
@@ -33,7 +33,7 @@
                     <div class="menu-action menu-action-profile">
                         <div class="menu-action-title">Height (cm)</div>
                         <div class="menu-action-sub">
-                            <input class="log-text-box menu-action menu-action menu-text-box-profile" asp-for="HeightInCM" type="number" min="1" />
+                            <input class="menu-action menu-action menu-text-box-profile" asp-for="HeightInCM" type="number" min="1" />
                             <span asp-validation-for="HeightInCM"></span>
                         </div>
                     </div>
@@ -41,7 +41,7 @@
                     <div class="menu-action menu-action-profile">
                         <div class="menu-action-title">Gender</div>
                         <div class="menu-action-sub">
-                            <select class="log-text-box menu-action menu-text-box-profile" asp-for="Gender"
+                            <select class="menu-action menu-text-box-profile" asp-for="Gender"
                                     asp-items="Html.GetEnumSelectList<InTakeWise.Models.Genders>()">
                                 <option value="">Select</option>
                             </select>
@@ -52,7 +52,7 @@
                     <div class="menu-action menu-action-profile">
                         <div class="menu-action-title">Weight (kg)</div>
                         <div class="menu-action-sub">
-                            <input class="log-text-box menu-action menu-text-box-profile" asp-for="WeightInKg" type="number" min="1" />
+                            <input class="menu-action menu-text-box-profile" asp-for="WeightInKg" type="number" min="1" />
                             <span asp-validation-for="WeightInKg"></span>
                         </div>
                     </div>

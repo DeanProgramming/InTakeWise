@@ -91,10 +91,6 @@
                     </div>
 
                     <section class="menu-action shopping-results-card">
-                        <div class="shopping-card-header">
-                            <h3 class="shopping-card-title">@Model.SelectedMeal</h3>
-                        </div>
-
                         @if (selected is null)
                         {
                             <div class="menu-action-sub">No @Model.SelectedMeal plan saved for today.</div>
@@ -149,7 +145,6 @@
         </section>
 
         @await Component.InvokeAsync("MenuSide", new { variant = "compact" })
+        @await Component.InvokeAsync("FloatingBackButton", new { text = "BACK", fallbackUrl = Url.Action("Index", "Home") })
     </div>
 </div>
-
-@await Component.InvokeAsync("FloatingBackButton", new { text = "BACK", fallbackUrl = Url.Action("Index", "Home") })

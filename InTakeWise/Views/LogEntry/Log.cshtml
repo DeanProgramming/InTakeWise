@@ -289,10 +289,11 @@
         </section>
 
         @await Component.InvokeAsync("MenuSide", new { variant = "compact" })
+
+        @await Component.InvokeAsync("FloatingBackButton", new { text = "BACK", fallbackUrl = Url.Action("Index", "Home") })
     </div>
 </div>
 
-@await Component.InvokeAsync("FloatingBackButton", new { text = "BACK", fallbackUrl = Url.Action("Index", "Home") })
 
 @section Scripts {
     <script>

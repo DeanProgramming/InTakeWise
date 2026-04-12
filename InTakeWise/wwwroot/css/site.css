@@ -1,6 +1,4 @@
-﻿/* ========== Menu-only CSS (for Pages/Index.cshtml) ========== */
-
-/* Theme tokens */
+﻿
 :root {
     --text: #0f172a;
     --muted: #64748b;
@@ -14,49 +12,52 @@
     --shadow: 0 20px 60px rgba(0, 0, 0, 0.35);
 }
 
-/* Page background (simple dark gradient) */
 .auth-page {
-    padding-top: 30px;
+    padding: 16px;
     display: flex;
     align-items: center;
     justify-content: center;
 }
 
-/* Main card layout */
 .auth-card.menu-card {
-    width: min(980px, 100%);
+    width: min(760px, 100%);
     display: grid;
-    grid-template-columns: 1.25fr 0.85fr;
+    grid-template-columns: 1fr;
+    grid-template-rows: auto 1fr;
     border-radius: var(--radius);
     overflow: hidden;
     box-shadow: var(--shadow);
     border: 1px solid rgba(255, 255, 255, 0.12);
 }
 
-/* Right panel (actions) */
 .auth-main {
     background: var(--card-bg);
     backdrop-filter: blur(10px);
-    padding: 42px;
+    padding: 20px;
     text-align: left;
 }
 
 .auth-title {
-    margin: 0 0 14px;
+    margin: 0 0 12px;
     font-size: 26px;
     font-weight: 800;
     color: var(--text);
+    text-align: center;
 }
 
-/* Menu actions grid */
 .menu-actions {
     display: grid;
     grid-template-columns: 1fr;
     gap: 12px;
-    margin-top: 10px;
+    margin: 0;
 }
 
-/* Action tiles */
+.menu-actions-row {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 12px;
+}
+
 .menu-action {
     display: block;
     text-decoration: none;
@@ -69,18 +70,17 @@
     transition: transform 0.08s ease, box-shadow 0.15s ease, border-color 0.15s ease;
 }
 
-    .menu-action:hover {
-        transform: translateY(-1px);
-        border-color: rgba(37, 99, 235, 0.35);
-        box-shadow: 0 16px 34px rgba(15, 23, 42, 0.10);
-    }
+.menu-action:hover {
+    transform: translateY(-1px);
+    border-color: rgba(37, 99, 235, 0.35);
+    box-shadow: 0 16px 34px rgba(15, 23, 42, 0.10);
+}
 
-    .menu-action:focus-visible {
-        outline: none;
-        box-shadow: 0 0 0 4px var(--ring), 0 16px 34px rgba(15, 23, 42, 0.10);
-    }
+.menu-action:focus-visible {
+    outline: none;
+    box-shadow: 0 0 0 4px var(--ring), 0 16px 34px rgba(15, 23, 42, 0.10);
+}
 
-/* Tile text */
 .menu-action-title {
     font-size: 18px;
     font-weight: 900;
@@ -94,7 +94,28 @@
     font-weight: 600;
 }
 
-/* Logout block matches the tile width/spacing */
+.menu-meal-row,
+.activity-row {
+    display: grid;
+    gap: 6px;
+    min-height: 72px;
+    padding: 10px;
+    place-items: center;
+    text-align: center;
+}
+
+.log-intro-card {
+    cursor: default;
+}
+
+    .log-intro-card:hover,
+    .log-result-card:hover,
+    .shopping-results-card:hover {
+        transform: none;
+        border-color: var(--border);
+        box-shadow: 0 10px 24px rgba(15, 23, 42, 0.06);
+    }
+
 .menu-logout {
     margin-top: 6px;
 }
@@ -117,12 +138,47 @@
         box-shadow: 0 0 0 4px var(--ring) !important;
     }
 
-/* Left panel (status) */
+.menu-primary-btn {
+    border: none;
+    cursor: pointer;
+    background: var(--primary);
+    color: white;
+    box-shadow: 0 10px 24px rgba(37, 99, 235, 0.25);
+}
+
+    .menu-primary-btn .menu-action-title,
+    .menu-primary-btn .menu-action-sub {
+        color: white;
+    }
+
+    .menu-primary-btn:hover {
+        background: var(--primary-hover);
+    }
+
+
 .auth-side.menu-side {
-    padding: 42px;
+    order: -1;
+    padding: 20px 20px 24px;
     background: #000;
     color: rgba(255, 255, 255, 0.92);
     text-align: left;
+}
+
+.small-menu {
+    padding-bottom: 8px;
+}
+
+.side-top {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    justify-content: space-between;
+}
+
+.side-top-link {
+    display: block;
+    text-decoration: none;
+    color: inherit;
 }
 
 .auth-side-title {
@@ -133,14 +189,15 @@
 }
 
 .auth-side-subtitle {
-    margin: 0 0 18px;
+    margin: 9px 0 0;
     color: rgba(255, 255, 255, 0.78);
     font-weight: 600;
-    font-size: 13px;
+    font-size: 18px;
     line-height: 1.5;
+    text-align: center;
+    margin-bottom: 9px;
 }
 
-/* Status “box” */
 .menu-side-box {
     border-radius: 14px;
     padding: 14px 16px;
@@ -156,9 +213,9 @@
     border-bottom: 1px solid rgba(255, 255, 255, 0.08);
 }
 
-    .menu-side-row:last-child {
-        border-bottom: none;
-    }
+.menu-side-row:last-child {
+    border-bottom: none;
+}
 
 .menu-label {
     color: rgba(255, 255, 255, 0.72);
@@ -172,191 +229,29 @@
     font-weight: 900;
 }
 
-@media (max-width: 900px) {
-    .whole-container {
-        height: 100dvh;
-        box-sizing: border-box;
-        padding: 0;
-    }
-
-    .auth-page {
-        height: 100%;
-        display: flex;
-        align-items: stretch;
-        justify-content: stretch;
-        padding-top: 0;
-    }
-
-    .main-menu {
-        height: 100%;
-        padding: 0 !important;
-    }
-
-    .auth-card.menu-card {
-        grid-template-columns: 1fr;
-        grid-template-rows: auto 1fr;
-        height: 100%;
-        width: 100%;
-        align-self: stretch;
-        box-shadow: 0 0px 0px rgba(0, 0, 0, 0.35);
-    } 
-
-    .auth-main {
-        padding: 10px;
-        padding-top: 20px;
-        overflow-y: auto;
-    }
-
-    .auth-side.menu-side {
-        order: -1;
-        padding: 20px;
-        padding-top: 15px;
-        padding-bottom: 25px;
-        max-height: 162.5px;
-    }
-
-    .small-menu {
-        padding-bottom: 5px !important;
-    }
-
-    .auth-side-subtitle {
-        margin: 9px 0;
-        font-size: 11px;
-        text-align: center;
-    }
-
-    .menu-actions-row {
-        grid-template-columns: 1fr;
-        gap: 4px !important;
-        height: 80px;
-    }
-
-    .menu-meal-row {
-        padding: 0;
-        justify-items: anchor-center;
-        align-content: center;
-    }
-
-    .activity-row {
-        padding: 0;
-        justify-items: anchor-center;
-        align-content: center;
-    }
-
-
-    .auth-title,
-    .menu-actions {
-        margin: 0;
-        text-align: center;
-    }
-
-    .menu-action-title {
-        font-size: 16px;
-    }
-
-    .menu-minimised {
-        max-height: 100px !important;
-    }
-
-    .log-text-box {
-        width: 100%;
-        margin-bottom: 10px;
-        min-height: 280px;
-    }
-
-    .menu-actions-profile {
-        grid-template-columns: repeat(1, 1fr) !important;
-    }
-
-    .menu-text-box-profile {
-        width: 100%;
-        margin-bottom: 0px;
-        min-height: auto;
-    }
-
-    .menu-action-profile {
-        padding: 11px 16px;
-    }
-
-    .gym-day-selection{
-        height: 210px;
-    }
-
-
-    .floating-back-btn {
-        position: fixed;
-        right: 10px;
-        bottom: calc(14px + env(safe-area-inset-bottom, 0px));
-        z-index: 9999;
-        display: inline-flex;
-        align-items: center;
-        padding: 8px 25px;
-        border-radius: 999px;
-        font-weight: 900;
-        text-decoration: none;
-        background: #054585a8;
-        color: #fff;
-        box-shadow: 0 18px 40px rgba(0, 0, 0, 0.22);
-        transition: transform 0.08s ease, background 0.15s ease, box-shadow 0.15s ease;
-    } 
-
-    .floating-back-btn:hover {
-        background: var(--primary-hover);
-        transform: translateY(-1px);
-    }
-
-    .floating-back-btn:focus-visible {
-        outline: none;
-        box-shadow: 0 0 0 4px var(--ring), 0 18px 40px rgba(0, 0, 0, 0.22);
-    }
-}
-
-.side-top-link {
-    display: block; 
-    text-decoration: none;  
-    color: inherit; 
-}
-
-
-.curved {
-    border-radius: 999px;  
-    text-align: center;
-    font-weight: 900;
-    padding: 1px 1px;
-}
-
-.curved-Gym-Button {
-    font-size: 12px;
-}
-
-.menu-actions-row {
-    display: grid;
-    grid-template-columns: repeat(3, 1fr);
-    gap: 12px;
-}
-
-/* Make pills actually pill-sized */
 .curved {
     border-radius: 999px;
     text-align: center;
     font-weight: 900;
-    padding: 8px 14px; /* was 1px 1px */
+    padding: 8px 14px;
     line-height: 1.2;
 }
 
-/* Side layout tidy */
-.side-top {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    justify-content: space-between;
+.curved-Gym-Button,
+.curved-profile-Gym-Button {
+    font-size: 12px;
+    cursor: pointer;
+    user-select: none;
 }
 
-/* Gym toggle row */
+.curved-profile-Gym-Button {
+    background: white;
+}
+
 .gym-toggle {
     display: grid;
     grid-template-columns: 1fr 1fr;
-    gap: 12px; 
+    gap: 12px;
 }
 
 .profile-gym-toggle {
@@ -366,21 +261,6 @@
     margin-top: 10px;
 }
 
-.curved-profile-Gym-Button 
-{
-    font-size: 12px;
-    cursor: pointer;
-    user-select: none;
-    background: white;
-} 
-
-/* Active state for gym day */
-.curved-Gym-Button {
-    font-size: 12px;
-    cursor: pointer;
-    user-select: none; 
-}
-
 .curved-Gym-Button.is-active,
 .curved-profile-Gym-Button.is-active,
 .activity-row.is-active {
@@ -388,7 +268,6 @@
     border-color: rgba(34, 197, 94, 0.55);
 }
 
-/* Logged / pending badges */
 .status-badge {
     display: inline-block;
     padding: 4px 10px;
@@ -409,8 +288,6 @@
     background: rgba(37, 99, 235, 0.10);
 }
 
-/* ===== Login-only add-ons (keep your existing Menu CSS) ===== */
-
 .menu-input-tile {
     display: grid;
     gap: 10px;
@@ -420,16 +297,17 @@
     width: 100%;
     border-radius: 12px;
     border: 1px solid var(--border);
-    background: rgba(255,255,255,0.95);
+    background: rgba(255, 255, 255, 0.95);
     padding: 12px 12px;
     font-weight: 700;
     outline: none;
+    box-sizing: border-box;
 }
 
     .menu-input:focus {
-        border-color: rgba(37, 99, 235, 0.45);
-        box-shadow: 0 0 0 4px var(--ring);
-    }
+    border-color: rgba(37, 99, 235, 0.45);
+    box-shadow: 0 0 0 4px var(--ring);
+}
 
 .menu-check {
     display: inline-flex;
@@ -439,23 +317,6 @@
     color: var(--muted);
     margin-top: 2px;
 }
-
-.menu-primary-btn {
-    border: none;
-    cursor: pointer;
-    background: var(--primary);
-    color: white;
-    box-shadow: 0 10px 24px rgba(37, 99, 235, 0.25);
-}
-
-    .menu-primary-btn .menu-action-title,
-    .menu-primary-btn .menu-action-sub {
-        color: white;
-    }
-
-    .menu-primary-btn:hover {
-        background: var(--primary-hover);
-    }
 
 .menu-links {
     display: grid;
@@ -474,7 +335,6 @@
         text-decoration: underline;
     }
 
-/* Validation */
 .menu-validation {
     border-radius: 14px;
     border: 1px solid rgba(239, 68, 68, 0.35);
@@ -490,6 +350,29 @@
     color: #991b1b;
 }
 
+.menu-actions-profile {
+    grid-template-columns: 1fr !important;
+    gap: 12px !important;
+    height: auto !important;
+}
+
+.menu-action-profile {
+    padding: 11px 16px;
+}
+
+.menu-text-box-profile {
+    width: 100%;
+    margin-bottom: 0;
+    min-height: auto;
+    resize: vertical;
+    font: inherit;
+    box-sizing: border-box;
+}
+
+.gym-day-selection {
+    height: 240px;
+}
+
 .goal-row,
 .menu-goal-row {
     width: 100%;
@@ -502,7 +385,7 @@
 .menu-goal-row .menu-action-sub.goal-sub {
     margin-top: 0;
     color: var(--text);
-} 
+}
 
 .menu-goal-row .goal-sub-metrics {
     display: grid;
@@ -511,7 +394,6 @@
     align-items: center;
 }
 
-
 .menu-goal-row .goal-left,
 .menu-goal-row .goal-right,
 .menu-goal-row .goal-metric-row,
@@ -519,9 +401,9 @@
     min-width: 0;
 }
 
-    .menu-goal-row .goal-left .menu-action-title {
-        margin: 0;
-    }
+.menu-goal-row .goal-left .menu-action-title {
+    margin: 0;
+}
 
 .menu-goal-row .goal-desc {
     margin-top: 6px;
@@ -534,7 +416,7 @@
 .menu-goal-row .goal-right {
     display: grid;
     gap: 10px;
-    justify-items: center; 
+    justify-items: center;
 }
 
 .menu-goal-row .goal-metric-row {
@@ -558,6 +440,7 @@
     flex-wrap: wrap;
     max-width: 100%;
 }
+
 .menu-goal-row.is-selected {
     background: rgba(34, 197, 94, 0.35);
     border-color: rgba(34, 197, 94, 0.55);
@@ -585,7 +468,7 @@
 
 .pantry-fields {
     display: grid;
-    grid-template-columns: minmax(0, 1.5fr) minmax(110px, 0.7fr) minmax(120px, 0.9fr);
+    grid-template-columns: minmax(0, 1.5fr) minmax(110px, 0.7fr) minmax(120px, 0.9fr) auto;
     gap: 12px;
     align-items: start;
 }
@@ -603,16 +486,20 @@
     padding-left: 2px;
 }
 
+.pantry-label-ghost {
+    visibility: hidden;
+}
+
 .pantry-input {
     min-height: auto;
     margin-bottom: 0;
 }
 
-    .pantry-input[readonly] {
-        background: rgba(15, 23, 42, 0.04);
-        color: var(--text);
-        cursor: default;
-    }
+.pantry-input[readonly] {
+    background: rgba(15, 23, 42, 0.04);
+    color: var(--text);
+    cursor: default;
+}
 
 .pantry-actions-row {
     display: flex;
@@ -665,90 +552,7 @@
 
 .pantry-save-btn {
     border: none;
-}
-
-@media (max-width: 900px) {
-    .pantry-list {
-        gap: 10px;
-    }
-
-    .pantry-card {
-        padding: 10px;
-        border-radius: 14px;
-    }
-
-    .pantry-fields {
-        display: grid;
-        grid-template-columns: minmax(0, 1fr) 72px 88px 82px;
-        gap: 8px;
-        align-items: start;
-    }
-
-    .pantry-field {
-        min-width: 0;
-        display: flex;
-        flex-direction: column;
-    }
-
-    .pantry-field-name,
-    .pantry-field-qty,
-    .pantry-field-unit,
-    .pantry-field-delete {
-        width: 100%;
-    }
-
-    .pantry-label {
-        font-size: 10px;
-        margin-bottom: 4px;
-        white-space: nowrap;
-    }
-
-    .pantry-label-ghost {
-        visibility: hidden;
-    }
-
-    .pantry-input {
-        width: 100%;
-        min-width: 0;
-        padding: 10px 8px;
-        font-size: 14px;
-    }
-
-    .pantry-btn {
-        width: 100%;
-        min-height: 42px;
-        padding: 10px 8px;
-        font-size: 13px;
-    }
-
-    .pantry-field-delete {
-        justify-content: flex-end;
-    }
-
-        .pantry-field-delete .pantry-btn {
-            margin-top: auto;
-        }
-
-    .menu-field-error {
-        font-size: 10px;
-        line-height: 1.2;
-        margin-top: 4px;
-        min-height: 12px;
-    }
-
-    .pantry-bottom-actions {
-        grid-template-columns: 1fr;
-        gap: 10px;
-        margin-bottom: 76px;
-    }
-
-    .pantry-add-btn,
-    .pantry-save-btn {
-        padding: 14px 16px;
-    }
-}
-
-/* ========== Shopping suggestion page add-ons ========== */
+} 
 
 .shopping-generate-btn {
     width: 100%;
@@ -760,12 +564,12 @@
     gap: 14px;
 }
 
-    .shopping-generate-btn:disabled,
-    .shopping-generate-btn.is-loading {
-        opacity: 0.9;
-        cursor: wait;
-        transform: none;
-    }
+.shopping-generate-btn:disabled,
+.shopping-generate-btn.is-loading {
+    opacity: 0.9;
+    cursor: wait;
+    transform: none;
+}
 
 .shopping-spinner {
     width: 18px;
@@ -778,9 +582,9 @@
     animation: shopping-spin 0.8s linear infinite;
 }
 
-    .shopping-spinner.show {
-        display: inline-block;
-    }
+.shopping-spinner.show {
+    display: inline-block;
+}
 
 .shopping-loading-panel {
     display: grid;
@@ -802,12 +606,6 @@
     gap: 16px;
     cursor: default;
 }
-
-    .shopping-results-card:hover {
-        transform: none;
-        border-color: var(--border);
-        box-shadow: 0 10px 24px rgba(15, 23, 42, 0.06);
-    }
 
 .shopping-card-header {
     display: flex;
@@ -907,42 +705,6 @@
     font-weight: 900;
 }
 
-@keyframes shopping-spin {
-    to {
-        transform: rotate(360deg);
-    }
-}
-
-@media (max-width: 900px) {
-    .shopping-list-grid,
-    .shopping-meal-grid {
-        grid-template-columns: 1fr;
-    }
-
-    .shopping-card-header {
-        align-items: flex-start;
-        text-align: left;
-    }
-
-    .shopping-card-title {
-        font-size: 18px;
-    }
-
-    .shopping-meal-card,
-    .shopping-list-item {
-        padding: 12px;
-    }
-
-    .shopping-macro-grid {
-        grid-template-columns: 1fr 1fr;
-        gap: 8px;
-    }
-
-    .shopping-generate-btn {
-        text-align: left;
-    }
-}
-
 .shopping-meal-lines {
     display: grid;
     gap: 8px;
@@ -959,9 +721,7 @@
 }
 
 .shopping-snack-section {
-    margin-top: 1rem;
-    padding-top: 0.75rem;
-    border-top: 1px solid rgba(255,255,255,0.08);
+    border-top: 1px solid rgba(255, 255, 255, 0.08);
 }
 
 .shopping-snack-title {
@@ -977,16 +737,59 @@
     opacity: 0.95;
 }
 
-.log-intro-card {
-    cursor: default;
+.shopping-ingredient-list,
+.shopping-step-list {
+    margin: 0;
+    padding-left: 20px;
+    display: grid;
+    gap: 8px;
 }
 
-    .log-intro-card:hover,
-    .log-result-card:hover {
-        transform: none;
-        border-color: var(--border);
-        box-shadow: 0 10px 24px rgba(15, 23, 42, 0.06);
+.shopping-ingredient-item,
+.shopping-step-item {
+    color: var(--text);
+    font-size: 14px;
+    line-height: 1.45;
+    font-weight: 700;
+}
+
+@keyframes shopping-spin {
+    to {
+        transform: rotate(360deg);
     }
+}
+ 
+.auth-card.menu-card {
+    position: relative;
+}
+
+.floating-back-btn {
+    position: absolute;
+    right: 16px;
+    bottom: 16px;
+    z-index: 20;
+    display: inline-flex;
+    align-items: center;
+    padding: 8px 25px;
+    border-radius: 999px;
+    font-weight: 900;
+    text-decoration: none;
+    background: #054585a8;
+    color: #fff;
+    box-shadow: 0 18px 40px rgba(0, 0, 0, 0.22);
+    transition: transform 0.08s ease, background 0.15s ease, box-shadow 0.15s ease;
+}
+
+.floating-back-btn:hover {
+    background: var(--primary-hover);
+    transform: translateY(-1px);
+}
+
+.floating-back-btn:focus-visible {
+    outline: none;
+    box-shadow: 0 0 0 4px var(--ring), 0 18px 40px rgba(0, 0, 0, 0.22);
+}
+ 
 
 .log-meal-tabs {
     grid-template-columns: repeat(4, 1fr);
@@ -1010,6 +813,7 @@
     min-height: 180px;
     resize: vertical;
     font: inherit;
+    box-sizing: border-box;
 }
 
 .log-submit-btn {
@@ -1089,12 +893,239 @@
     border-bottom: 1px solid rgba(15, 23, 42, 0.08);
 }
 
-    .log-summary-row:last-child {
-        border-bottom: none;
-        padding-bottom: 0;
-    }
+.log-summary-row:last-child {
+    border-bottom: none;
+    padding-bottom: 0;
+}
+     
+.meal-plan-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 12px;
+}
+
+.menu-minimised {
+    max-height: 100px !important;
+}
 
 @media (max-width: 900px) {
+    .whole-container {
+        height: 100dvh;
+        box-sizing: border-box;
+        padding: 0;
+    }
+
+    .auth-page {
+        height: 100%;
+        display: flex;
+        align-items: stretch;
+        justify-content: stretch;
+        padding-top: 0;
+        padding: 0;
+    }
+
+    .main-menu {
+        height: 100%;
+        padding: 0 !important;
+    }
+
+    .auth-card.menu-card {
+        grid-template-columns: 1fr;
+        grid-template-rows: auto 1fr;
+        height: 100%;
+        width: 100%;
+        align-self: stretch;
+        box-shadow: 0 0 0 rgba(0, 0, 0, 0.35);
+        border-radius: 0;
+    }
+
+    .auth-main {
+        padding: 10px;
+        padding-top: 20px;
+        overflow-y: auto;
+    }
+
+    .auth-side.menu-side {
+        order: -1;
+        padding: 20px;
+        padding-top: 15px;
+        padding-bottom: 25px;
+        max-height: 162.5px;
+    }
+
+    .small-menu {
+        padding-bottom: 5px !important;
+    }
+
+    .auth-side-subtitle {
+        margin: 9px 0;
+        font-size: 11px;
+        text-align: center;
+    }
+     
+    .menu-actions > .menu-actions-row:not(.log-meal-tabs):not(.meal-plan-grid):not(.menu-actions-profile) { 
+        gap: 4px !important;
+        height: 80px;
+    }
+
+    .menu-meal-row {
+        padding: 0;
+        place-items: center;
+        align-content: center;
+    }
+
+    .activity-row {
+        padding: 0;
+        place-items: center;
+        align-content: center;
+    }
+
+    .auth-title,
+    .menu-actions {
+        margin: 0;
+        text-align: center;
+    }
+
+    .menu-action-title {
+        font-size: 16px;
+    }
+
+    .log-text-box {
+        width: 100%;
+        margin-bottom: 10px;
+        min-height: 280px;
+    }
+
+    .menu-actions-profile {
+        grid-template-columns: 1fr !important;
+        gap: 12px !important;
+        height: auto !important;
+    }
+
+    .menu-text-box-profile {
+        width: 100%;
+        margin-bottom: 0;
+        min-height: auto;
+    }
+
+    .menu-action-profile {
+        padding: 11px 16px;
+    }
+
+    .gym-day-selection {
+        height: 235px;
+    }
+
+    .floating-back-btn {
+        position: fixed;
+        right: 10px;
+        bottom: calc(14px + env(safe-area-inset-bottom, 0px));
+        z-index: 9;
+    }
+
+    .pantry-list {
+        gap: 10px;
+    }
+
+    .pantry-card {
+        padding: 10px;
+        border-radius: 14px;
+    }
+
+    .pantry-fields {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) 72px 88px 82px;
+        gap: 8px;
+        align-items: start;
+    }
+
+    .pantry-field {
+        min-width: 0;
+        display: flex;
+        flex-direction: column;
+    }
+
+    .pantry-field-name,
+    .pantry-field-qty,
+    .pantry-field-unit,
+    .pantry-field-delete {
+        width: 100%;
+    }
+
+    .pantry-label {
+        font-size: 10px;
+        margin-bottom: 4px;
+        white-space: nowrap;
+    }
+
+    .pantry-input {
+        width: 100%;
+        min-width: 0;
+        padding: 10px 8px;
+        font-size: 14px;
+    }
+
+    .pantry-btn {
+        width: 100%;
+        min-height: 42px;
+        padding: 10px 8px;
+        font-size: 13px;
+    }
+
+    .pantry-field-delete {
+        justify-content: flex-end;
+    }
+
+    .pantry-field-delete .pantry-btn {
+        margin-top: auto;
+    }
+
+    .menu-field-error {
+        font-size: 10px;
+        line-height: 1.2;
+        margin-top: 4px;
+        min-height: 12px;
+    }
+
+    .pantry-bottom-actions {
+        grid-template-columns: 1fr;
+        gap: 10px;
+        margin-bottom: 76px;
+    }
+
+    .pantry-add-btn,
+    .pantry-save-btn {
+        padding: 14px 16px;
+    }
+
+    .shopping-list-grid,
+    .shopping-meal-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .shopping-card-header {
+        align-items: flex-start;
+        text-align: left;
+    }
+
+    .shopping-card-title {
+        font-size: 18px;
+    }
+
+    .shopping-meal-card,
+    .shopping-list-item {
+        padding: 12px;
+    }
+
+    .shopping-macro-grid {
+        grid-template-columns: 1fr 1fr;
+        gap: 8px;
+    }
+
+    .shopping-generate-btn {
+        text-align: left;
+    }
+
     .log-meal-tabs {
         grid-template-columns: repeat(2, 1fr);
         gap: 8px;
@@ -1116,15 +1147,7 @@
     .log-text-box {
         min-height: 220px;
     }
-}
 
-.meal-plan-grid {
-    display: grid;
-    grid-template-columns: repeat(2, 1fr);
-    gap: 12px;
-}
-
-@media (max-width: 900px) {
     .meal-plan-grid {
         grid-template-columns: repeat(2, 1fr);
         gap: 8px;
@@ -1134,8 +1157,12 @@
     .meal-plan-grid .menu-meal-row {
         min-height: 72px;
         padding: 10px;
-        justify-items: center;
+        place-items: center;
         align-content: center;
         text-align: center;
+    }
+
+    .menu-goal-row .goal-sub-metrics {
+        grid-template-columns: 1fr;
     }
 }
