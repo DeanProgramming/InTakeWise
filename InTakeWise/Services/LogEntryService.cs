@@ -33,6 +33,21 @@ namespace InTakeWise.Services
                 Fiber = mealInfo.Fiber
             };
 
+            var now = DateTime.UtcNow;
+            var today = now.Date;
+
+            var oldLog = await _db.MealLogs
+                .Where(x => x.UserId == userId
+                         && x.TimeEat == logTime
+                         && x.Timestamp.Date == today)
+                .OrderByDescending(x => x.Timestamp)
+                .FirstOrDefaultAsync();
+
+            if (oldLog != null)
+            {
+                _db.MealLogs.Remove(oldLog);
+            }
+
             _db.MealLogs.Add(log);
             await _db.SaveChangesAsync();
             return log;
