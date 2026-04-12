@@ -1,4 +1,5 @@
-﻿using InTakeWise.Models;
+﻿using InTakeWise.Helper;
+using InTakeWise.Models;
 using InTakeWise.Services;
 using InTakeWise.ViewModels;
 using Microsoft.AspNetCore.Authorization;
@@ -25,7 +26,7 @@ namespace InTakeWise.Controllers
         }
 
         [HttpGet]
-        public async Task<IActionResult> Index(LogType.LoggingType mode, TimeOfDay meal = TimeOfDay.Breakfast)
+        public async Task<IActionResult> Index(LogType.LoggingType mode, MealType meal = MealType.Breakfast)
         {
             var user = await _userManager.GetUserAsync(User);
             if (user == null) return Unauthorized();
@@ -56,7 +57,7 @@ namespace InTakeWise.Controllers
 
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> Meal(string userInput, LogType.LoggingType mode, TimeOfDay logTime)
+        public async Task<IActionResult> Meal(string userInput, LogType.LoggingType mode, MealType logTime)
         {
             var user = await _userManager.GetUserAsync(User);
             if (user == null) return Unauthorized();

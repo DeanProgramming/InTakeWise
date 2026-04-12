@@ -1,4 +1,5 @@
-﻿using InTakeWise.Models;
+﻿using InTakeWise.Helper;
+using InTakeWise.Models;
 using InTakeWise.Services;
 using InTakeWise.ViewModels;
 using Microsoft.AspNetCore.Authorization;
@@ -32,9 +33,9 @@ namespace InTakeWise.Controllers
 
             var vm = new HomeViewModel
             {
-                LoggedBreakfast = await _logEntryService.GetCompletedTodayMealAsync(user.Id, TimeOfDay.Breakfast),
-                LoggedDinner = await _logEntryService.GetCompletedTodayMealAsync(user.Id, TimeOfDay.Dinner),
-                LoggedTea = await _logEntryService.GetCompletedTodayMealAsync(user.Id, TimeOfDay.Tea)
+                LoggedBreakfast = await _logEntryService.GetCompletedTodayMealAsync(user.Id, MealType.Breakfast),
+                LoggedDinner = await _logEntryService.GetCompletedTodayMealAsync(user.Id, MealType.Dinner),
+                LoggedTea = await _logEntryService.GetCompletedTodayMealAsync(user.Id, MealType.Tea)
             };
 
             return View(vm);

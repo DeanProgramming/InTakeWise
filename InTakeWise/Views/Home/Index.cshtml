@@ -1,4 +1,5 @@
-﻿@model InTakeWise.ViewModels.HomeViewModel
+﻿@using InTakeWise.Helper
+@model InTakeWise.ViewModels.HomeViewModel
 
 @{
     ViewData["Title"] = "Menu";
@@ -16,7 +17,7 @@
                        asp-controller="LogEntry"
                        asp-action="Index"
                        asp-route-mode="Meal"
-                       asp-route-meal="@TimeOfDay.Breakfast">
+                       asp-route-meal="@MealType.Breakfast">
                         <div class="menu-action-title">Breakfast</div>
                         <div class="menu-action-sub">
                             <span class="status-badge @(Model.LoggedBreakfast ? "status-logged" : "status-pending")">
@@ -29,7 +30,7 @@
                        asp-controller="LogEntry"
                        asp-action="Index"
                        asp-route-mode="Meal"
-                       asp-route-meal="@TimeOfDay.Dinner">
+                       asp-route-meal="@MealType.Dinner">
                         <div class="menu-action-title">Dinner</div>
                         <div class="menu-action-sub">
                             <span class="status-badge @(Model.LoggedDinner ? "status-logged" : "status-pending")">
@@ -42,7 +43,7 @@
                        asp-controller="LogEntry"
                        asp-action="Index"
                        asp-route-mode="Meal"
-                       asp-route-meal="@TimeOfDay.Tea">
+                       asp-route-meal="@MealType.Tea">
                         <div class="menu-action-title">Tea</div>
                         <div class="menu-action-sub">
                             <span class="status-badge @(Model.LoggedTea ? "status-logged" : "status-pending")">

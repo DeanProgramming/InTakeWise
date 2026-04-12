@@ -1,13 +1,14 @@
 ﻿using InTakeWise.Dto;
+using InTakeWise.Helper;
 using InTakeWise.Models;
 namespace InTakeWise.Services
 {
     public interface ILogEntryService
     {
-        Task<MealLogEntry?> GetTodayMealAsync(string userId, TimeOfDay timeOfDay);
-        Task<bool> GetCompletedTodayMealAsync(string userId, TimeOfDay timeOfDay);
+        Task<MealLogEntry?> GetTodayMealAsync(string userId, MealType timeOfDay);
+        Task<bool> GetCompletedTodayMealAsync(string userId, MealType timeOfDay);
 
-        Task<MealLogEntry> LogMealInfoAsync(string userId, string userInput, TimeOfDay logTime);
+        Task<MealLogEntry> LogMealInfoAsync(string userId, string userInput, MealType logTime);
         Task<WorkoutLogEntry> LogWorkoutInfoAsync(string userId, string userInput);
 
         Task<MealLogEntry?> GetMealByIdAsync(int id, string userId);

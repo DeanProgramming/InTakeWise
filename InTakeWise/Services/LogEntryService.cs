@@ -1,5 +1,6 @@
 ﻿using InTakeWise.Data;
 using InTakeWise.Dto;
+using InTakeWise.Helper;
 using InTakeWise.Models;
 using Microsoft.EntityFrameworkCore;
 
@@ -18,7 +19,7 @@ namespace InTakeWise.Services
             _clock = clock;
         }
 
-        public async Task<MealLogEntry> LogMealInfoAsync(string userId, string userInput, TimeOfDay logTime)
+        public async Task<MealLogEntry> LogMealInfoAsync(string userId, string userInput, MealType logTime)
         {
             var mealInfo = await _aiLogParser.AnalyzeMealAsync(userInput);
             var (startUtc, endUtc) = _clock.GetTodayLondonRangeUtc();
@@ -54,7 +55,7 @@ namespace InTakeWise.Services
             return log;
         }
 
-        public async Task<MealLogEntry?> GetTodayMealAsync(string userId, TimeOfDay timeOfDay)
+        public async Task<MealLogEntry?> GetTodayMealAsync(string userId, MealType timeOfDay)
         {
             var (startUtc, endUtc) = _clock.GetTodayLondonRangeUtc();
 
@@ -67,7 +68,7 @@ namespace InTakeWise.Services
                 .FirstOrDefaultAsync();
         }
 
-        public async Task<bool> GetCompletedTodayMealAsync(string userId, TimeOfDay timeOfDay)
+        public async Task<bool> GetCompletedTodayMealAsync(string userId, MealType timeOfDay)
         {
             MealLogEntry? meal = await GetTodayMealAsync(userId, timeOfDay);
             return meal != null;

@@ -1,4 +1,5 @@
 ﻿using InTakeWise.Dto;
+using InTakeWise.Helper;
 using InTakeWise.Models;
 
 namespace InTakeWise.ViewModels
@@ -7,7 +8,7 @@ namespace InTakeWise.ViewModels
     {
         public string? UserName { get; set; }
         public LogType.LoggingType Mode { get; set; }
-        public TimeOfDay SelectedTimeOfDay { get; set; }
+        public MealType SelectedTimeOfDay { get; set; }
 
         public string UserInput { get; set; } = "";
 

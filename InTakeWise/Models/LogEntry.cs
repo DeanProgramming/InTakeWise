@@ -1,15 +1,8 @@
-﻿using static InTakeWise.Models.LogType;
+﻿using InTakeWise.Helper;
+using static InTakeWise.Models.LogType;
 
 namespace InTakeWise.Models
 {
-    public enum TimeOfDay
-    {
-        Breakfast,
-        Dinner,
-        Tea,
-        Snack
-    }
-
     public abstract class LogEntryBase
     {
         public int Id { get; set; }
@@ -20,7 +13,7 @@ namespace InTakeWise.Models
 
     public class MealLogEntry : LogEntryBase
     {
-        public TimeOfDay TimeEat { get; set; } 
+        public MealType TimeEat { get; set; } 
         public int? Calories { get; set; }
         public int? Protein { get; set; }
         public int? Carbs { get; set; }

@@ -1,4 +1,5 @@
-﻿@model InTakeWise.ViewModels.LogEntryViewModel
+﻿@using InTakeWise.Helper
+@model InTakeWise.ViewModels.LogEntryViewModel
 
 @{
     var isMeal = Model.Mode == LogType.LoggingType.Meal;
@@ -26,50 +27,50 @@
                 @if (isMeal)
                 {
                     <div class="menu-actions-row log-meal-tabs">
-                        <a class="menu-action menu-meal-row @(Model.SelectedTimeOfDay == TimeOfDay.Breakfast ? "is-selected-tile" : "")"
+                        <a class="menu-action menu-meal-row @(Model.SelectedTimeOfDay == MealType.Breakfast ? "is-selected-tile" : "")"
                            asp-action="Index"
                            asp-route-mode="@Model.Mode"
-                           asp-route-meal="@TimeOfDay.Breakfast">
+                           asp-route-meal="@MealType.Breakfast">
                             <div class="menu-action-title">Breakfast</div>
                             <div class="menu-action-sub">
-                                <span class="status-badge @(Model.SelectedTimeOfDay == TimeOfDay.Breakfast ? "status-logged" : "status-pending")">
-                                    @(Model.SelectedTimeOfDay == TimeOfDay.Breakfast ? "Selected" : "View")
+                                <span class="status-badge @(Model.SelectedTimeOfDay == MealType.Breakfast ? "status-logged" : "status-pending")">
+                                    @(Model.SelectedTimeOfDay == MealType.Breakfast ? "Selected" : "View")
                                 </span>
                             </div>
                         </a>
 
-                        <a class="menu-action menu-meal-row @(Model.SelectedTimeOfDay == TimeOfDay.Dinner ? "is-selected-tile" : "")"
+                        <a class="menu-action menu-meal-row @(Model.SelectedTimeOfDay == MealType.Dinner ? "is-selected-tile" : "")"
                            asp-action="Index"
                            asp-route-mode="@Model.Mode"
-                           asp-route-meal="@TimeOfDay.Dinner">
+                           asp-route-meal="@MealType.Dinner">
                             <div class="menu-action-title">Dinner</div>
                             <div class="menu-action-sub">
-                                <span class="status-badge @(Model.SelectedTimeOfDay == TimeOfDay.Dinner ? "status-logged" : "status-pending")">
-                                    @(Model.SelectedTimeOfDay == TimeOfDay.Dinner ? "Selected" : "View")
+                                <span class="status-badge @(Model.SelectedTimeOfDay == MealType.Dinner ? "status-logged" : "status-pending")">
+                                    @(Model.SelectedTimeOfDay == MealType.Dinner ? "Selected" : "View")
                                 </span>
                             </div>
                         </a>
 
-                        <a class="menu-action menu-meal-row @(Model.SelectedTimeOfDay == TimeOfDay.Tea ? "is-selected-tile" : "")"
+                        <a class="menu-action menu-meal-row @(Model.SelectedTimeOfDay == MealType.Tea ? "is-selected-tile" : "")"
                            asp-action="Index"
                            asp-route-mode="@Model.Mode"
-                           asp-route-meal="@TimeOfDay.Tea">
+                           asp-route-meal="@MealType.Tea">
                             <div class="menu-action-title">Tea</div>
                             <div class="menu-action-sub">
-                                <span class="status-badge @(Model.SelectedTimeOfDay == TimeOfDay.Tea ? "status-logged" : "status-pending")">
-                                    @(Model.SelectedTimeOfDay == TimeOfDay.Tea ? "Selected" : "View")
+                                <span class="status-badge @(Model.SelectedTimeOfDay == MealType.Tea ? "status-logged" : "status-pending")">
+                                    @(Model.SelectedTimeOfDay == MealType.Tea ? "Selected" : "View")
                                 </span>
                             </div>
                         </a>
 
-                        <a class="menu-action menu-meal-row @(Model.SelectedTimeOfDay == TimeOfDay.Snack ? "is-selected-tile" : "")"
+                        <a class="menu-action menu-meal-row @(Model.SelectedTimeOfDay == MealType.Snack ? "is-selected-tile" : "")"
                            asp-action="Index"
                            asp-route-mode="@Model.Mode"
-                           asp-route-meal="@TimeOfDay.Snack">
+                           asp-route-meal="@MealType.Snack">
                             <div class="menu-action-title">Snack</div>
                             <div class="menu-action-sub">
-                                <span class="status-badge @(Model.SelectedTimeOfDay == TimeOfDay.Snack ? "status-logged" : "status-pending")">
-                                    @(Model.SelectedTimeOfDay == TimeOfDay.Snack ? "Selected" : "View")
+                                <span class="status-badge @(Model.SelectedTimeOfDay == MealType.Snack ? "status-logged" : "status-pending")">
+                                    @(Model.SelectedTimeOfDay == MealType.Snack ? "Selected" : "View")
                                 </span>
                             </div>
                         </a>

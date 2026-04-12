@@ -1,14 +1,8 @@
-﻿using System.ComponentModel.DataAnnotations;
+﻿using InTakeWise.Helper;
+using System.ComponentModel.DataAnnotations;
 
 namespace InTakeWise.Models
-{
-    public enum MealType
-    {
-        Breakfast = 1,
-        Dinner = 2,
-        Tea = 3
-    }
-
+{ 
     public class SavedTodayMealPlan
     {
         public int Id { get; set; }
@@ -30,7 +24,7 @@ namespace InTakeWise.Models
         public int SavedTodayMealPlanId { get; set; }
         public SavedTodayMealPlan SavedTodayMealPlan { get; set; } = null!;
 
-        public MealType MealType { get; set; }
+        public Helper.MealType MealType { get; set; }
 
         [Required]
         public string Title { get; set; } = "";
