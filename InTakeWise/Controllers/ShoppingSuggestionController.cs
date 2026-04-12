@@ -25,9 +25,21 @@ namespace InTakeWise.Controllers
         }
 
         [HttpGet]
-        public IActionResult Index()
+        public async Task<IActionResult> Index()
         {
-            return View("ShoppingSuggestion", new ShoppingSuggestionViewModel());
+            var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            if (string.IsNullOrWhiteSpace(userId))
+                return Unauthorized();
+
+            var savedPlan = await _shoppingSuggestionService.GetSavedWeekPlanAsync(userId);
+
+            var vm = new ShoppingSuggestionViewModel
+            {
+                ShoppingList = savedPlan?.ShoppingList ?? new(),
+                WeekMealsSummary = savedPlan?.WeekMealsSummary ?? new()
+            };
+
+            return View("ShoppingSuggestion", vm);
         }
 
         [HttpPost]
@@ -45,10 +57,9 @@ namespace InTakeWise.Controllers
                 var pantryItems = await _foodItemService.GetFoodItemsAsync(userId);
                 var plan = await _shoppingSuggestionService.GenerateWeekPlanAsync(userId, pantryItems);
 
-                vm.ShoppingList = plan.ShoppingList ?? new();
-                vm.WeekMealsSummary = plan.WeekMealsSummary ?? new();
+                await _shoppingSuggestionService.SaveWeekPlanAsync(userId, plan);
 
-                return View("ShoppingSuggestion", vm);
+                return RedirectToAction(nameof(Index));
             }
             catch (TaskCanceledException ex)
             {

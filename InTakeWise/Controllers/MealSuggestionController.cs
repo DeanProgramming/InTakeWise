@@ -1,22 +1,19 @@
-﻿using InTakeWise.Models;
+﻿using System.Security.Claims;
 using InTakeWise.Services;
 using InTakeWise.ViewModels;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using System.Security.Claims;
 
 namespace InTakeWise.Controllers
 {
     [Authorize]
     public class MealSuggestionController : Controller
     {
-        private readonly IFoodItemService _foodItemService;
-        private readonly IMealSuggestionService _mealService;
+        private readonly IMealSuggestionService _mealSuggestionService;
 
-        public MealSuggestionController(IFoodItemService foodService, IMealSuggestionService mealService)
+        public MealSuggestionController(IMealSuggestionService mealSuggestionService)
         {
-            _foodItemService = foodService;
-            _mealService = mealService;
+            _mealSuggestionService = mealSuggestionService;
         }
 
         [HttpGet]
@@ -26,25 +23,39 @@ namespace InTakeWise.Controllers
             if (string.IsNullOrWhiteSpace(userId))
                 return Unauthorized();
 
-            var foods = await _foodItemService.GetFoodItemsAsync(userId);
-            var plan = await _mealService.GetTodayPlanAsync(userId, foods);
+            var selectedMeal = NormalizeMeal(meal);
+            var plan = await _mealSuggestionService.GetTodayPlanAsync(userId);
 
             var vm = new MealSuggestionViewModel
             {
                 Plan = plan,
-                SelectedMeal = meal,
-                StatusMessage = "Today's meals generated from your fridge items."
+                SelectedMeal = selectedMeal,
+                StatusMessage = plan == null
+                    ? "No saved meal plan for today. Generate your weekly shopping plan first."
+                    : ""
             };
+
+            if (plan != null && vm.SelectedMealSuggestion == null)
+            {
+                vm.SelectedMeal =
+                    plan.Breakfast != null ? "Breakfast" :
+                    plan.Lunch != null ? "Lunch" :
+                    plan.Dinner != null ? "Dinner" :
+                    "Breakfast";
+            }
 
             return View("MealSuggestion", vm);
         }
-
-        [HttpPost]
-        [ValidateAntiForgeryToken]
-        public async Task<IActionResult> Regenerate(string meal = "Breakfast")
-        { 
-            return await Index(meal);
+        private static string NormalizeMeal(string? meal)
+        {
+            return meal?.Trim().ToLowerInvariant() switch
+            {
+                "breakfast" => "Breakfast",
+                "lunch" => "Lunch",
+                "dinner" => "Dinner",
+                "snack" => "Snack",
+                _ => "Breakfast"
+            };
         }
     }
-
 }

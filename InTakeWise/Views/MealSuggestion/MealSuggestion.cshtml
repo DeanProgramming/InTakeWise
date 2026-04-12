@@ -2,92 +2,154 @@
 
 @{
     ViewData["Title"] = "Today Meal Plan";
+    var hasPlan = Model.Plan != null;
+    var selected = Model.SelectedMealSuggestion;
 }
 
 <div class="auth-page">
     <div class="auth-card menu-card">
 
-        <!-- MAIN -->
         <section class="auth-main">
             <div class="menu-actions">
                 <h1 class="auth-title">@ViewData["Title"]</h1>
 
-                <a class="menu-action" asp-controller="Pantry" asp-action="Index">
-                    <div class="menu-action-title">Whats in my fridge ?</div>
-                    <div class="menu-action-sub">Check whats in your fridge before generating</div>
-                </a>
-
-                <form asp-controller="MealSuggestion"
-                      asp-action="Regenerate"
-                      method="post"
-                      class="log-form">
-                    @Html.AntiForgeryToken()
-                    <button type="submit" class="btn-primary">
-                        Regenerate meals
-                    </button>
-
-                </form>
-                <div class="menu-actions-row">
-                    <a class="menu-action menu-meal-row" asp-action="Index" asp-route-meal="Breakfast">
-                        <div class="menu-action-title">Breakfast</div>
-                        <div class="menu-action-sub">
-                            <span class="status-badge @(Model.SelectedMeal == "Breakfast" ? "status-logged" : "status-pending")">
-                                @(Model.SelectedMeal == "Breakfast" ? "Selected" : "View")
-                            </span>
-                        </div>
-                    </a>
-
-                    <a class="menu-action menu-meal-row" asp-action="Index" asp-route-meal="Dinner">
-                        <div class="menu-action-title">Dinner</div>
-                        <div class="menu-action-sub">
-                            <span class="status-badge @(Model.SelectedMeal == "Dinner" ? "status-logged" : "status-pending")">
-                                @(Model.SelectedMeal == "Dinner" ? "Selected" : "View")
-                            </span>
-                        </div>
-                    </a>
-
-                    <a class="menu-action menu-meal-row" asp-action="Index" asp-route-meal="Tea">
-                        <div class="menu-action-title">Tea</div>
-                        <div class="menu-action-sub">
-                            <span class="status-badge @(Model.SelectedMeal == "Tea" ? "status-logged" : "status-pending")">
-                                @(Model.SelectedMeal == "Tea" ? "Selected" : "View")
-                            </span>
-                        </div>
-                    </a>
-                </div>               
-
-                <h1 class="auth-title">@Model.SelectedMeal Plan</h1>
-
-                @if (Model.SelectedMealSuggestion is null)
+                @if (!hasPlan)
                 {
-                    <text>No suggestion yet.</text>
+                    <div class="menu-action shopping-empty-state">
+                        <div class="menu-action-title">No meal plan for today</div>
+                        <div class="menu-action-sub">
+                            Generate your weekly shopping plan first, then today’s meals will appear here.
+                        </div>
+                    </div>
                 }
                 else
                 {
-                    var m = Model.SelectedMealSuggestion;
+                    <section class="menu-action shopping-results-card">
+                        <div class="shopping-card-header">
+                            <h3 class="shopping-card-title">
+                                @Model.Plan!.Day @(Model.Plan.IsGymDay ? "(Gym Day)" : "")
+                            </h3>
+                            <span class="status-badge status-logged">Today</span>
+                        </div>
 
-                    <text>@m.Title</text>
-                    <text>
+                        <div class="shopping-macro-grid">
+                            <div class="shopping-macro-box">
+                                <span class="shopping-macro-label">Calories</span>
+                                <strong class="shopping-macro-value">@Model.Plan.Calories</strong>
+                            </div>
+                            <div class="shopping-macro-box">
+                                <span class="shopping-macro-label">Protein</span>
+                                <strong class="shopping-macro-value">@Model.Plan.ProteinGrams g</strong>
+                            </div>
+                            <div class="shopping-macro-box">
+                                <span class="shopping-macro-label">Carbs</span>
+                                <strong class="shopping-macro-value">@Model.Plan.CarbsGrams g</strong>
+                            </div>
+                            <div class="shopping-macro-box">
+                                <span class="shopping-macro-label">Fat</span>
+                                <strong class="shopping-macro-value">@Model.Plan.FatGrams g</strong>
+                            </div>
+                        </div>
+                    </section>
 
-                        @m.Description
+                    <div class="menu-actions-row meal-plan-grid">
+                        <a class="menu-action menu-meal-row" asp-action="Index" asp-route-meal="Breakfast">
+                            <div class="menu-action-title">Breakfast</div>
+                            <div class="menu-action-sub">
+                                <span class="status-badge @(Model.SelectedMeal == "Breakfast" ? "status-logged" : "status-pending")">
+                                    @(Model.SelectedMeal == "Breakfast" ? "Selected" : "View")
+                                </span>
+                            </div>
+                        </a>
 
-                        Calories: @m.Calories | P: @m.ProteinGrams g | C: @m.CarbsGrams g | F: @m.FatGrams g
+                        <a class="menu-action menu-meal-row" asp-action="Index" asp-route-meal="Lunch">
+                            <div class="menu-action-title">Lunch</div>
+                            <div class="menu-action-sub">
+                                <span class="status-badge @(Model.SelectedMeal == "Lunch" ? "status-logged" : "status-pending")">
+                                    @(Model.SelectedMeal == "Lunch" ? "Selected" : "View")
+                                </span>
+                            </div>
+                        </a>
 
-                        Ingredients:
-                        - @string.Join("\n- ", m.IngredientsUsed)
+                        <a class="menu-action menu-meal-row" asp-action="Index" asp-route-meal="Dinner">
+                            <div class="menu-action-title">Dinner</div>
+                            <div class="menu-action-sub">
+                                <span class="status-badge @(Model.SelectedMeal == "Dinner" ? "status-logged" : "status-pending")">
+                                    @(Model.SelectedMeal == "Dinner" ? "Selected" : "View")
+                                </span>
+                            </div>
+                        </a>
 
-                        Steps:
-                        - @string.Join("\n- ", m.Steps)
-                    </text>
+                        <a class="menu-action menu-meal-row" asp-action="Index" asp-route-meal="Snack">
+                            <div class="menu-action-title">Snack</div>
+                            <div class="menu-action-sub">
+                                <span class="status-badge @(Model.SelectedMeal == "Snack" ? "status-logged" : "status-pending")">
+                                    @(Model.SelectedMeal == "Snack" ? "Selected" : "View")
+                                </span>
+                            </div>
+                        </a>
+                    </div>
+
+                    <section class="menu-action shopping-results-card">
+                        <div class="shopping-card-header">
+                            <h3 class="shopping-card-title">@Model.SelectedMeal</h3>
+                        </div>
+
+                        @if (selected is null)
+                        {
+                            <div class="menu-action-sub">No @Model.SelectedMeal plan saved for today.</div>
+                        }
+                        else
+                        {
+                            @if (!string.IsNullOrWhiteSpace(selected.Description))
+                            {
+                                <div class="shopping-snack-section">
+                                    <div class="shopping-snack-title">Overview</div>
+
+                                    <div class="shopping-meal-lines">
+                                        @foreach (var line in selected.Description.Split('\n', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
+                                        {
+                                            <div class="shopping-meal-line">@line</div>
+                                        }
+                                    </div>
+                                </div>
+                            }
+
+                            @if (selected.IngredientsUsed.Any())
+                            {
+                                <div class="shopping-snack-section">
+                                    <div class="shopping-snack-title">Ingredients</div>
+
+                                    <ul class="shopping-ingredient-list">
+                                        @foreach (var ingredient in selected.IngredientsUsed)
+                                        {
+                                            <li class="shopping-ingredient-item">@ingredient</li>
+                                        }
+                                    </ul>
+                                </div>
+                            }
+
+                            @if (selected.Steps.Any())
+                            {
+                                <div class="shopping-snack-section">
+                                    <div class="shopping-snack-title">Steps</div>
+
+                                    <ol class="shopping-step-list">
+                                        @foreach (var step in selected.Steps)
+                                        {
+                                            <li class="shopping-step-item">@step</li>
+                                        }
+                                    </ol>
+                                </div>
+                            }
+                        }
+                    </section>
                 }
-
             </div>
         </section>
 
-        <!-- SIDE -->
         @await Component.InvokeAsync("MenuSide", new { variant = "compact" })
-
     </div>
 </div>
 
-@await Component.InvokeAsync("FloatingBackButton", new {text = "BACK", fallbackUrl = Url.Action("Index", "Home")})
+@await Component.InvokeAsync("FloatingBackButton", new { text = "BACK", fallbackUrl = Url.Action("Index", "Home") })

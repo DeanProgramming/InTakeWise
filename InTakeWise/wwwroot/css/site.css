@@ -958,6 +958,25 @@
     font-weight: 700;
 }
 
+.shopping-snack-section {
+    margin-top: 1rem;
+    padding-top: 0.75rem;
+    border-top: 1px solid rgba(255,255,255,0.08);
+}
+
+.shopping-snack-title {
+    font-size: 0.85rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    margin-bottom: 0.5rem;
+    opacity: 0.8;
+}
+
+.shopping-snack-line {
+    opacity: 0.95;
+}
+
 .log-intro-card {
     cursor: default;
 }
@@ -1096,5 +1115,27 @@
 
     .log-text-box {
         min-height: 220px;
+    }
+}
+
+.meal-plan-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 12px;
+}
+
+@media (max-width: 900px) {
+    .meal-plan-grid {
+        grid-template-columns: repeat(2, 1fr);
+        gap: 8px;
+        height: auto;
+    }
+
+    .meal-plan-grid .menu-meal-row {
+        min-height: 72px;
+        padding: 10px;
+        justify-items: center;
+        align-content: center;
+        text-align: center;
     }
 }

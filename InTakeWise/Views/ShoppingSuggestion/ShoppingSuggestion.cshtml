@@ -100,21 +100,84 @@
                                         </div>
 
                                         @{
+                                            var rawTitle = meal.Title?.Trim() ?? "";
+
                                             var formattedMealTitle = Regex.Replace(
-                                            meal.Title?.Trim() ?? "",
+                                            rawTitle,
                                             @"\s*(Late Snack|Breakfast|Lunch|Dinner|Snack):",
                                             m => (m.Index == 0 ? "" : "\n") + m.Groups[1].Value + ":");
 
                                             var mealLines = formattedMealTitle
                                             .Split('\n', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+
+                                            var mainMealLines = mealLines
+                                            .Where(x =>
+                                            x.StartsWith("Breakfast:", StringComparison.OrdinalIgnoreCase) ||
+                                            x.StartsWith("Lunch:", StringComparison.OrdinalIgnoreCase) ||
+                                            x.StartsWith("Dinner:", StringComparison.OrdinalIgnoreCase))
+                                            .ToList();
+
+                                            var snackLines = mealLines
+                                            .Where(x =>
+                                            x.StartsWith("Snack:", StringComparison.OrdinalIgnoreCase) ||
+                                            x.StartsWith("Late Snack:", StringComparison.OrdinalIgnoreCase))
+                                            .ToList();
+
+                                            var overviewLines = new List<string>();
+
+                                            if (!string.IsNullOrWhiteSpace(meal.MealDetails?.Breakfast?.Overview))
+                                                overviewLines.Add($"Breakfast: {meal.MealDetails.Breakfast.Overview.Trim()}");
+
+                                            if (!string.IsNullOrWhiteSpace(meal.MealDetails?.Lunch?.Overview))
+                                                overviewLines.Add($"Lunch: {meal.MealDetails.Lunch.Overview.Trim()}");
+
+                                            if (!string.IsNullOrWhiteSpace(meal.MealDetails?.Dinner?.Overview))
+                                                overviewLines.Add($"Dinner: {meal.MealDetails.Dinner.Overview.Trim()}");
+
+                                            if (!string.IsNullOrWhiteSpace(meal.MealDetails?.Snack?.Overview))
+                                                overviewLines.Add($"Snack: {meal.MealDetails.Snack.Overview.Trim()}");
+
+                                            if (!string.IsNullOrWhiteSpace(meal.MealDetails?.LateSnack?.Overview))
+                                                overviewLines.Add($"Late Snack: {meal.MealDetails.LateSnack.Overview.Trim()}");
                                         }
 
-                                        <div class="shopping-meal-lines">
-                                            @foreach (var line in mealLines)
-                                            {
-                                                <div class="shopping-meal-line">@line</div>
-                                            }
-                                        </div>
+                                        @if (mainMealLines.Any())
+                                        {
+                                            <div class="shopping-meal-lines">
+                                                @foreach (var line in mainMealLines)
+                                                {
+                                                    <div class="shopping-meal-line">@line</div>
+                                                }
+                                            </div>
+                                        }
+
+                                        @if (snackLines.Any())
+                                        {
+                                            <div class="shopping-snack-section">
+                                                <div class="shopping-snack-title">Snacks</div>
+
+                                                <div class="shopping-meal-lines">
+                                                    @foreach (var line in snackLines)
+                                                    {
+                                                        <div class="shopping-meal-line shopping-snack-line">@line</div>
+                                                    }
+                                                </div>
+                                            </div>
+                                        }
+
+                                        @if (overviewLines.Any())
+                                        {
+                                            <div class="shopping-snack-section">
+                                                <div class="shopping-snack-title">Meal Overview</div>
+
+                                                <div class="shopping-meal-lines">
+                                                    @foreach (var line in overviewLines)
+                                                    {
+                                                        <div class="shopping-meal-line">@line</div>
+                                                    }
+                                                </div>
+                                            </div>
+                                        }
 
                                         <div class="shopping-macro-grid">
                                             <div class="shopping-macro-box">

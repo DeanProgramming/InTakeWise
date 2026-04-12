@@ -16,6 +16,11 @@ namespace InTakeWise.Services
         private readonly IConfiguration _config;
         private readonly ILogger<ShoppingSuggestionService> _logger;
 
+        private static readonly JsonSerializerOptions JsonOptions = new()
+        {
+            PropertyNameCaseInsensitive = true
+        };
+
         public ShoppingSuggestionService(
             ApplicationDbContext db,
             IConfiguration config,
@@ -66,6 +71,36 @@ namespace InTakeWise.Services
                     jsonSchema: BinaryData.FromBytes("""
                     {
                       "type": "object",
+                      "definitions": {
+                        "mealDetail": {
+                          "type": "object",
+                          "properties": {
+                            "overview": { "type": "string" },
+                            "ingredients": {
+                              "type": "array",
+                              "items": { "type": "string" }
+                            },
+                            "steps": {
+                              "type": "array",
+                              "items": { "type": "string" }
+                            }
+                          },
+                          "required": ["overview", "ingredients", "steps"],
+                          "additionalProperties": false
+                        },
+                        "mealDetails": {
+                          "type": "object",
+                          "properties": {
+                            "breakfast": { "$ref": "#/definitions/mealDetail" },
+                            "lunch": { "$ref": "#/definitions/mealDetail" },
+                            "dinner": { "$ref": "#/definitions/mealDetail" },
+                            "snack": { "$ref": "#/definitions/mealDetail" },
+                            "lateSnack": { "$ref": "#/definitions/mealDetail" }
+                          },
+                          "required": ["breakfast", "lunch", "dinner", "snack", "lateSnack"],
+                          "additionalProperties": false
+                        }
+                      },
                       "properties": {
                         "shoppingList": {
                           "type": "array",
@@ -90,9 +125,10 @@ namespace InTakeWise.Services
                               "calories": { "type": "integer" },
                               "proteinGrams": { "type": "integer" },
                               "carbsGrams": { "type": "integer" },
-                              "fatGrams": { "type": "integer" }
+                              "fatGrams": { "type": "integer" },
+                              "mealDetails": { "$ref": "#/definitions/mealDetails" }
                             },
-                            "required": ["day", "title", "calories", "proteinGrams", "carbsGrams", "fatGrams"],
+                            "required": ["day", "title", "calories", "proteinGrams", "carbsGrams", "fatGrams", "mealDetails"],
                             "additionalProperties": false
                           }
                         }
@@ -115,12 +151,7 @@ namespace InTakeWise.Services
 
             try
             {
-                var plan = JsonSerializer.Deserialize<ShoppingPlanDto>(
-                    json,
-                    new JsonSerializerOptions
-                    {
-                        PropertyNameCaseInsensitive = true
-                    });
+                var plan = JsonSerializer.Deserialize<ShoppingPlanDto>(json, JsonOptions);
 
                 if (plan == null)
                     throw new InvalidOperationException("OpenAI returned an empty shopping plan.");
@@ -130,6 +161,8 @@ namespace InTakeWise.Services
 
                 foreach (var meal in plan.WeekMealsSummary)
                 {
+                    meal.MealDetails ??= new DailyMealDetailsDto();
+
                     var targetDay = weekTargets.FirstOrDefault(x =>
                         string.Equals(x.Day, meal.Day, StringComparison.OrdinalIgnoreCase));
 
@@ -250,6 +283,10 @@ namespace InTakeWise.Services
             sb.AppendLine("- Keep meals realistic and simple.");
             sb.AppendLine("- Try to keep each day close to the target macros.");
             sb.AppendLine("- Use kilograms, grams, ml, or item counts where suitable.");
+            sb.AppendLine("- For each day, return a short summary in title.");
+            sb.AppendLine("- Also return detailed mealDetails for breakfast, lunch, dinner, snack and lateSnack.");
+            sb.AppendLine("- Each meal detail must include overview, ingredients array, and steps array.");
+            sb.AppendLine("- If lateSnack is not used, return empty overview and empty arrays.");
             sb.AppendLine();
 
             sb.AppendLine("RETURN JSON IN THIS SHAPE");
@@ -261,11 +298,38 @@ namespace InTakeWise.Services
               "weekMealsSummary": [
                 {
                   "day": "Monday",
-                  "title": "Breakfast: ..., Lunch: ..., Dinner: ...",
+                  "title": "Breakfast: Greek yogurt bowl, Lunch: Chicken rice bowl, Dinner: Salmon with potatoes, Snack: Apple with peanut butter",
                   "calories": 2200,
                   "proteinGrams": 180,
                   "carbsGrams": 210,
-                  "fatGrams": 65
+                  "fatGrams": 65,
+                  "mealDetails": {
+                    "breakfast": {
+                      "overview": "Greek yogurt bowl with berries and oats.",
+                      "ingredients": ["200g Greek yogurt", "50g oats", "80g berries"],
+                      "steps": ["Add yogurt to a bowl.", "Top with oats and berries.", "Serve immediately."]
+                    },
+                    "lunch": {
+                      "overview": "Chicken rice bowl with vegetables.",
+                      "ingredients": ["180g chicken breast", "150g cooked rice", "100g broccoli"],
+                      "steps": ["Cook chicken.", "Heat rice and broccoli.", "Assemble in a bowl."]
+                    },
+                    "dinner": {
+                      "overview": "Salmon with potatoes and green beans.",
+                      "ingredients": ["180g salmon", "250g potatoes", "100g green beans"],
+                      "steps": ["Bake salmon.", "Boil potatoes.", "Steam green beans.", "Serve together."]
+                    },
+                    "snack": {
+                      "overview": "Apple slices with peanut butter.",
+                      "ingredients": ["1 apple", "20g peanut butter"],
+                      "steps": ["Slice the apple.", "Serve with peanut butter."]
+                    },
+                    "lateSnack": {
+                      "overview": "",
+                      "ingredients": [],
+                      "steps": []
+                    }
+                  }
                 }
               ]
             }
@@ -298,6 +362,168 @@ namespace InTakeWise.Services
             public int Carbs { get; set; }
             public int Fat { get; set; }
             public int Fiber { get; set; }
+        }
+
+        public async Task SaveWeekPlanAsync(string userId, ShoppingPlanDto plan)
+        {
+            if (string.IsNullOrWhiteSpace(userId))
+                throw new InvalidOperationException("You must be signed in to save a shopping plan.");
+
+            if (plan == null)
+                throw new ArgumentNullException(nameof(plan));
+
+            plan.ShoppingList ??= new List<ShoppingLineDto>();
+            plan.WeekMealsSummary ??= new List<WeeklyMealDto>();
+
+            await using var tx = await _db.Database.BeginTransactionAsync();
+
+            var existing = await _db.ShoppingLists
+                .Include(x => x.Items)
+                .Include(x => x.Meals)
+                .FirstOrDefaultAsync(x => x.UserId == userId);
+
+            if (existing == null)
+            {
+                existing = new ShoppingList
+                {
+                    UserId = userId
+                };
+
+                _db.ShoppingLists.Add(existing);
+            }
+            else
+            {
+                _db.ShoppingListItems.RemoveRange(existing.Items);
+                _db.ShoppingMealDays.RemoveRange(existing.Meals);
+
+                existing.Items.Clear();
+                existing.Meals.Clear();
+            }
+
+            existing.CreatedAt = DateTime.UtcNow;
+
+            var foodLookup = await _db.FoodItems
+                .AsNoTracking()
+                .Select(x => new { x.Id, x.Name })
+                .ToListAsync();
+
+            var foodMap = foodLookup
+                .GroupBy(x => NormalizeName(x.Name))
+                .ToDictionary(g => g.Key, g => g.First().Id);
+
+            existing.Items = plan.ShoppingList
+                .Where(x => !string.IsNullOrWhiteSpace(x.Name))
+                .Select(x =>
+                {
+                    var normalized = NormalizeName(x.Name);
+                    foodMap.TryGetValue(normalized, out var foodItemId);
+
+                    return new ShoppingListItem
+                    {
+                        Name = x.Name.Trim(),
+                        Quantity = x.Quantity,
+                        Unit = x.Unit?.Trim() ?? "",
+                        FoodItemId = foodItemId == 0 ? null : foodItemId
+                    };
+                })
+                .ToList();
+
+            existing.Meals = plan.WeekMealsSummary
+                .Where(x => !string.IsNullOrWhiteSpace(x.Day))
+                .Select(x => new ShoppingMealDay
+                {
+                    Day = x.Day.Trim(),
+                    Title = x.Title?.Trim() ?? "",
+                    MealDetailsJson = JsonSerializer.Serialize(x.MealDetails ?? new DailyMealDetailsDto(), JsonOptions),
+                    Calories = x.Calories,
+                    ProteinGrams = x.ProteinGrams,
+                    CarbsGrams = x.CarbsGrams,
+                    FatGrams = x.FatGrams,
+                    IsGymDay = x.IsGymDay
+                })
+                .ToList();
+
+            await _db.SaveChangesAsync();
+            await tx.CommitAsync();
+        }
+
+        public async Task<ShoppingPlanDto?> GetSavedWeekPlanAsync(string userId)
+        {
+            if (string.IsNullOrWhiteSpace(userId))
+                throw new InvalidOperationException("You must be signed in to load a shopping plan.");
+
+            var saved = await _db.ShoppingLists
+                .AsNoTracking()
+                .Include(x => x.Items)
+                .Include(x => x.Meals)
+                .FirstOrDefaultAsync(x => x.UserId == userId);
+
+            if (saved == null)
+                return null;
+
+            return new ShoppingPlanDto
+            {
+                ShoppingList = saved.Items
+                    .OrderBy(x => x.Name)
+                    .Select(x => new ShoppingLineDto
+                    {
+                        Name = x.Name,
+                        Quantity = x.Quantity,
+                        Unit = x.Unit
+                    })
+                    .ToList(),
+
+                WeekMealsSummary = saved.Meals
+                    .OrderBy(x => GetDayOrder(x.Day))
+                    .Select(x => new WeeklyMealDto
+                    {
+                        Day = x.Day,
+                        Title = x.Title,
+                        Calories = x.Calories,
+                        ProteinGrams = x.ProteinGrams,
+                        CarbsGrams = x.CarbsGrams,
+                        FatGrams = x.FatGrams,
+                        IsGymDay = x.IsGymDay,
+                        MealDetails = DeserializeMealDetails(x.MealDetailsJson)
+                    })
+                    .ToList()
+            };
+        }
+
+        private static DailyMealDetailsDto DeserializeMealDetails(string? json)
+        {
+            if (string.IsNullOrWhiteSpace(json))
+                return new DailyMealDetailsDto();
+
+            try
+            {
+                return JsonSerializer.Deserialize<DailyMealDetailsDto>(json, JsonOptions)
+                       ?? new DailyMealDetailsDto();
+            }
+            catch
+            {
+                return new DailyMealDetailsDto();
+            }
+        }
+
+        private static string NormalizeName(string value)
+        {
+            return (value ?? "").Trim().ToLowerInvariant();
+        }
+
+        private static int GetDayOrder(string? day)
+        {
+            return day?.Trim().ToLowerInvariant() switch
+            {
+                "monday" => 1,
+                "tuesday" => 2,
+                "wednesday" => 3,
+                "thursday" => 4,
+                "friday" => 5,
+                "saturday" => 6,
+                "sunday" => 7,
+                _ => 99
+            };
         }
     }
 }
