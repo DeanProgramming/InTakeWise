@@ -9,37 +9,25 @@ namespace InTakeWise.Services
     {
         private readonly ApplicationDbContext _db;
         private readonly IAiLogParser _aiLogParser;
+        private readonly IAppClock _clock;
 
-        public LogEntryService(ApplicationDbContext db, IAiLogParser aiLogParser)
+        public LogEntryService(ApplicationDbContext db, IAiLogParser aiLogParser, IAppClock clock)
         {
             _db = db;
             _aiLogParser = aiLogParser;
+            _clock = clock;
         }
 
         public async Task<MealLogEntry> LogMealInfoAsync(string userId, string userInput, TimeOfDay logTime)
         {
             var mealInfo = await _aiLogParser.AnalyzeMealAsync(userInput);
-
-            var log = new MealLogEntry
-            {
-                UserId = userId,
-                TimeEat = logTime,
-                Timestamp = DateTime.UtcNow,
-                RawInput = userInput,
-                Calories = mealInfo.Calories,
-                Protein = mealInfo.Protein,
-                Carbs = mealInfo.Carbs,
-                Fat = mealInfo.Fat,
-                Fiber = mealInfo.Fiber
-            };
-
-            var now = DateTime.UtcNow;
-            var today = now.Date;
+            var (startUtc, endUtc) = _clock.GetTodayLondonRangeUtc();
 
             var oldLog = await _db.MealLogs
                 .Where(x => x.UserId == userId
                          && x.TimeEat == logTime
-                         && x.Timestamp.Date == today)
+                         && x.Timestamp >= startUtc
+                         && x.Timestamp < endUtc)
                 .OrderByDescending(x => x.Timestamp)
                 .FirstOrDefaultAsync();
 
@@ -48,6 +36,19 @@ namespace InTakeWise.Services
                 _db.MealLogs.Remove(oldLog);
             }
 
+            var log = new MealLogEntry
+            {
+                UserId = userId,
+                TimeEat = logTime,
+                Timestamp = _clock.UtcNow,
+                RawInput = userInput,
+                Calories = mealInfo.Calories,
+                Protein = mealInfo.Protein,
+                Carbs = mealInfo.Carbs,
+                Fat = mealInfo.Fat,
+                Fiber = mealInfo.Fiber
+            };
+
             _db.MealLogs.Add(log);
             await _db.SaveChangesAsync();
             return log;
@@ -55,7 +56,7 @@ namespace InTakeWise.Services
 
         public async Task<MealLogEntry?> GetTodayMealAsync(string userId, TimeOfDay timeOfDay)
         {
-            var (startUtc, endUtc) = GetTodayLondonRangeUtc();
+            var (startUtc, endUtc) = _clock.GetTodayLondonRangeUtc();
 
             return await _db.MealLogs.AsNoTracking()
                 .Where(x => x.UserId == userId
@@ -83,7 +84,7 @@ namespace InTakeWise.Services
             var log = new WorkoutLogEntry
             {
                 UserId = userId,
-                Timestamp = DateTime.UtcNow,
+                Timestamp = _clock.UtcNow,
                 RawInput = userInput,
                 CaloriesBurned = workInfo.CaloriesBurned,
                 ActivityType = workInfo.ActivityType,
@@ -108,10 +109,8 @@ namespace InTakeWise.Services
             if (profile == null)
                 return null;
 
-            var tz = TimeZoneInfo.FindSystemTimeZoneById("Europe/London");
-            var nowLocal = TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, tz);
-
-            var (startUtc, endUtc) = GetTodayLondonRangeUtc();
+            var (startUtc, endUtc) = _clock.GetTodayLondonRangeUtc();
+            var todayLocal = _clock.LondonDayOfWeek;
 
             var meals = await _db.MealLogs
                 .AsNoTracking()
@@ -127,9 +126,9 @@ namespace InTakeWise.Services
                             && x.Timestamp < endUtc)
                 .ToListAsync();
 
-            var isGymDay = IsGymDay(profile.ChosenGymDays, nowLocal.DayOfWeek);
+            var isGymDay = IsGymDay(profile.ChosenGymDays, todayLocal);
 
-            var summary = new DailyLogSummaryDto
+            return new DailyLogSummaryDto
             {
                 IsGymDay = isGymDay,
 
@@ -147,8 +146,6 @@ namespace InTakeWise.Services
 
                 CaloriesBurned = workouts.Sum(x => x.CaloriesBurned ?? 0)
             };
-
-            return summary;
         }
 
         public Task<MealLogEntry?> GetMealByIdAsync(int id, string userId) =>
@@ -156,19 +153,6 @@ namespace InTakeWise.Services
 
         public Task<WorkoutLogEntry?> GetWorkoutByIdAsync(int id, string userId) =>
             _db.WorkoutLogs.AsNoTracking().FirstOrDefaultAsync(x => x.Id == id && x.UserId == userId);
-
-        private static (DateTime StartUtc, DateTime EndUtc) GetTodayLondonRangeUtc()
-        {
-            var tz = TimeZoneInfo.FindSystemTimeZoneById("Europe/London");
-            var nowLocal = TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, tz);
-            var startLocal = nowLocal.Date;
-            var endLocal = startLocal.AddDays(1);
-
-            var startUtc = TimeZoneInfo.ConvertTimeToUtc(startLocal, tz);
-            var endUtc = TimeZoneInfo.ConvertTimeToUtc(endLocal, tz);
-
-            return (startUtc, endUtc);
-        }
 
         private static bool IsGymDay(GymDays chosenGymDays, DayOfWeek dayOfWeek)
         {

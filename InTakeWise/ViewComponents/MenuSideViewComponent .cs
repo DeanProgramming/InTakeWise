@@ -1,5 +1,6 @@
 ﻿using InTakeWise.Data;
 using InTakeWise.Models;
+using InTakeWise.Services;
 using InTakeWise.ViewModels;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
@@ -11,11 +12,16 @@ namespace InTakeWise.ViewComponents
     {
         private readonly ApplicationDbContext _db;
         private readonly UserManager<IdentityUser> _userManager;
+        private readonly IAppClock _clock;
 
-        public MenuSideViewComponent(ApplicationDbContext db, UserManager<IdentityUser> userManager)
+        public MenuSideViewComponent(
+            ApplicationDbContext db,
+            UserManager<IdentityUser> userManager,
+            IAppClock clock)
         {
             _db = db;
             _userManager = userManager;
+            _clock = clock;
         }
 
         public async Task<IViewComponentResult> InvokeAsync(string variant = "large")
@@ -24,18 +30,18 @@ namespace InTakeWise.ViewComponents
                 return Content("");
 
             var user = await _userManager.GetUserAsync(UserClaimsPrincipal);
-            if (user == null) return Content("");
+            if (user == null)
+                return Content("");
 
             var profile = await _db.UsersInformation
                 .AsNoTracking()
                 .FirstOrDefaultAsync(x => x.UserId == user.Id);
-             
-            var todayUtc = DateTime.UtcNow.Date;
-            var tomorrowUtc = todayUtc.AddDays(1);
+
+            var (startUtc, endUtc) = _clock.GetTodayLondonRangeUtc();
 
             var totals = await _db.MealLogs
                 .AsNoTracking()
-                .Where(x => x.UserId == user.Id && x.Timestamp >= todayUtc && x.Timestamp < tomorrowUtc)
+                .Where(x => x.UserId == user.Id && x.Timestamp >= startUtc && x.Timestamp < endUtc)
                 .GroupBy(_ => 1)
                 .Select(g => new
                 {
@@ -46,19 +52,18 @@ namespace InTakeWise.ViewComponents
                     Fiber = g.Sum(x => x.Fiber ?? 0),
                 })
                 .FirstOrDefaultAsync();
-             
+
             if (profile == null)
             {
                 var vmNoProfile = new MenuSideViewModel
                 {
-                    UserName = user.UserName,  
+                    UserName = user.UserName,
                     CaloriesTarget = 0,
                     ProteinTarget = 0,
                     CarbsTarget = 0,
                     FatTarget = 0,
                     FiberTarget = 0,
                     IsGymDayToday = false,
-
                     CaloriesConsumed = totals?.Calories ?? 0,
                     ProteinConsumed = totals?.Protein ?? 0,
                     CarbsConsumed = totals?.Carbs ?? 0,
@@ -74,8 +79,8 @@ namespace InTakeWise.ViewComponents
 
                 return View(viewNameNoProfile, vmNoProfile);
             }
-             
-            var todayFlag = DayOfWeekToGymDay(DateTime.UtcNow.DayOfWeek);
+
+            var todayFlag = DayOfWeekToGymDay(_clock.LondonDayOfWeek);
             var isGymDayToday = todayFlag != GymDays.None && (profile.ChosenGymDays & todayFlag) != 0;
 
             var vm = new MenuSideViewModel

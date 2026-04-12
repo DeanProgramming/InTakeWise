@@ -1,24 +1,27 @@
-﻿using System.Text.Json;
-using System.Text.RegularExpressions;
-using InTakeWise.Data;
+﻿using InTakeWise.Data;
 using InTakeWise.Dto;
 using InTakeWise.Models;
 using Microsoft.EntityFrameworkCore;
+using System.Text.Json;
+using System.Text.RegularExpressions;
+using System.Threading;
 
 namespace InTakeWise.Services
 {
     public class MealSuggestionService : IMealSuggestionService
     {
         private readonly ApplicationDbContext _db;
+        private readonly IAppClock _clock;
 
         private static readonly JsonSerializerOptions JsonOptions = new()
         {
             PropertyNameCaseInsensitive = true
         };
 
-        public MealSuggestionService(ApplicationDbContext db)
+        public MealSuggestionService(ApplicationDbContext db, IAppClock clock)
         {
             _db = db;
+            _clock = clock;
         }
 
         public async Task<TodayMealPlan?> GetTodayPlanAsync(string userId)
@@ -33,11 +36,9 @@ namespace InTakeWise.Services
 
             if (savedPlan == null || savedPlan.Meals.Count == 0)
                 return null;
-
-            var todayName = DateTime.Now.DayOfWeek.ToString();
-
+             
             var today = savedPlan.Meals
-                .FirstOrDefault(x => string.Equals(x.Day, todayName, StringComparison.OrdinalIgnoreCase));
+                .FirstOrDefault(x => string.Equals(x.Day, _clock.LondonDayOfWeek.ToString(), StringComparison.OrdinalIgnoreCase));
 
             if (today == null)
                 return null;

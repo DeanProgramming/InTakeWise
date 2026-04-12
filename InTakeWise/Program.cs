@@ -25,6 +25,7 @@ builder.Services.AddScoped<IFoodItemService, FoodItemService>();
 builder.Services.AddScoped<IShoppingSuggestionService, ShoppingSuggestionService>();
 builder.Services.AddScoped<IMealSuggestionService, MealSuggestionService>();
 builder.Services.AddScoped<ILogEntryService, LogEntryService>();
+builder.Services.AddSingleton<IAppClock, AppClock>();
 
 builder.Services.AddSingleton(sp =>
 {
