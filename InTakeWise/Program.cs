@@ -1,4 +1,5 @@
 using InTakeWise.Data;
+using InTakeWise.Filters;
 using InTakeWise.Services;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
@@ -14,8 +15,11 @@ builder.Services.AddDatabaseDeveloperPageExceptionFilter();
 
 builder.Services.AddDefaultIdentity<IdentityUser>(options => options.SignIn.RequireConfirmedAccount = true)
     .AddEntityFrameworkStores<ApplicationDbContext>();
-builder.Services.AddControllersWithViews();
 
+builder.Services.AddControllersWithViews(options =>
+{
+    options.Filters.Add<RequireProfileCompletedAttribute>();
+});
 
 builder.Services.AddScoped<IFoodItemService, FoodItemService>();
 builder.Services.AddScoped<IShoppingSuggestionService, ShoppingSuggestionService>();
@@ -35,13 +39,10 @@ builder.Services.AddSingleton(sp =>
     return new ChatClient(model: model, apiKey: apiKey);
 });
 
-builder.Services.AddScoped<IAiLogParser, OpenAiLogParser>();
+builder.Services.AddScoped<IAiLogParser, OpenAiLogParser>(); 
 
-builder.Services.AddScoped<RequireProfileCompletedAttribute>();
-
-
-builder.Services.AddDistributedMemoryCache();//Temp
-builder.Services.AddSession(options =>//Temp
+builder.Services.AddDistributedMemoryCache();
+builder.Services.AddSession(options =>
 {
     options.IdleTimeout = TimeSpan.FromMinutes(30);
     options.Cookie.HttpOnly = true;
@@ -65,7 +66,7 @@ else
 app.UseHttpsRedirection();
 app.UseRouting();
 
-app.UseSession();//Temp
+app.UseSession();
 
 app.UseAuthentication();
 app.UseAuthorization();

@@ -50,11 +50,13 @@ namespace InTakeWise.Controllers
             HttpContext.Session.SetObject(Step1Key, vm);
             return RedirectToAction(nameof(Step2));
         }
-
+         
         [HttpGet]
         public async Task<IActionResult> Step2()
         {
+            var step1 = HttpContext.Session.GetObject<ProfileStep1ViewModel>(Step1Key);
             var fromSession = HttpContext.Session.GetObject<ProfileStep2ViewModel>(Step2Key);
+
             if (fromSession != null)
                 return View(fromSession);
 
@@ -63,6 +65,10 @@ namespace InTakeWise.Controllers
 
             var existing = await _db.UsersInformation.AsNoTracking()
                 .FirstOrDefaultAsync(x => x.UserId == user.Id);
+
+            // New user cannot skip Step1
+            if (step1 == null && existing == null)
+                return RedirectToAction(nameof(Step1));
 
             var vm = existing != null ? MapToStep2(existing) : new ProfileStep2ViewModel();
             return View(vm);
@@ -97,16 +103,32 @@ namespace InTakeWise.Controllers
             var existing = await _db.UsersInformation.AsNoTracking()
                 .FirstOrDefaultAsync(x => x.UserId == user.Id);
 
-            if (existing == null) return RedirectToAction(nameof(Step1));
+            // Existing user editing profile:
+            // if session is missing, seed it from DB
+            if (existing != null)
+            {
+                if (step1 == null)
+                {
+                    step1 = MapToStep1(existing);
+                    HttpContext.Session.SetObject(Step1Key, step1);
+                }
 
-            if (step1 == null || step2 == null)
-            {  
-                step1 = MapToStep1(existing);
-                step2 = MapToStep2(existing);
-
-                HttpContext.Session.SetObject(Step1Key, step1);
-                HttpContext.Session.SetObject(Step2Key, step2);
+                if (step2 == null)
+                {
+                    step2 = MapToStep2(existing);
+                    HttpContext.Session.SetObject(Step2Key, step2);
+                }
             }
+
+            // New user cannot skip Step1
+            if (step1 == null)
+                return RedirectToAction(nameof(Step1));
+
+            // New user cannot skip Step2
+            if (step2 == null)
+                return RedirectToAction(nameof(Step2));
+
+            months = Math.Max(months, 1);
 
             var predictedByGoal = Enum.GetValues<FitnessGoal>()
                 .ToDictionary(
@@ -117,8 +139,10 @@ namespace InTakeWise.Controllers
             var startBf = EstimateBodyFatPercentFromBmi(step1);
 
             var fatByGoal = Enum.GetValues<FitnessGoal>()
-                .ToDictionary(g => g,
-                        g => PredictBodyFatPercent(step1, step2, months, step1.WeightInKg, g, startBf));
+                .ToDictionary(
+                    goal => goal,
+                    goal => PredictBodyFatPercent(step1, step2, months, step1.WeightInKg, goal, startBf)
+                );
 
             return View(new ProfileStep3ViewModel
             {
@@ -126,28 +150,29 @@ namespace InTakeWise.Controllers
                 CurrentFatPercentage = startBf,
                 PredictedWeightKgByGoal = predictedByGoal,
                 FatPercentageByGoal = fatByGoal,
-                CurrentFitnessGoal = existing.ChosenFitnessGoal,
+                CurrentFitnessGoal = existing?.ChosenFitnessGoal ?? FitnessGoal.Maintain,
                 Months = months
             });
         }
-
 
         [HttpPost]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Complete(ProfileStep3ViewModel step3)
         {
             var step1 = HttpContext.Session.GetObject<ProfileStep1ViewModel>(Step1Key);
-            var step2 = HttpContext.Session.GetObject<ProfileStep2ViewModel>(Step2Key); 
+            var step2 = HttpContext.Session.GetObject<ProfileStep2ViewModel>(Step2Key);
 
-            if (step1 == null || step2 == null)
+            if (step1 == null)
                 return RedirectToAction(nameof(Step1));
+
+            if (step2 == null)
+                return RedirectToAction(nameof(Step2));
 
             var user = await _userManager.GetUserAsync(User);
             if (user == null) return Challenge();
 
             var existing = await _db.UsersInformation
                 .FirstOrDefaultAsync(x => x.UserId == user.Id);
-             
 
             if (existing == null)
             {
@@ -166,7 +191,7 @@ namespace InTakeWise.Controllers
 
             var (gymCalories, nonGymCalories) = ComputeCaloriesFromRoughEstimate(step1, step2, step3.CurrentFitnessGoal);
 
-            SetMacroTargets(ref existing, step1.WeightInKg, step3.CurrentFitnessGoal, gymCalories, nonGymCalories); 
+            SetMacroTargets(ref existing, step1.WeightInKg, step3.CurrentFitnessGoal, gymCalories, nonGymCalories);
 
             await _db.SaveChangesAsync();
 

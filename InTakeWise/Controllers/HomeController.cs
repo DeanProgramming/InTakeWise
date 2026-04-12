@@ -1,26 +1,27 @@
-﻿using InTakeWise.Data;
-using InTakeWise.Models;
+﻿using InTakeWise.Models;
 using InTakeWise.Services;
 using InTakeWise.ViewModels;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using System.Diagnostics;
 
 namespace InTakeWise.Controllers
 {
-    public class HomeController : BaseController
+    [Authorize]
+    public class HomeController : Controller
     {
         private readonly ILogger<HomeController> _logger;
+        private readonly UserManager<IdentityUser> _userManager;
         private readonly ILogEntryService _logEntryService;
 
         public HomeController(
             ILogger<HomeController> logger,
-            ApplicationDbContext db,
             UserManager<IdentityUser> userManager,
             ILogEntryService logEntryService)
-            : base(db, userManager)
         {
             _logger = logger;
+            _userManager = userManager;
             _logEntryService = logEntryService;
         }
 
@@ -34,9 +35,9 @@ namespace InTakeWise.Controllers
                 LoggedBreakfast = await _logEntryService.GetCompletedTodayMealAsync(user.Id, TimeOfDay.Breakfast),
                 LoggedDinner = await _logEntryService.GetCompletedTodayMealAsync(user.Id, TimeOfDay.Dinner),
                 LoggedTea = await _logEntryService.GetCompletedTodayMealAsync(user.Id, TimeOfDay.Tea)
-            }; 
+            };
 
-            return View("Index", vm);
+            return View(vm);
         }
 
         public IActionResult Privacy() => View();
