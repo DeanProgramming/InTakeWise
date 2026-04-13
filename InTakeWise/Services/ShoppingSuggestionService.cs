@@ -404,18 +404,18 @@ namespace InTakeWise.Services
 
             var foodLookup = await _db.FoodItems
                 .AsNoTracking()
-                .Select(x => new { x.Id, x.Name })
+                .Select(x => new { x.Id, x.NormalizedName })
                 .ToListAsync();
 
             var foodMap = foodLookup
-                .GroupBy(x => NormalizeName(x.Name))
+                .GroupBy(x => x.NormalizedName)
                 .ToDictionary(g => g.Key, g => g.First().Id);
 
             existing.Items = plan.ShoppingList
                 .Where(x => !string.IsNullOrWhiteSpace(x.Name))
                 .Select(x =>
                 {
-                    var normalized = NormalizeName(x.Name);
+                    var normalized = FoodItemNameNormalizer.NormalizeName(x.Name);
                     foodMap.TryGetValue(normalized, out var foodItemId);
 
                     return new ShoppingListItem
@@ -504,12 +504,7 @@ namespace InTakeWise.Services
             {
                 return new DailyMealDetailsDto();
             }
-        }
-
-        private static string NormalizeName(string value)
-        {
-            return (value ?? "").Trim().ToLowerInvariant();
-        }
+        } 
 
         private static int GetDayOrder(string? day)
         {

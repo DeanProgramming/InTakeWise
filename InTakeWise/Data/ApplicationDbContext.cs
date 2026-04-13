@@ -29,6 +29,13 @@ namespace InTakeWise.Data
                 .HasIndex(x => x.UserId)
                 .IsUnique();
 
+            b.Entity<FoodItem>(e =>
+            {
+                e.Property(x => x.Name).HasMaxLength(100).IsRequired();
+                e.Property(x => x.NormalizedName).HasMaxLength(100).IsRequired();
+                e.HasIndex(x => x.NormalizedName).IsUnique();
+            });
+
             b.Entity<PantryItem>()
                 .HasIndex(x => new { x.UserId, x.FoodItemId })
                 .IsUnique();

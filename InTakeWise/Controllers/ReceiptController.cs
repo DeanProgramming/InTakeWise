@@ -1,5 +1,6 @@
 ﻿using InTakeWise.Data;
 using InTakeWise.Models;
+using InTakeWise.Services;
 using InTakeWise.ViewModels;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
@@ -17,15 +18,18 @@ namespace InTakeWise.Controllers
         private readonly ILogger<ReceiptController> _logger;
         private readonly UserManager<IdentityUser> _userManager;
         private readonly ApplicationDbContext _db;
+        private readonly IPantryUnitService _pantryUnitService;
 
         public ReceiptController(
             ILogger<ReceiptController> logger,
             UserManager<IdentityUser> userManager,
-            ApplicationDbContext db)
+            ApplicationDbContext db,
+            IPantryUnitService pantryUnitService)
         {
             _logger = logger;
             _userManager = userManager;
             _db = db;
+            _pantryUnitService = pantryUnitService;
         }
 
         [HttpGet]
@@ -109,149 +113,164 @@ namespace InTakeWise.Controllers
                 return View("Receipt", model);
             }
 
-            var mergedReceiptRows = new List<PantryItemInputViewModel>();
+            var mergeResult = _pantryUnitService.MergeRowsByFoodName(rows);
 
-            foreach (var group in rows.GroupBy(x => x.Name.Trim(), StringComparer.OrdinalIgnoreCase))
+            if (mergeResult.HasErrors)
             {
-                UnitInfo? firstUnit = null;
-                decimal totalBaseQuantity = 0m;
-
-                foreach (var row in group)
+                foreach (var error in mergeResult.Errors)
                 {
-                    var parsedUnit = ParseUnit(row.Unit);
-                    var qty = row.Quantity ?? 0m;
-
-                    if (firstUnit == null)
-                    {
-                        firstUnit = parsedUnit;
-                    }
-                    else if (!string.Equals(firstUnit.Family, parsedUnit.Family, StringComparison.OrdinalIgnoreCase))
-                    {
-                        ModelState.AddModelError("", $"'{group.Key}' has incompatible units ('{firstUnit.NormalizedUnit}' and '{parsedUnit.NormalizedUnit}').");
-                        continue;
-                    }
-
-                    totalBaseQuantity += qty * parsedUnit.FactorToBase;
+                    ModelState.AddModelError("", error);
                 }
 
-                if (firstUnit == null)
-                    continue;
-
-                var converted = ConvertFromBase(totalBaseQuantity, firstUnit.Family, firstUnit.NormalizedUnit);
-
-                mergedReceiptRows.Add(new PantryItemInputViewModel
-                {
-                    Name = group.Key,
-                    Quantity = converted.Quantity,
-                    Unit = converted.Unit
-                });
-            }
-
-            if (!ModelState.IsValid)
-            {
                 model.Items = rows;
                 EnsureBlankRow(model);
                 return View("Receipt", model);
             }
 
-            var existingPantry = await _db.PantryItems
-                .Include(x => x.FoodItem)
-                .Where(x => x.UserId == userId)
-                .ToListAsync();
+            var mergedReceiptRows = mergeResult.Rows;
 
-            foreach (var receiptRow in mergedReceiptRows)
-            {
-                var trimmedName = receiptRow.Name.Trim();
-
-                var food = await _db.FoodItems
-                    .FirstOrDefaultAsync(f => f.Name.ToLower() == trimmedName.ToLower());
-
-                if (food == null)
-                {
-                    food = new FoodItem { Name = trimmedName };
-                    _db.FoodItems.Add(food);
-                    await _db.SaveChangesAsync();
-                }
-
-                var existingMatches = existingPantry
-                    .Where(x => x.FoodItem != null &&
-                                x.FoodItem.Name.Equals(trimmedName, StringComparison.OrdinalIgnoreCase))
-                    .ToList();
-
-                if (existingMatches.Count == 0)
-                {
-                    _db.PantryItems.Add(new PantryItem
-                    {
-                        UserId = userId,
-                        FoodItemId = food.Id,
-                        Quantity = receiptRow.Quantity ?? 0,
-                        Unit = receiptRow.Unit.Trim()
-                    });
-
-                    continue;
-                }
-
-                var baseTotal = 0m;
-
-                foreach (var pantryItem in existingMatches)
-                {
-                    var parsedExistingUnit = ParseUnit(pantryItem.Unit);
-                    var parsedReceiptUnit = ParseUnit(receiptRow.Unit);
-
-                    if (!string.Equals(parsedExistingUnit.Family, parsedReceiptUnit.Family, StringComparison.OrdinalIgnoreCase))
-                    {
-                        ModelState.AddModelError("", $"Cannot combine pantry item '{trimmedName}' because units are incompatible ('{pantryItem.Unit}' and '{receiptRow.Unit}').");
-                        break;
-                    }
-
-                    baseTotal += pantryItem.Quantity * parsedExistingUnit.FactorToBase;
-                }
-
-                if (!ModelState.IsValid)
-                    break;
-
-                var receiptParsed = ParseUnit(receiptRow.Unit);
-                baseTotal += (receiptRow.Quantity ?? 0m) * receiptParsed.FactorToBase;
-
-                var converted = ConvertFromBase(baseTotal, receiptParsed.Family, receiptParsed.NormalizedUnit);
-
-                var keeper = existingMatches.First();
-                keeper.FoodItemId = food.Id;
-                keeper.Quantity = converted.Quantity;
-                keeper.Unit = converted.Unit;
-
-                var duplicates = existingMatches.Skip(1).ToList();
-                if (duplicates.Count > 0)
-                {
-                    _db.PantryItems.RemoveRange(duplicates);
-                }
-            }
-
-            if (!ModelState.IsValid)
-            {
-                model.Items = rows;
-                EnsureBlankRow(model);
-                return View("Receipt", model);
-            }
+            await using var tx = await _db.Database.BeginTransactionAsync();
 
             try
             {
+                var foodMap = await GetOrCreateFoodItemsAsync(mergedReceiptRows.Select(x => x.Name));
+
                 await _db.SaveChangesAsync();
+
+                var existingPantry = await _db.PantryItems
+                    .Include(x => x.FoodItem)
+                    .Where(x => x.UserId == userId)
+                    .ToListAsync();
+
+                foreach (var receiptRow in mergedReceiptRows)
+                {
+                    var cleanName = FoodItemNameNormalizer.CleanDisplayName(receiptRow.Name);
+                    var normalizedName = FoodItemNameNormalizer.NormalizeName(receiptRow.Name);
+
+                    var food = foodMap[normalizedName];
+
+                    var existingMatches = existingPantry
+                        .Where(x => x.FoodItem != null &&
+                                    x.FoodItem.NormalizedName == normalizedName)
+                        .ToList();
+
+                    if (existingMatches.Count == 0)
+                    {
+                        var newPantryItem = new PantryItem
+                        {
+                            UserId = userId,
+                            FoodItemId = food.Id,
+                            Quantity = receiptRow.Quantity ?? 0,
+                            Unit = receiptRow.Unit.Trim()
+                        };
+
+                        _db.PantryItems.Add(newPantryItem);
+                        existingPantry.Add(newPantryItem);
+                        continue;
+                    }
+
+                    var mergeExistingResult = _pantryUnitService.MergeWithExisting(
+                        cleanName,
+                        receiptRow.Quantity ?? 0m,
+                        receiptRow.Unit,
+                        existingMatches.Select(x => new PantryQuantityItem
+                        {
+                            Quantity = x.Quantity,
+                            Unit = x.Unit
+                        }));
+
+                    if (mergeExistingResult.HasErrors)
+                    {
+                        foreach (var error in mergeExistingResult.Errors)
+                        {
+                            ModelState.AddModelError("", error);
+                        }
+
+                        break;
+                    }
+
+                    var keeper = existingMatches.First();
+                    keeper.FoodItemId = food.Id;
+                    keeper.Quantity = mergeExistingResult.Quantity;
+                    keeper.Unit = mergeExistingResult.Unit;
+
+                    var duplicates = existingMatches.Skip(1).ToList();
+                    if (duplicates.Count > 0)
+                    {
+                        _db.PantryItems.RemoveRange(duplicates);
+
+                        foreach (var duplicate in duplicates)
+                        {
+                            existingPantry.Remove(duplicate);
+                        }
+                    }
+                }
+
+                if (!ModelState.IsValid)
+                {
+                    await tx.RollbackAsync();
+                    model.Items = rows;
+                    EnsureBlankRow(model);
+                    return View("Receipt", model);
+                }
+
+                await _db.SaveChangesAsync();
+                await tx.CommitAsync();
+
                 TempData["PantrySaved"] = "Receipt items added to pantry.";
+
+                return RedirectToAction("Index", "Pantry", new
+                {
+                    returnUrl = GetPantryParentReturnUrl(model.ReturnUrl)
+                });
             }
             catch (DbUpdateException ex)
             {
+                await tx.RollbackAsync();
                 _logger.LogError(ex, "Error saving receipt items to pantry for user {UserId}", userId);
+
                 TempData["PantrySaved"] = "Could not save receipt items (database error).";
                 EnsureBlankRow(model);
                 return View("Receipt", model);
             }
-
-            return RedirectToAction("Index", "Pantry", new
-            {
-                returnUrl = GetPantryParentReturnUrl(model.ReturnUrl)
-            });
         }
+
+        private async Task<Dictionary<string, FoodItem>> GetOrCreateFoodItemsAsync(
+            IEnumerable<string> rawNames,
+            CancellationToken cancellationToken = default)
+                {
+                    var normalizedNames = rawNames
+                        .Where(x => !string.IsNullOrWhiteSpace(x))
+                        .Select(FoodItemNameNormalizer.NormalizeName)
+                        .Distinct(StringComparer.Ordinal)
+                        .ToList();
+
+                    var existingFoods = await _db.FoodItems
+                        .Where(x => normalizedNames.Contains(x.NormalizedName))
+                        .ToListAsync(cancellationToken);
+
+                    var foodMap = existingFoods.ToDictionary(x => x.NormalizedName, StringComparer.Ordinal);
+
+                    foreach (var rawName in rawNames.Where(x => !string.IsNullOrWhiteSpace(x)))
+                    {
+                        var cleanName = FoodItemNameNormalizer.CleanDisplayName(rawName);
+                        var normalizedName = FoodItemNameNormalizer.NormalizeName(rawName);
+
+                        if (foodMap.ContainsKey(normalizedName))
+                            continue;
+
+                        var newFood = new FoodItem
+                        {
+                            Name = cleanName,
+                            NormalizedName = normalizedName
+                        };
+
+                        _db.FoodItems.Add(newFood);
+                        foodMap[normalizedName] = newFood;
+                    }
+
+                    return foodMap;
+                }
 
         private string GetSafeReturnUrl(string? returnUrl)
         {
@@ -350,75 +369,6 @@ namespace InTakeWise.Controllers
             }
 
             return results;
-        }
-
-        private sealed record UnitInfo(string NormalizedUnit, string Family, decimal FactorToBase);
-
-        private static UnitInfo ParseUnit(string? rawUnit)
-        {
-            var unit = (rawUnit ?? "").Trim().ToLowerInvariant();
-
-            return unit switch
-            {
-                "mg" or "milligram" or "milligrams"
-                    => new UnitInfo("mg", "mass", 0.001m),
-
-                "g" or "gram" or "grams"
-                    => new UnitInfo("g", "mass", 1m),
-
-                "kg" or "kilogram" or "kilograms"
-                    => new UnitInfo("kg", "mass", 1000m),
-
-                "ml" or "millilitre" or "millilitres" or "milliliter" or "milliliters"
-                    => new UnitInfo("ml", "volume", 1m),
-
-                "l" or "litre" or "litres" or "liter" or "liters"
-                    => new UnitInfo("l", "volume", 1000m),
-
-                "pcs" or "pc" or "piece" or "pieces"
-                    => new UnitInfo("pcs", "count:pcs", 1m),
-
-                "tin" or "tins"
-                    => new UnitInfo("tins", "count:tins", 1m),
-
-                "can" or "cans"
-                    => new UnitInfo("cans", "count:cans", 1m),
-
-                "pack" or "packs"
-                    => new UnitInfo("packs", "count:packs", 1m),
-
-                "bottle" or "bottles"
-                    => new UnitInfo("bottles", "count:bottles", 1m),
-
-                "item" or "items" or "unit" or "units"
-                    => new UnitInfo("items", "count:items", 1m),
-
-                _ => new UnitInfo(unit, $"custom:{unit}", 1m)
-            };
-        }
-
-        private static (decimal Quantity, string Unit) ConvertFromBase(decimal totalBase, string family, string fallbackUnit)
-        {
-            if (family == "mass")
-            {
-                if (totalBase >= 1000m)
-                    return (decimal.Round(totalBase / 1000m, 3), "kg");
-
-                if (totalBase >= 1m)
-                    return (decimal.Round(totalBase, 3), "g");
-
-                return (decimal.Round(totalBase * 1000m, 3), "mg");
-            }
-
-            if (family == "volume")
-            {
-                if (totalBase >= 1000m)
-                    return (decimal.Round(totalBase / 1000m, 3), "l");
-
-                return (decimal.Round(totalBase, 3), "ml");
-            }
-
-            return (decimal.Round(totalBase, 3), fallbackUnit);
         }
     }
 }
