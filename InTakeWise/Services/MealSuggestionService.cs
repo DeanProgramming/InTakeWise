@@ -36,9 +36,10 @@ namespace InTakeWise.Services
 
             if (savedPlan == null || savedPlan.Meals.Count == 0)
                 return null;
-             
+
+            var todayLocal = _clock.LondonNow.Date; 
             var today = savedPlan.Meals
-                .FirstOrDefault(x => string.Equals(x.Day, _clock.LondonDayOfWeek.ToString(), StringComparison.OrdinalIgnoreCase));
+                .FirstOrDefault(x => x.MealDateLocal.Date == todayLocal);
 
             if (today == null)
                 return null;
@@ -58,11 +59,11 @@ namespace InTakeWise.Services
                 Breakfast = BuildMealSuggestion("Breakfast", details.Breakfast)
                             ?? BuildLegacyMealSuggestion("Breakfast", legacySections),
 
-                Lunch = BuildMealSuggestion("Lunch", details.Lunch)
-                        ?? BuildLegacyMealSuggestion("Lunch", legacySections),
+                Dinner = BuildMealSuggestion("Dinner", details.Lunch)
+                         ?? BuildLegacyMealSuggestion("Lunch", legacySections),
 
-                Dinner = BuildMealSuggestion("Dinner", details.Dinner)
-                         ?? BuildLegacyMealSuggestion("Dinner", legacySections),
+                Tea = BuildMealSuggestion("Tea", details.Dinner)
+                      ?? BuildLegacyMealSuggestion("Dinner", legacySections),
 
                 Snack = BuildCombinedSnackSuggestion(details, legacySections)
             };

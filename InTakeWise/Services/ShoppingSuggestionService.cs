@@ -15,6 +15,7 @@ namespace InTakeWise.Services
         private readonly ApplicationDbContext _db;
         private readonly IConfiguration _config;
         private readonly ILogger<ShoppingSuggestionService> _logger;
+        private readonly IAppClock _clock;
 
         private static readonly JsonSerializerOptions JsonOptions = new()
         {
@@ -24,11 +25,13 @@ namespace InTakeWise.Services
         public ShoppingSuggestionService(
             ApplicationDbContext db,
             IConfiguration config,
-            ILogger<ShoppingSuggestionService> logger)
+            ILogger<ShoppingSuggestionService> logger,
+            IAppClock clock)
         {
             _db = db;
             _config = config;
             _logger = logger;
+            _clock = clock;
         }
 
         public async Task<ShoppingPlanDto> GenerateWeekPlanAsync(string userId, List<UserFoodItemDto> currentInHouse)
@@ -45,7 +48,8 @@ namespace InTakeWise.Services
             if (profile == null)
                 throw new InvalidOperationException("Profile not found. Please complete your profile before generating a shopping plan.");
 
-            var weekTargets = BuildWeekTargets(profile);
+            var todayLocal = _clock.LondonNow.Date;
+            var weekTargets = BuildRemainingWeekTargets(profile, todayLocal);
             var prompt = BuildOpenAiPrompt(profile, currentInHouse, weekTargets);
 
             var apiKey = _config["OpenAI:ApiKey"] ?? Environment.GetEnvironmentVariable("OPENAI_API_KEY");
@@ -159,6 +163,23 @@ namespace InTakeWise.Services
                 plan.ShoppingList ??= new List<ShoppingLineDto>();
                 plan.WeekMealsSummary ??= new List<WeeklyMealDto>();
 
+                var mealsByDay = plan.WeekMealsSummary
+                    .Where(x => !string.IsNullOrWhiteSpace(x.Day))
+                    .ToDictionary(x => x.Day.Trim(), StringComparer.OrdinalIgnoreCase);
+
+                    plan.WeekMealsSummary = weekTargets
+                        .Where(t => mealsByDay.ContainsKey(t.Day))
+                        .Select(t =>
+                        {
+                            var meal = mealsByDay[t.Day];
+                            meal.Day = t.Day;
+                            meal.MealDateLocal = t.DateLocal.Date;
+                            meal.IsGymDay = t.IsGymDay;
+                            meal.MealDetails ??= new DailyMealDetailsDto();
+                            return meal;
+                        })
+                        .ToList();
+
                 foreach (var meal in plan.WeekMealsSummary)
                 {
                     meal.MealDetails ??= new DailyMealDetailsDto();
@@ -180,35 +201,32 @@ namespace InTakeWise.Services
                 throw new InvalidOperationException("OpenAI returned invalid JSON for the shopping plan.", ex);
             }
         }
-
-        private static List<DailyTargetDto> BuildWeekTargets(UsersInformation profile)
+        private static List<DailyTargetDto> BuildRemainingWeekTargets(UsersInformation profile, DateTime startLocalDate)
         {
-            var days = new[]
-            {
-                DayOfWeek.Monday,
-                DayOfWeek.Tuesday,
-                DayOfWeek.Wednesday,
-                DayOfWeek.Thursday,
-                DayOfWeek.Friday,
-                DayOfWeek.Saturday,
-                DayOfWeek.Sunday
-            };
+            var start = startLocalDate.Date;
+            var daysUntilSunday = ((int)DayOfWeek.Sunday - (int)start.DayOfWeek + 7) % 7;
+            var end = start.AddDays(daysUntilSunday);
 
-            return days.Select(day =>
-            {
-                var isGymDay = IsGymDay(profile.ChosenGymDays, day);
+            var targets = new List<DailyTargetDto>();
 
-                return new DailyTargetDto
+            for (var date = start; date <= end; date = date.AddDays(1))
+            {
+                var isGymDay = IsGymDay(profile.ChosenGymDays, date.DayOfWeek);
+
+                targets.Add(new DailyTargetDto
                 {
-                    Day = day.ToString(),
+                    Day = date.DayOfWeek.ToString(),
+                    DateLocal = date,
                     IsGymDay = isGymDay,
                     Calories = isGymDay ? profile.CaloriesTargetGymDay : profile.CaloriesTargetNonGymDay,
                     Protein = isGymDay ? profile.ProteinTargetGymDay : profile.ProteinTargetNonGymDay,
                     Carbs = isGymDay ? profile.CarbsTargetGymDay : profile.CarbsTargetNonGymDay,
                     Fat = isGymDay ? profile.FatTargetGymDay : profile.FatTargetNonGymDay,
                     Fiber = isGymDay ? profile.FiberTargetGymDay : profile.FiberTargetNonGymDay
-                };
-            }).ToList();
+                });
+            }
+
+            return targets;
         }
 
         private static bool IsGymDay(GymDays chosenGymDays, DayOfWeek dayOfWeek)
@@ -235,7 +253,9 @@ namespace InTakeWise.Services
         {
             var sb = new StringBuilder();
 
-            sb.AppendLine("Create a 7-day meal plan and shopping list.");
+            sb.AppendLine("Create a meal plan and shopping list from today until the end of this week (Sunday).");
+            sb.AppendLine($"The plan must start on {weekTargets.First().DateLocal:dddd} and end on {weekTargets.Last().DateLocal:dddd}.");
+            sb.AppendLine($"Return exactly {weekTargets.Count} day entries in weekMealsSummary.");
             sb.AppendLine("Use pantry items first whenever possible.");
             sb.AppendLine("Only add missing items to the shopping list.");
             sb.AppendLine("Meals should support the user's fitness goals and daily macro targets.");
@@ -256,7 +276,7 @@ namespace InTakeWise.Services
             foreach (var day in weekTargets)
             {
                 sb.AppendLine(
-                    $"- {day.Day}: GymDay={day.IsGymDay}, Calories={day.Calories}, Protein={day.Protein}g, Carbs={day.Carbs}g, Fat={day.Fat}g, Fiber={day.Fiber}g");
+                    $"- Date={day.DateLocal:yyyy-MM-dd}, Day={day.Day}, GymDay={day.IsGymDay}, Calories={day.Calories}, Protein={day.Protein}g, Carbs={day.Carbs}g, Fat={day.Fat}g, Fiber={day.Fiber}g");
             }
 
             sb.AppendLine();
@@ -353,17 +373,6 @@ namespace InTakeWise.Services
             return selected.Count == 0 ? "None" : string.Join(", ", selected);
         }
 
-        private sealed class DailyTargetDto
-        {
-            public string Day { get; set; } = "";
-            public bool IsGymDay { get; set; }
-            public int Calories { get; set; }
-            public int Protein { get; set; }
-            public int Carbs { get; set; }
-            public int Fat { get; set; }
-            public int Fiber { get; set; }
-        }
-
         public async Task SaveWeekPlanAsync(string userId, ShoppingPlanDto plan)
         {
             if (string.IsNullOrWhiteSpace(userId))
@@ -428,11 +437,16 @@ namespace InTakeWise.Services
                 })
                 .ToList();
 
+            existing.WeekStartLocalDate = plan.WeekMealsSummary.Count > 0
+                ? plan.WeekMealsSummary.Min(x => x.MealDateLocal).Date
+                : _clock.LondonNow.Date;
+
             existing.Meals = plan.WeekMealsSummary
                 .Where(x => !string.IsNullOrWhiteSpace(x.Day))
                 .Select(x => new ShoppingMealDay
                 {
                     Day = x.Day.Trim(),
+                    MealDateLocal = x.MealDateLocal.Date,
                     Title = x.Title?.Trim() ?? "",
                     MealDetailsJson = JsonSerializer.Serialize(x.MealDetails ?? new DailyMealDetailsDto(), JsonOptions),
                     Calories = x.Calories,
@@ -474,19 +488,20 @@ namespace InTakeWise.Services
                     .ToList(),
 
                 WeekMealsSummary = saved.Meals
-                    .OrderBy(x => GetDayOrder(x.Day))
-                    .Select(x => new WeeklyMealDto
-                    {
-                        Day = x.Day,
-                        Title = x.Title,
-                        Calories = x.Calories,
-                        ProteinGrams = x.ProteinGrams,
-                        CarbsGrams = x.CarbsGrams,
-                        FatGrams = x.FatGrams,
-                        IsGymDay = x.IsGymDay,
-                        MealDetails = DeserializeMealDetails(x.MealDetailsJson)
-                    })
-                    .ToList()
+                .OrderBy(x => x.MealDateLocal)
+                .Select(x => new WeeklyMealDto
+                {
+                    Day = x.Day,
+                    MealDateLocal = x.MealDateLocal,
+                    Title = x.Title,
+                    Calories = x.Calories,
+                    ProteinGrams = x.ProteinGrams,
+                    CarbsGrams = x.CarbsGrams,
+                    FatGrams = x.FatGrams,
+                    IsGymDay = x.IsGymDay,
+                    MealDetails = DeserializeMealDetails(x.MealDetailsJson)
+                })
+                .ToList()
             };
         }
 
@@ -504,21 +519,6 @@ namespace InTakeWise.Services
             {
                 return new DailyMealDetailsDto();
             }
-        } 
-
-        private static int GetDayOrder(string? day)
-        {
-            return day?.Trim().ToLowerInvariant() switch
-            {
-                "monday" => 1,
-                "tuesday" => 2,
-                "wednesday" => 3,
-                "thursday" => 4,
-                "friday" => 5,
-                "saturday" => 6,
-                "sunday" => 7,
-                _ => 99
-            };
         }
     }
 }

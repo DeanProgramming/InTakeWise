@@ -66,6 +66,8 @@ namespace InTakeWise.Data
             {
                 e.HasIndex(x => x.UserId).IsUnique();
 
+                e.Property(x => x.WeekStartLocalDate).HasColumnType("date");
+
                 e.HasMany(x => x.Items)
                     .WithOne(x => x.ShoppingList)
                     .HasForeignKey(x => x.ShoppingListId)
@@ -94,6 +96,7 @@ namespace InTakeWise.Data
                 e.Property(x => x.Day).HasMaxLength(20).IsRequired();
                 e.Property(x => x.Title).HasMaxLength(4000).IsRequired();
                 e.Property(x => x.MealDetailsJson).HasColumnType("nvarchar(max)");
+                e.Property(x => x.MealDateLocal).HasColumnType("date");
             });
         }
     }

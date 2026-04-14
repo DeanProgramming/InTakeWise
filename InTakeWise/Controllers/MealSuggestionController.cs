@@ -1,4 +1,5 @@
 ﻿using System.Security.Claims;
+using InTakeWise.Helper;
 using InTakeWise.Services;
 using InTakeWise.ViewModels;
 using Microsoft.AspNetCore.Authorization;
@@ -17,13 +18,13 @@ namespace InTakeWise.Controllers
         }
 
         [HttpGet]
-        public async Task<IActionResult> Index(string meal = "Breakfast")
+        public async Task<IActionResult> Index(string? meal = null)
         {
             var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
             if (string.IsNullOrWhiteSpace(userId))
                 return Unauthorized();
 
-            var selectedMeal = NormalizeMeal(meal);
+            var selectedMeal = MealTypeExtensions.ParseOrDefault(meal);
             var plan = await _mealSuggestionService.GetTodayPlanAsync(userId);
 
             var vm = new MealSuggestionViewModel
@@ -38,24 +39,14 @@ namespace InTakeWise.Controllers
             if (plan != null && vm.SelectedMealSuggestion == null)
             {
                 vm.SelectedMeal =
-                    plan.Breakfast != null ? "Breakfast" :
-                    plan.Lunch != null ? "Lunch" :
-                    plan.Dinner != null ? "Dinner" :
-                    "Breakfast";
+                    plan.Breakfast != null ? MealType.Breakfast :
+                    plan.Dinner != null ? MealType.Dinner :
+                    plan.Tea != null ? MealType.Tea :
+                    plan.Snack != null ? MealType.Snack :
+                    MealType.Breakfast;
             }
 
             return View("MealSuggestion", vm);
-        }
-        private static string NormalizeMeal(string? meal)
-        {
-            return meal?.Trim().ToLowerInvariant() switch
-            {
-                "breakfast" => "Breakfast",
-                "lunch" => "Lunch",
-                "dinner" => "Dinner",
-                "snack" => "Snack",
-                _ => "Breakfast"
-            };
         }
     }
 }

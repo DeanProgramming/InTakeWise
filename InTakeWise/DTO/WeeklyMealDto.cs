@@ -5,6 +5,8 @@ namespace InTakeWise.Dto
     public class WeeklyMealDto
     {
         public string Day { get; set; } = "";
+        public DateTime MealDateLocal { get; set; }
+
         public bool IsGymDay { get; set; }
         public string Title { get; set; } = "";
         public int Calories { get; set; }

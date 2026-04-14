@@ -15,6 +15,7 @@ namespace InTakeWise.Models
         [Required]
         public string Title { get; set; } = "";
 
+        public DateTime MealDateLocal { get; set; }
         public string MealDetailsJson { get; set; } = "";
 
         public int Calories { get; set; }

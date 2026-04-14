@@ -1,4 +1,5 @@
-﻿using InTakeWise.Models;
+﻿using InTakeWise.Helper;
+using InTakeWise.Models;
 
 namespace InTakeWise.ViewModels
 {
@@ -6,15 +7,15 @@ namespace InTakeWise.ViewModels
     {
         public TodayMealPlan? Plan { get; set; }
 
-        public string SelectedMeal { get; set; } = "Breakfast";
+        public MealType SelectedMeal { get; set; } = MealType.Breakfast;
 
         public MealSuggestion? SelectedMealSuggestion =>
             Plan is null ? null :
             SelectedMeal switch
             {
-                "Lunch" => Plan.Lunch,
-                "Dinner" => Plan.Dinner,
-                "Snack" => Plan.Snack,
+                MealType.Dinner => Plan.Dinner,
+                MealType.Tea => Plan.Tea,
+                MealType.Snack => Plan.Snack,
                 _ => Plan.Breakfast
             };
 

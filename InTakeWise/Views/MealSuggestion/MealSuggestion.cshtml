@@ -1,4 +1,5 @@
 ﻿@model InTakeWise.ViewModels.MealSuggestionViewModel
+@using InTakeWise.Helper
 
 @{
     ViewData["Title"] = "Today Meal Plan";
@@ -16,7 +17,7 @@
                 @if (!hasPlan)
                 {
                     <div class="menu-action shopping-empty-state">
-                        <div class="menu-action-title">No meal plan for today</div>
+                        <div class="menu-action-sub">No @Model.SelectedMeal.ToDisplayName() plan saved for today.</div>
                         <div class="menu-action-sub">
                             Generate your weekly shopping plan first, then today’s meals will appear here.
                         </div>
@@ -53,38 +54,38 @@
                     </section>
 
                     <div class="menu-actions-row meal-plan-grid">
-                        <a class="menu-action menu-meal-row" asp-action="Index" asp-route-meal="Breakfast">
+                        <a class="menu-action menu-meal-row" asp-action="Index" asp-route-meal="@MealType.Breakfast">
                             <div class="menu-action-title">Breakfast</div>
                             <div class="menu-action-sub">
-                                <span class="status-badge @(Model.SelectedMeal == "Breakfast" ? "status-logged" : "status-pending")">
-                                    @(Model.SelectedMeal == "Breakfast" ? "Selected" : "View")
+                                <span class="status-badge @(Model.SelectedMeal == MealType.Breakfast ? "status-logged" : "status-pending")">
+                                    @(Model.SelectedMeal == MealType.Breakfast ? "Selected" : "View")
                                 </span>
                             </div>
                         </a>
 
-                        <a class="menu-action menu-meal-row" asp-action="Index" asp-route-meal="Lunch">
-                            <div class="menu-action-title">Lunch</div>
-                            <div class="menu-action-sub">
-                                <span class="status-badge @(Model.SelectedMeal == "Lunch" ? "status-logged" : "status-pending")">
-                                    @(Model.SelectedMeal == "Lunch" ? "Selected" : "View")
-                                </span>
-                            </div>
-                        </a>
-
-                        <a class="menu-action menu-meal-row" asp-action="Index" asp-route-meal="Dinner">
+                        <a class="menu-action menu-meal-row" asp-action="Index" asp-route-meal="@MealType.Dinner">
                             <div class="menu-action-title">Dinner</div>
                             <div class="menu-action-sub">
-                                <span class="status-badge @(Model.SelectedMeal == "Dinner" ? "status-logged" : "status-pending")">
-                                    @(Model.SelectedMeal == "Dinner" ? "Selected" : "View")
+                                <span class="status-badge @(Model.SelectedMeal == MealType.Dinner ? "status-logged" : "status-pending")">
+                                    @(Model.SelectedMeal == MealType.Dinner ? "Selected" : "View")
                                 </span>
                             </div>
                         </a>
 
-                        <a class="menu-action menu-meal-row" asp-action="Index" asp-route-meal="Snack">
+                        <a class="menu-action menu-meal-row" asp-action="Index" asp-route-meal="@MealType.Tea">
+                            <div class="menu-action-title">Tea</div>
+                            <div class="menu-action-sub">
+                                <span class="status-badge @(Model.SelectedMeal == MealType.Tea ? "status-logged" : "status-pending")">
+                                    @(Model.SelectedMeal == MealType.Tea ? "Selected" : "View")
+                                </span>
+                            </div>
+                        </a>
+
+                        <a class="menu-action menu-meal-row" asp-action="Index" asp-route-meal="@MealType.Snack">
                             <div class="menu-action-title">Snack</div>
                             <div class="menu-action-sub">
-                                <span class="status-badge @(Model.SelectedMeal == "Snack" ? "status-logged" : "status-pending")">
-                                    @(Model.SelectedMeal == "Snack" ? "Selected" : "View")
+                                <span class="status-badge @(Model.SelectedMeal == MealType.Snack ? "status-logged" : "status-pending")">
+                                    @(Model.SelectedMeal == MealType.Snack ? "Selected" : "View")
                                 </span>
                             </div>
                         </a>
