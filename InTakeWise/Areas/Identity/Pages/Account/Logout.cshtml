@@ -1,21 +1,39 @@
 ﻿@page
 @model LogoutModel
 @{
-    ViewData["Title"] = "Log out";
+    ViewData["Title"] = "Log out"; 
+    var returnUrl = Url.Page("/", new { area = "" });
 }
 
-<header>
-    <h1>@ViewData["Title"]</h1>
-    @{
-        if (User.Identity?.IsAuthenticated ?? false)
-        {
-            <form class="form-inline" asp-area="Identity" asp-page="/Account/Logout" asp-route-returnUrl="@Url.Page("/", new { area = "" })" method="post">
-                <button type="submit" class="nav-link btn btn-link text-dark">Click here to Logout</button>
-            </form>
-        }
-        else
-        {
-            <p>You have successfully logged out of the application.</p>
-        }
-    }
-</header>
+<div class="auth-page main-menu">
+    <section class="auth-card menu-card">
+        <aside class="auth-side menu-side small-menu">
+            <div class="side-top">
+                <div class="side-top-link">
+                    <h1 class="auth-side-title">Account</h1>
+                </div>
+            </div>
+        </aside>
+
+        <main class="auth-main">
+            <h2 class="auth-title">@ViewData["Title"]</h2>
+
+            <div class="menu-actions">
+                <form asp-area="Identity"
+                        asp-page="/Account/Logout"
+                        asp-route-returnUrl="@returnUrl"
+                        method="post"
+                        class="menu-logout">
+                    <button type="submit" class="menu-action menu-primary-btn menu-logout-btn">
+                        <span class="menu-action-title">Log out</span>
+                        <span class="menu-action-sub">Confirm and sign out now</span>
+                    </button>
+                </form>
+
+                <div class="menu-links">
+                    <a class="menu-link" href="@returnUrl">Cancel and go back</a>
+                </div>
+            </div>
+        </main>
+    </section>
+</div>

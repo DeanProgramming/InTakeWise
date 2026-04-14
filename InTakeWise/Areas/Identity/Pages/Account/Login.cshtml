@@ -12,10 +12,26 @@
             <div class="menu-actions">
                 <h1 class="auth-title">Log in</h1>
 
+                <div class="login-notes">
+                    <div class="menu-action login-note-card" aria-label="Premade account details">
+                        <div class="login-note-title">Premade account</div>
+                        <div class="login-note-copy">
+                            <div><span class="login-note-label">Email:</span> Test@Test</div>
+                            <div><span class="login-note-label">Password:</span> Test123!</div>
+                        </div>
+                    </div>
+
+                    <div class="menu-action login-note-card desktop-note-card" aria-label="Desktop viewing note">
+                        <div class="login-note-title">Desktop users</div>
+                        <div class="login-note-copy">
+                            This project was built with mobile view as the priority. It can also adapt to desktop screens, but for the best experience, you can enable mobile view in your browser’s developer tools. This is not required.
+                        </div>
+                    </div>
+                </div>
+
                 <form id="account" method="post" class="menu-actions" novalidate>
                     <div asp-validation-summary="ModelOnly" class="menu-validation" role="alert"></div>
 
-                    <!-- Email -->
                     <div class="menu-action menu-input-tile">
                         <label asp-for="Input.Email" class="menu-action-title"></label>
                         <input asp-for="Input.Email"
@@ -26,7 +42,6 @@
                         <span asp-validation-for="Input.Email" class="menu-field-error"></span>
                     </div>
 
-                    <!-- Password -->
                     <div class="menu-action menu-input-tile">
                         <label asp-for="Input.Password" class="menu-action-title"></label>
                         <input asp-for="Input.Password"
@@ -47,11 +62,13 @@
                         <div class="menu-action-sub">Welcome back</div>
                     </button>
 
+                    <!--
                     <div class="menu-links">
                         <a asp-page="./ForgotPassword" class="menu-link">Forgot your password?</a>
                         <a asp-page="./Register" asp-route-returnUrl="@Model.ReturnUrl" class="menu-link">Create an account</a>
                         <a asp-page="./ResendEmailConfirmation" class="menu-link">Resend email confirmation</a>
                     </div>
+                    -->
                 </form>
             </div>
         </section>
