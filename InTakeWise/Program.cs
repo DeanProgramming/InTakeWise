@@ -7,19 +7,31 @@ using OpenAI.Chat;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// Add services to the container.
-var connectionString = builder.Configuration.GetConnectionString("DefaultConnection") ?? throw new InvalidOperationException("Connection string 'DefaultConnection' not found.");
+if (builder.Environment.IsDevelopment())
+{
+    builder.Configuration.AddUserSecrets<Program>();
+}
+
+var connectionString = builder.Configuration.GetConnectionString("DefaultConnection")
+    ?? throw new InvalidOperationException("Connection string 'DefaultConnection' not found.");
+
 builder.Services.AddDbContext<ApplicationDbContext>(options =>
-    options.UseSqlServer(connectionString));
+    options.UseSqlServer(connectionString, sql => sql.EnableRetryOnFailure()));
+
 builder.Services.AddDatabaseDeveloperPageExceptionFilter();
 
-builder.Services.AddDefaultIdentity<IdentityUser>(options => options.SignIn.RequireConfirmedAccount = true)
-    .AddEntityFrameworkStores<ApplicationDbContext>();
+builder.Services.AddDefaultIdentity<IdentityUser>(options =>
+{
+    options.SignIn.RequireConfirmedAccount = true;
+})
+.AddEntityFrameworkStores<ApplicationDbContext>();
 
 builder.Services.AddControllersWithViews(options =>
 {
     options.Filters.Add<RequireProfileCompletedAttribute>();
 });
+
+builder.Services.AddRazorPages();
 
 builder.Services.AddScoped<IFoodItemService, FoodItemService>();
 builder.Services.AddScoped<IShoppingSuggestionService, ShoppingSuggestionService>();
@@ -31,17 +43,16 @@ builder.Services.AddScoped<IPantryUnitService, PantryUnitService>();
 builder.Services.AddSingleton(sp =>
 {
     var config = sp.GetRequiredService<IConfiguration>();
-
     var apiKey = config["OpenAI:ApiKey"] ?? Environment.GetEnvironmentVariable("OPENAI_API_KEY");
+
     if (string.IsNullOrWhiteSpace(apiKey))
         throw new InvalidOperationException("OPENAI_API_KEY is missing.");
 
     var model = config["OpenAI:LoggingModel"] ?? "gpt-5.1";
-
     return new ChatClient(model: model, apiKey: apiKey);
 });
 
-builder.Services.AddScoped<IAiLogParser, OpenAiLogParser>(); 
+builder.Services.AddScoped<IAiLogParser, OpenAiLogParser>();
 
 builder.Services.AddDistributedMemoryCache();
 builder.Services.AddSession(options =>
@@ -53,7 +64,31 @@ builder.Services.AddSession(options =>
 
 var app = builder.Build();
 
-// Configure the HTTP request pipeline.
+using (var scope = app.Services.CreateScope())
+{
+    var services = scope.ServiceProvider;
+    var logger = services.GetRequiredService<ILogger<Program>>();
+
+    try
+    {
+        var db = services.GetRequiredService<ApplicationDbContext>();
+
+        if (app.Configuration.GetValue<bool>("RunMigrationsOnStartup"))
+        {
+            await db.Database.MigrateAsync();
+        }
+
+        await DbSeeder.SeedTestUserAsync(services);
+    }
+    catch (Exception ex)
+    {
+        logger.LogError(ex, "Startup migration/seed failed.");
+
+        if (app.Environment.IsDevelopment())
+            throw;
+    }
+}
+
 if (app.Environment.IsDevelopment())
 {
     app.UseMigrationsEndPoint();
@@ -61,18 +96,17 @@ if (app.Environment.IsDevelopment())
 else
 {
     app.UseExceptionHandler("/Home/Error");
-    // The default HSTS value is 30 days. You may want to change this for production scenarios, see https://aka.ms/aspnetcore-hsts.
     app.UseHsts();
 }
 
 app.UseHttpsRedirection();
+app.UseStaticFiles();
 app.UseRouting();
 
 app.UseSession();
 
 app.UseAuthentication();
 app.UseAuthorization();
-
 
 app.MapStaticAssets();
 
@@ -81,15 +115,6 @@ app.MapControllerRoute(
     pattern: "{controller=Home}/{action=Index}/{id?}")
     .WithStaticAssets();
 
-app.MapRazorPages()
-   .WithStaticAssets();
-
-using (var scope = app.Services.CreateScope())
-{
-    var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
-    await db.Database.MigrateAsync();
-}
-
-await DbSeeder.SeedTestUserAsync(app.Services);
+app.MapRazorPages().WithStaticAssets();
 
 app.Run();
