@@ -7,7 +7,7 @@
 The project uses **SQL Server** for persistence, includes secure **user authentication with ASP.NET Identity**, and integrates **OpenAI-powered analysis** to estimate meal macros, workout calorie burn, and generate personalised shopping and meal suggestions.
 
 ## Project URL
-Add your live site here: [InTakeWise] Soon to be added 
+Add your live site here: [InTakeWise](https://intakewise.azurewebsites.net/)
 
 ## Features
 
