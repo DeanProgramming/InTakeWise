@@ -3,6 +3,8 @@
 
 @{
     ViewData["Title"] = "Menu";
+
+    var isDemo = User.HasClaim(DbSeeder.DemoClaimType, DbSeeder.DemoClaimValue);
 }
 
 <div class="auth-page">
@@ -21,7 +23,7 @@
                         <div class="menu-action-title">Breakfast</div>
                         <div class="menu-action-sub">
                             <span class="status-badge @(Model.LoggedBreakfast ? "status-logged" : "status-pending")">
-                                @(Model.LoggedBreakfast ? "Logged" : "Log Now")
+                                @(isDemo ? "View sample" : (Model.LoggedBreakfast ? "Logged" : "Log Now"))
                             </span>
                         </div>
                     </a>
@@ -34,7 +36,7 @@
                         <div class="menu-action-title">Dinner</div>
                         <div class="menu-action-sub">
                             <span class="status-badge @(Model.LoggedDinner ? "status-logged" : "status-pending")">
-                                @(Model.LoggedDinner ? "Logged" : "Log Now")
+                                @(isDemo ? "View sample" : (Model.LoggedBreakfast ? "Logged" : "Log Now"))
                             </span>
                         </div>
                     </a>
@@ -47,7 +49,7 @@
                         <div class="menu-action-title">Tea</div>
                         <div class="menu-action-sub">
                             <span class="status-badge @(Model.LoggedTea ? "status-logged" : "status-pending")">
-                                @(Model.LoggedTea ? "Logged" : "Log Now")
+                                @(isDemo ? "View sample" : (Model.LoggedBreakfast ? "Logged" : "Log Now"))
                             </span>
                         </div>
                     </a>
@@ -59,44 +61,90 @@
                     <div class="menu-action-title">View Recommended Meal</div>
                     <div class="menu-action-sub">Planned for you • ~15 min cook time</div>
                 </a>
-
                 <a class="menu-action"
                    asp-controller="LogEntry"
                    asp-action="Index"
                    asp-route-mode="Meal">
-                    <div class="menu-action-title">Log Meal</div>
-                    <div class="menu-action-sub">You did the hard part — now log it</div>
+
+                    <div class="menu-action-title">
+                        @(isDemo ? "View sample meal log" : "Log Meal")
+                    </div>
+
+                    <div class="menu-action-sub">
+                        @(isDemo ? "Browse today’s pre-generated meal analysis" : "You did the hard part — now log it")
+                    </div>
                 </a>
 
                 <a class="menu-action"
                    asp-controller="LogEntry"
                    asp-action="Index"
                    asp-route-mode="Workout">
-                    <div class="menu-action-title">Log Workout</div>
-                    <div class="menu-action-sub">You did the hard part — now log it</div>
+
+                    <div class="menu-action-title">
+                        @(isDemo ? "View sample workout" : "Log Workout")
+                    </div>
+
+                    <div class="menu-action-sub">
+                        @(isDemo ? "Browse a pre-generated workout analysis" : "You did the hard part — now log it")
+                    </div>
                 </a>
 
                 <a class="menu-action"
                    asp-controller="ShoppingSuggestion"
                    asp-action="Index">
-                    <div class="menu-action-title">Recommend a week’s shopping</div>
-                    <div class="menu-action-sub">Tell us what’s in your fridge and we’ll generate the rest</div>
+
+                    <div class="menu-action-title">
+                        @(isDemo ? "View sample plan" : "Recommend a week’s shopping")
+                    </div>
+
+                    <div class="menu-action-sub">
+                        @(isDemo ? "Explore a pre-generated shopping and meal plan" : "Tell us what’s in your fridge and we’ll generate the rest")
+                    </div>
                 </a>
 
-                <a class="menu-action"
-                   asp-controller="Receipt"
-                   asp-action="Index"
-                   asp-route-returnUrl="@Url.Action("Index", "Home")">
-                    <div class="menu-action-title">Receipt to Pantry</div>
-                    <div class="menu-action-sub">Take a photo of the Receipt</div>
-                </a>
+                @if (isDemo)
+                {
+                    <div class="menu-action demo-unavailable-action"
+                         aria-disabled="true">
+
+                        <div class="menu-action-title">
+                            Receipt scanner unavailable
+                        </div>
+
+                        <div class="menu-action-sub">
+                            Sample pantry items are already provided in demo mode.
+                        </div>
+                    </div>
+                }
+                else
+                {
+                    <a class="menu-action"
+                       asp-controller="Receipt"
+                       asp-action="Index"
+                       asp-route-returnUrl="@Url.Action("Index", "Home")">
+
+                        <div class="menu-action-title">
+                            Receipt to Pantry
+                        </div>
+
+                        <div class="menu-action-sub">
+                            Take a photo of the receipt
+                        </div>
+                    </a>
+                }
 
                 <a class="menu-action"
                    asp-controller="Pantry"
                    asp-action="Index"
                    asp-route-returnUrl="@Url.Action("Index", "Home")">
-                    <div class="menu-action-title">Whats in my Pantry ?</div>
-                    <div class="menu-action-sub">Tell us what’s in your Pantry</div>
+
+                    <div class="menu-action-title">
+                        @(isDemo ? "View sample pantry" : "What’s in my Pantry?")
+                    </div>
+
+                    <div class="menu-action-sub">
+                        @(isDemo ? "Browse fictional seeded pantry items" : "Tell us what’s in your pantry")
+                    </div>
                 </a>
             </div>
         </section>

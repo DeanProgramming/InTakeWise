@@ -83,7 +83,12 @@ using (var scope = app.Services.CreateScope())
 
         var demoEnabled = app.Configuration.GetValue<bool>("Demo:Enabled");
 
-        await DbSeeder.ConfigureDemoUserAsync(services, demoEnabled);
+        await DbSeeder.ConfigureDemoUserAsync(services, demoEnabled); 
+
+        if (demoEnabled)
+        {
+            await DemoDataSeeder.SeedAsync(services);
+        }
     }
     catch (Exception ex)
     {

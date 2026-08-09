@@ -7,6 +7,7 @@
     var hasShopping = Model?.ShoppingList != null && Model.ShoppingList.Any();
     var hasMeals = Model?.WeekMealsSummary != null && Model.WeekMealsSummary.Any();
     var hasResults = hasShopping || hasMeals;
+    var isDemo = User.HasClaim(DbSeeder.DemoClaimType, DbSeeder.DemoClaimValue);
 }
 
 <div class="auth-page">
@@ -24,13 +25,17 @@
                     <div class="menu-action-sub">Check what you already have before generating</div>
                 </a>
 
-                @if (User.HasClaim(DbSeeder.DemoClaimType, DbSeeder.DemoClaimValue))
+                @if (isDemo)
                 {
                     <div class="menu-action log-intro-card">
-                        <div class="menu-action-title">Sample analysis</div>
+                        <div class="menu-action-title">
+                            View sample plan
+                        </div>
+
                         <div class="menu-action-sub">
-                            Live AI analysis is disabled in demo mode.
-                            The result below contains pre-generated sample data.
+                            This shopping list and weekly meal plan are
+                            pre-generated and read-only.
+                            Live AI generation is disabled.
                         </div>
                     </div>
                 }

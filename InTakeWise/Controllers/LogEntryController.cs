@@ -45,12 +45,28 @@ namespace InTakeWise.Controllers
                 vm.GeneratedMealLog = await _logEntryService.GetTodayMealAsync(user.Id, meal);
                 vm.UserInput = vm.GeneratedMealLog?.RawInput ?? "";
             }
-            else if (mode == LogType.LoggingType.Workout &&
-                     TempData["LastWorkoutLogId"] is string workoutIdStr &&
-                     int.TryParse(workoutIdStr, out var workoutId))
+            else if (mode == LogType.LoggingType.Workout)
             {
-                vm.GeneratedWorkoutLog = await _logEntryService.GetWorkoutByIdAsync(workoutId, user.Id);
-                vm.UserInput = vm.GeneratedWorkoutLog?.RawInput ?? "";
+                if (TempData["LastWorkoutLogId"] is string workoutIdStr &&
+                    int.TryParse(workoutIdStr, out var workoutId))
+                {
+                    vm.GeneratedWorkoutLog =
+                        await _logEntryService.GetWorkoutByIdAsync(
+                            workoutId,
+                            user.Id);
+
+                    vm.UserInput =
+                        vm.GeneratedWorkoutLog?.RawInput ?? "";
+                }
+                else if (IsDemoUser())
+                {
+                    vm.GeneratedWorkoutLog =
+                        await _logEntryService.GetLatestWorkoutAsync(
+                            user.Id);
+
+                    vm.UserInput =
+                        vm.GeneratedWorkoutLog?.RawInput ?? "";
+                }
             }
 
             return View("Log", vm);

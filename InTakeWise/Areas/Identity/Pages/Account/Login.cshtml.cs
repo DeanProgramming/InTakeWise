@@ -128,8 +128,7 @@ namespace InTakeWise.Areas.Identity.Pages.Account
 
             if (!_configuration.GetValue<bool>("Demo:Enabled"))
             {
-                _logger.LogWarning(
-                    "A demo sign-in was attempted while demo mode was disabled.");
+                _logger.LogWarning("A demo sign-in was attempted while demo mode was disabled.");
 
                 return NotFound();
             }
@@ -139,8 +138,7 @@ namespace InTakeWise.Areas.Identity.Pages.Account
 
             if (demoUser is null)
             {
-                _logger.LogError(
-                    "Demo sign-in failed because the seeded demo user was not found.");
+                _logger.LogError("Demo sign-in failed because the seeded demo user was not found.");
 
                 return await DemoUnavailableAsync(safeReturnUrl);
             }
@@ -172,6 +170,17 @@ namespace InTakeWise.Areas.Identity.Pages.Account
                 return await DemoUnavailableAsync(safeReturnUrl);
             }
 
+            try
+            {
+                await DemoDataSeeder.SeedAsync(HttpContext.RequestServices, HttpContext.RequestAborted);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Demo sample-data refresh failed.");
+
+                return await DemoUnavailableAsync(safeReturnUrl);
+            }
+
             await _signInManager.SignInAsync(
                 demoUser,
                 isPersistent: false);
@@ -186,9 +195,7 @@ namespace InTakeWise.Areas.Identity.Pages.Account
         {
             await LoadPageStateAsync(safeReturnUrl);
 
-            ModelState.AddModelError(
-                string.Empty,
-                "The demo is temporarily unavailable. Please try again later.");
+            ModelState.AddModelError(string.Empty, "The demo is temporarily unavailable. Please try again later.");
 
             return Page();
         }
@@ -197,13 +204,9 @@ namespace InTakeWise.Areas.Identity.Pages.Account
         {
             ReturnUrl = GetSafeReturnUrl(returnUrl);
 
-            DemoEnabled =
-                _configuration.GetValue<bool>("Demo:Enabled");
+            DemoEnabled = _configuration.GetValue<bool>("Demo:Enabled");
 
-            ExternalLogins =
-                (await _signInManager
-                    .GetExternalAuthenticationSchemesAsync())
-                .ToList();
+            ExternalLogins = (await _signInManager.GetExternalAuthenticationSchemesAsync()).ToList();
         }
 
         private string GetSafeReturnUrl(string returnUrl)

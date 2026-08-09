@@ -1,24 +1,60 @@
-﻿<!DOCTYPE html>
+﻿@{
+    var isDemoUser =
+        User.Identity?.IsAuthenticated == true &&
+        User.HasClaim(
+            DbSeeder.DemoClaimType,
+            DbSeeder.DemoClaimValue);
+}
+
+<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
     <title>@ViewData["Title"] - InTakeWise</title>
+
     <script type="importmap"></script>
+
     <link rel="stylesheet" href="~/lib/bootstrap/dist/css/bootstrap.min.css" />
     <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
     <link rel="stylesheet" href="~/InTakeWise.styles.css" asp-append-version="true" />
 </head>
-<body>
+
+<body class="@(isDemoUser ? "demo-mode" : string.Empty)"
+      data-demo-mode="@isDemoUser.ToString().ToLowerInvariant()">
+
+    @if (isDemoUser)
+    {
+        <div id="demo-mode-banner"
+             class="demo-banner"
+             role="note"
+             aria-label="Demo mode notice"
+             tabindex="-1">
+
+            <div class="demo-banner-inner">
+                <span class="demo-banner-title">Demo mode</span>
+
+                <span id="demo-mode-message">
+                    You’re viewing sample data.
+                    Changes and live AI generation are disabled.
+                </span>
+            </div>
+        </div>
+    }
+
     <div class="container whole-container">
-        <main role="main" class="pb-3  main-menu">
+        <main role="main" class="pb-3 main-menu">
             @RenderBody()
         </main>
     </div>
 
     <script src="~/lib/jquery/dist/jquery.min.js"></script>
+
     <script src="~/lib/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
+
     <script src="~/js/site.js" asp-append-version="true"></script>
+
     @await RenderSectionAsync("Scripts", required: false)
 </body>
 </html>

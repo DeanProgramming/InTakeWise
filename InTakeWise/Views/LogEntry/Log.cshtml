@@ -5,6 +5,7 @@
 @{
     var isMeal = Model.Mode == LogType.LoggingType.Meal;
     ViewData["Title"] = isMeal ? "Log Meal" : "Log Workout";
+    var isDemo = User.HasClaim(DbSeeder.DemoClaimType, DbSeeder.DemoClaimValue);
 }
 
 <div class="auth-page">
@@ -15,14 +16,29 @@
                 <h1 class="auth-title">@ViewData["Title"]</h1>
 
                 <div class="menu-action log-intro-card">
-                    <div class="menu-action-title">
-                        @(isMeal ? "Tell us what you ate" : "Tell us what workout you did")
-                    </div>
-                    <div class="menu-action-sub">
-                        @(isMeal
-                                                ? "You can write naturally, for example: 2 eggs, 2 slices of toast, 1 banana, black coffee."
-                                                : "You can write naturally, for example: 45 min incline treadmill and 20 min weights.")
-                    </div>
+                    @if (isDemo) 
+                    {
+
+                        <div class="menu-action log-intro-card">
+                            <div class="menu-action-title">
+                                @(isMeal ? "View sample meal analysis" : "View sample workout analysis")
+                            </div>
+                        </div>
+
+                        <div class="menu-action-sub">
+                            This is pre-generated sample data.
+                            Live AI analysis is disabled in demo mode.
+                        </div> 
+                    }
+                    else
+                    {
+                        <div class="menu-action-title">
+                            @(isMeal ? "Tell us what you ate" : "Tell us what workout you did")
+                        </div>
+                        <div class="menu-action-sub">
+                            @(isMeal ? "You can write naturally, for example: 2 eggs, 2 slices of toast, 1 banana, black coffee." : "You can write naturally, for example: 45 min incline treadmill and 20 min weights.")
+                        </div>
+                    }
                 </div>
 
                 @if (isMeal)

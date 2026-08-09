@@ -20,10 +20,11 @@
 
             <div class="menu-actions">
                 <form asp-area="Identity"
-                        asp-page="/Account/Logout"
-                        asp-route-returnUrl="@returnUrl"
-                        method="post"
-                        class="menu-logout">
+                      asp-page="/Account/Logout"
+                      asp-route-returnUrl="@returnUrl"
+                      method="post"
+                      data-demo-allow="logout"
+                      class="menu-logout">
                     <button type="submit" class="menu-action menu-primary-btn menu-logout-btn">
                         <span class="menu-action-title">Log out</span>
                         <span class="menu-action-sub">Confirm and sign out now</span>

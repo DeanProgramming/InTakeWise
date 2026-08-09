@@ -149,6 +149,12 @@ namespace InTakeWise.Services
             };
         }
 
+        public Task<WorkoutLogEntry?> GetLatestWorkoutAsync(string userId) => _db.WorkoutLogs
+                                                                                .AsNoTracking()
+                                                                                .Where(x => x.UserId == userId)
+                                                                                .OrderByDescending(x => x.Timestamp)
+                                                                                .FirstOrDefaultAsync();
+
         public Task<MealLogEntry?> GetMealByIdAsync(int id, string userId) =>
             _db.MealLogs.AsNoTracking().FirstOrDefaultAsync(x => x.Id == id && x.UserId == userId);
 

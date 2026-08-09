@@ -14,5 +14,6 @@ namespace InTakeWise.Services
         Task<MealLogEntry?> GetMealByIdAsync(int id, string userId);
         Task<WorkoutLogEntry?> GetWorkoutByIdAsync(int id, string userId);
         Task<DailyLogSummaryDto?> GetTodaySummaryAsync(string userId);
+        Task<WorkoutLogEntry?> GetLatestWorkoutAsync(string userId);
     } 
 }
