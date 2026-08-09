@@ -1,4 +1,5 @@
 ﻿@using InTakeWise.Helper
+@using InTakeWise.Data
 @model InTakeWise.ViewModels.LogEntryViewModel
 
 @{
@@ -77,35 +78,48 @@
                     </div>
                 }
 
-                <form asp-controller="LogEntry"
-                      asp-action="@(isMeal ? "Meal" : "Workout")"
-                      method="post"
-                      class="log-form">
-                    @Html.AntiForgeryToken()
+                @if (User.HasClaim(DbSeeder.DemoClaimType, DbSeeder.DemoClaimValue))
+                {
+                    <div class="menu-action log-intro-card">
+                        <div class="menu-action-title">Sample analysis</div>
+                        <div class="menu-action-sub">
+                            Live AI analysis is disabled in demo mode.
+                            The result below contains pre-generated sample data.
+                        </div>
+                    </div>
+                }
+                else
+                {  
+                    <form asp-controller="LogEntry"
+                          asp-action="@(isMeal ? "Meal" : "Workout")"
+                          method="post"
+                          class="log-form">
+                        @Html.AntiForgeryToken()
 
-                    <input type="hidden" name="mode" value="@Model.Mode" />
+                        <input type="hidden" name="mode" value="@Model.Mode" />
 
-                    @if (isMeal)
-                    {
-                        <input type="hidden" name="logTime" value="@Model.SelectedTimeOfDay" />
-                    }
+                        @if (isMeal)
+                        {
+                            <input type="hidden" name="logTime" value="@Model.SelectedTimeOfDay" />
+                        }
 
-                    <label class="log-section-label">
-                        @(isMeal ? $"{Model.SelectedTimeOfDay} entry" : "Workout entry")
-                    </label>
+                        <label class="log-section-label">
+                            @(isMeal ? $"{Model.SelectedTimeOfDay} entry" : "Workout entry")
+                        </label>
 
-                    <textarea name="userInput"
-                              class="log-text-box menu-action"
-                              rows="5"
-                              placeholder="@(isMeal ? "Example: 200g chicken, rice, broccoli, yogurt..." : "Example: 30 min run, 20 min weights, moderate intensity...")">@Model.UserInput</textarea>
+                        <textarea name="userInput"
+                                  class="log-text-box menu-action"
+                                  rows="5"
+                                  placeholder="@(isMeal ? "Example: 200g chicken, rice, broccoli, yogurt..." : "Example: 30 min run, 20 min weights, moderate intensity...")">@Model.UserInput</textarea>
 
-                    <button type="submit" class="menu-action menu-primary-btn log-submit-btn">
-                        <span class="menu-action-title">Generate</span>
-                        <span class="menu-action-sub">
-                            @(isMeal ? "Estimate calories and macros" : "Estimate workout burn")
-                        </span>
-                    </button>
-                </form>
+                        <button type="submit" class="menu-action menu-primary-btn log-submit-btn">
+                            <span class="menu-action-title">Generate</span>
+                            <span class="menu-action-sub">
+                                @(isMeal ? "Estimate calories and macros" : "Estimate workout burn")
+                            </span>
+                        </button>
+                    </form> 
+                }
 
                 @if (isMeal && Model.GeneratedMealLog != null)
                 {
@@ -314,6 +328,8 @@
             ta.addEventListener('input', () => localStorage.setItem(key, ta.value));
 
             form?.addEventListener('submit', () => localStorage.removeItem(key));
-        })();
+
+
+        })(); 
     </script>
 }

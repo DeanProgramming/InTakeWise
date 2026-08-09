@@ -21,7 +21,7 @@ namespace InTakeWise.Services
 
         public async Task<MealLogEntry> LogMealInfoAsync(string userId, string userInput, MealType logTime)
         {
-            var mealInfo = await _aiLogParser.AnalyzeMealAsync(userInput);
+            var mealInfo = await _aiLogParser.AnalyzeMealAsync(userId, userInput);
             var (startUtc, endUtc) = _clock.GetTodayLondonRangeUtc();
 
             var oldLog = await _db.MealLogs
@@ -80,7 +80,7 @@ namespace InTakeWise.Services
                 .AsNoTracking()
                 .FirstOrDefaultAsync(x => x.UserId == userId);
 
-            var workInfo = await _aiLogParser.AnalyzeWorkoutAsync(userInput, profile);
+            var workInfo = await _aiLogParser.AnalyzeWorkoutAsync(userId, userInput, profile);
 
             var log = new WorkoutLogEntry
             {

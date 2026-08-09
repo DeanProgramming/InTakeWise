@@ -5,6 +5,7 @@ using InTakeWise.ViewModels;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
+using InTakeWise.Data;
 
 namespace InTakeWise.Controllers
 {
@@ -62,6 +63,13 @@ namespace InTakeWise.Controllers
             var user = await _userManager.GetUserAsync(User);
             if (user == null) return Unauthorized();
 
+            if (IsDemoUser())
+            {
+                _logger.LogWarning("Blocked demo meal-analysis request.");
+
+                return RedirectToAction(nameof(Index), new { mode = LogType.LoggingType.Meal, meal = logTime });
+            }
+
             if (string.IsNullOrWhiteSpace(userInput))
             {
                 return View("Log", new LogEntryViewModel
@@ -86,6 +94,13 @@ namespace InTakeWise.Controllers
             var user = await _userManager.GetUserAsync(User);
             if (user == null) return Unauthorized();
 
+            if (IsDemoUser())
+            {
+                _logger.LogWarning("Blocked demo workout-analysis request.");
+
+                return RedirectToAction(nameof(Index), new { mode = LogType.LoggingType.Workout});
+            }
+
             if (string.IsNullOrWhiteSpace(userInput))
             {
                 return View("Log", new LogEntryViewModel
@@ -102,6 +117,13 @@ namespace InTakeWise.Controllers
             TempData["LastInput"] = userInput;
 
             return RedirectToAction(nameof(Index), new { mode = LogType.LoggingType.Workout });
+        }
+
+        private bool IsDemoUser()
+        {
+            return User.HasClaim(
+                DbSeeder.DemoClaimType,
+                DbSeeder.DemoClaimValue);
         }
     }
 }

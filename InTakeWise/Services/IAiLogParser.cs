@@ -5,7 +5,7 @@ namespace InTakeWise.Services
 {
     public interface IAiLogParser
     {
-        Task<MealAnalysisDto> AnalyzeMealAsync(string userInput);
-        Task<WorkoutAnalysisDto> AnalyzeWorkoutAsync(string userInput, UsersInformation? profile);
+        Task<MealAnalysisDto> AnalyzeMealAsync(string userId, string userInput);
+        Task<WorkoutAnalysisDto> AnalyzeWorkoutAsync(string userId, string userInput, UsersInformation? profile);
     }
 }

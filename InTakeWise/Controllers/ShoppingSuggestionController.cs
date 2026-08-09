@@ -4,6 +4,7 @@ using InTakeWise.Services;
 using InTakeWise.ViewModels;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using InTakeWise.Data;
 
 namespace InTakeWise.Controllers
 {
@@ -51,6 +52,13 @@ namespace InTakeWise.Controllers
             var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
             if (string.IsNullOrWhiteSpace(userId))
                 return Unauthorized();
+
+            if (IsDemoUser())
+            {
+                _logger.LogWarning("Blocked demo shopping-plan generation request.");
+
+                return RedirectToAction(nameof(Index));
+            }
 
             try
             {
@@ -109,6 +117,13 @@ namespace InTakeWise.Controllers
                 HttpStatusCode code => (int)code,
                 _ => null
             };
+        }
+
+        private bool IsDemoUser()
+        {
+            return User.HasClaim(
+                DbSeeder.DemoClaimType,
+                DbSeeder.DemoClaimValue);
         }
     }
 }

@@ -6,6 +6,7 @@ using InTakeWise.Models;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
+using InTakeWise.Security;
 using OpenAI.Chat;
 
 namespace InTakeWise.Services
@@ -16,6 +17,7 @@ namespace InTakeWise.Services
         private readonly IConfiguration _config;
         private readonly ILogger<ShoppingSuggestionService> _logger;
         private readonly IAppClock _clock;
+        private readonly IDemoAiGuard _demoAiGuard;
 
         private static readonly JsonSerializerOptions JsonOptions = new()
         {
@@ -26,16 +28,20 @@ namespace InTakeWise.Services
             ApplicationDbContext db,
             IConfiguration config,
             ILogger<ShoppingSuggestionService> logger,
-            IAppClock clock)
+            IAppClock clock,
+            IDemoAiGuard demoAiGuard)
         {
             _db = db;
             _config = config;
             _logger = logger;
             _clock = clock;
+            _demoAiGuard = demoAiGuard;
         }
 
         public async Task<ShoppingPlanDto> GenerateWeekPlanAsync(string userId, List<UserFoodItemDto> currentInHouse)
         {
+            await _demoAiGuard.EnsureLiveAiAllowedAsync(userId);
+
             if (string.IsNullOrWhiteSpace(userId))
                 throw new InvalidOperationException("You must be signed in to generate a shopping plan.");
 

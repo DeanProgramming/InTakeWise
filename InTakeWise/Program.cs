@@ -3,6 +3,8 @@ using InTakeWise.Filters;
 using InTakeWise.Services;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
+using InTakeWise.Middleware;
+using InTakeWise.Security;
 using OpenAI.Chat;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -39,6 +41,7 @@ builder.Services.AddScoped<IMealSuggestionService, MealSuggestionService>();
 builder.Services.AddScoped<ILogEntryService, LogEntryService>();
 builder.Services.AddSingleton<IAppClock, AppClock>();
 builder.Services.AddScoped<IPantryUnitService, PantryUnitService>();
+builder.Services.AddScoped<IDemoAiGuard, DemoAiGuard>();
 
 builder.Services.AddSingleton(sp =>
 {
@@ -108,6 +111,8 @@ app.UseSession();
 
 app.UseAuthentication();
 app.UseAuthorization();
+
+app.UseMiddleware<DemoReadOnlyMiddleware>();
 
 app.MapStaticAssets();
 

@@ -2,6 +2,7 @@
 using InTakeWise.Dto;
 using InTakeWise.Models;
 using Microsoft.Extensions.Logging;
+using InTakeWise.Security;
 using OpenAI.Chat;
 
 namespace InTakeWise.Services
@@ -10,17 +11,22 @@ namespace InTakeWise.Services
     {
         private readonly ChatClient _chatClient;
         private readonly ILogger<OpenAiLogParser> _logger;
+        private readonly IDemoAiGuard _demoAiGuard;
 
         public OpenAiLogParser(
             ChatClient chatClient,
+            IDemoAiGuard demoAiGuard,
             ILogger<OpenAiLogParser> logger)
-        {
-            _chatClient = chatClient;
-            _logger = logger;
-        }
+            {
+                _chatClient = chatClient;
+                _demoAiGuard = demoAiGuard;
+                _logger = logger;
+            }
 
-        public async Task<MealAnalysisDto> AnalyzeMealAsync(string userInput)
+        public async Task<MealAnalysisDto> AnalyzeMealAsync(string userId, string userInput)
         {
+            await _demoAiGuard.EnsureLiveAiAllowedAsync(userId); 
+
             if (string.IsNullOrWhiteSpace(userInput))
                 throw new InvalidOperationException("Meal input cannot be empty.");
 
@@ -94,8 +100,10 @@ namespace InTakeWise.Services
             }
         }
 
-        public async Task<WorkoutAnalysisDto> AnalyzeWorkoutAsync(string userInput, UsersInformation? profile)
+        public async Task<WorkoutAnalysisDto> AnalyzeWorkoutAsync(string userId, string userInput, UsersInformation? profile)
         {
+            await _demoAiGuard.EnsureLiveAiAllowedAsync(userId);
+
             if (string.IsNullOrWhiteSpace(userInput))
                 throw new InvalidOperationException("Workout input cannot be empty.");
 

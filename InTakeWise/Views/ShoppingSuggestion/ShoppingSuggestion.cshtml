@@ -1,4 +1,5 @@
 ﻿@using System.Text.RegularExpressions
+@using InTakeWise.Data
 @model InTakeWise.ViewModels.ShoppingSuggestionViewModel
 
 @{
@@ -23,21 +24,34 @@
                     <div class="menu-action-sub">Check what you already have before generating</div>
                 </a>
 
-                <form id="generatePlanForm"
-                      asp-controller="ShoppingSuggestion"
-                      asp-action="GetShoppingList"
-                      method="post"
-                      class="log-form">
-                    @Html.AntiForgeryToken()
+                @if (User.HasClaim(DbSeeder.DemoClaimType, DbSeeder.DemoClaimValue))
+                {
+                    <div class="menu-action log-intro-card">
+                        <div class="menu-action-title">Sample analysis</div>
+                        <div class="menu-action-sub">
+                            Live AI analysis is disabled in demo mode.
+                            The result below contains pre-generated sample data.
+                        </div>
+                    </div>
+                }
+                else
+                {  
+                    <form id="generatePlanForm"
+                          asp-controller="ShoppingSuggestion"
+                          asp-action="GetShoppingList"
+                          method="post"
+                          class="log-form">
+                        @Html.AntiForgeryToken()
 
-                    <button id="generatePlanBtn" type="submit" class="menu-action menu-primary-btn shopping-generate-btn">
-                        <span id="generatePlanBtnText">
-                            <span class="menu-action-title">Generate Shopping List</span>
-                            <span class="menu-action-sub">Build a 7-day meal plan around your pantry</span>
-                        </span>
-                        <span id="generatePlanSpinner" class="shopping-spinner" aria-hidden="true"></span>
-                    </button>
-                </form>
+                        <button id="generatePlanBtn" type="submit" class="menu-action menu-primary-btn shopping-generate-btn">
+                            <span id="generatePlanBtnText">
+                                <span class="menu-action-title">Generate Shopping List</span>
+                                <span class="menu-action-sub">Build a 7-day meal plan around your pantry</span>
+                            </span>
+                            <span id="generatePlanSpinner" class="shopping-spinner" aria-hidden="true"></span>
+                        </button>
+                    </form>
+                }
 
                 <div id="loadingPanel" class="menu-action shopping-loading-panel" hidden>
                     <div class="menu-action-title">Generating your weekly plan...</div>
