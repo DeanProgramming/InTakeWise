@@ -78,14 +78,15 @@ using (var scope = app.Services.CreateScope())
             await db.Database.MigrateAsync();
         }
 
-        await DbSeeder.SeedTestUserAsync(services);
+        var demoEnabled = app.Configuration.GetValue<bool>("Demo:Enabled");
+
+        await DbSeeder.ConfigureDemoUserAsync(services, demoEnabled);
     }
     catch (Exception ex)
     {
-        logger.LogError(ex, "Startup migration/seed failed.");
+        logger.LogCritical(ex, "Startup migration or demo-account configuration faile");
 
-        if (app.Environment.IsDevelopment())
-            throw;
+        throw;
     }
 }
 

@@ -1,85 +1,62 @@
-﻿// Licensed to the .NET Foundation under one or more agreements.
-// The .NET Foundation licenses this file to you under the MIT license.
-#nullable disable
+﻿#nullable disable
 
-using System;
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
 using System.Linq;
 using System.Threading.Tasks;
-using Microsoft.AspNetCore.Authorization;
+using InTakeWise.Data;
 using Microsoft.AspNetCore.Authentication;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
-using Microsoft.AspNetCore.Identity.UI.Services;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 
 namespace InTakeWise.Areas.Identity.Pages.Account
 {
+    [AllowAnonymous]
     public class LoginModel : PageModel
     {
         private readonly SignInManager<IdentityUser> _signInManager;
+        private readonly UserManager<IdentityUser> _userManager;
+        private readonly IConfiguration _configuration;
         private readonly ILogger<LoginModel> _logger;
 
-        public LoginModel(SignInManager<IdentityUser> signInManager, ILogger<LoginModel> logger)
+        public LoginModel(
+            SignInManager<IdentityUser> signInManager,
+            UserManager<IdentityUser> userManager,
+            IConfiguration configuration,
+            ILogger<LoginModel> logger)
         {
             _signInManager = signInManager;
+            _userManager = userManager;
+            _configuration = configuration;
             _logger = logger;
         }
 
-        /// <summary>
-        ///     This API supports the ASP.NET Core Identity default UI infrastructure and is not intended to be used
-        ///     directly from your code. This API may change or be removed in future releases.
-        /// </summary>
         [BindProperty]
         public InputModel Input { get; set; }
 
-        /// <summary>
-        ///     This API supports the ASP.NET Core Identity default UI infrastructure and is not intended to be used
-        ///     directly from your code. This API may change or be removed in future releases.
-        /// </summary>
         public IList<AuthenticationScheme> ExternalLogins { get; set; }
 
-        /// <summary>
-        ///     This API supports the ASP.NET Core Identity default UI infrastructure and is not intended to be used
-        ///     directly from your code. This API may change or be removed in future releases.
-        /// </summary>
         public string ReturnUrl { get; set; }
 
-        /// <summary>
-        ///     This API supports the ASP.NET Core Identity default UI infrastructure and is not intended to be used
-        ///     directly from your code. This API may change or be removed in future releases.
-        /// </summary>
+        public bool DemoEnabled { get; private set; }
+
         [TempData]
         public string ErrorMessage { get; set; }
 
-        /// <summary>
-        ///     This API supports the ASP.NET Core Identity default UI infrastructure and is not intended to be used
-        ///     directly from your code. This API may change or be removed in future releases.
-        /// </summary>
         public class InputModel
         {
-            /// <summary>
-            ///     This API supports the ASP.NET Core Identity default UI infrastructure and is not intended to be used
-            ///     directly from your code. This API may change or be removed in future releases.
-            /// </summary>
             [Required]
             [EmailAddress]
             public string Email { get; set; }
 
-            /// <summary>
-            ///     This API supports the ASP.NET Core Identity default UI infrastructure and is not intended to be used
-            ///     directly from your code. This API may change or be removed in future releases.
-            /// </summary>
             [Required]
             [DataType(DataType.Password)]
             public string Password { get; set; }
 
-            /// <summary>
-            ///     This API supports the ASP.NET Core Identity default UI infrastructure and is not intended to be used
-            ///     directly from your code. This API may change or be removed in future releases.
-            /// </summary>
             [Display(Name = "Remember me?")]
             public bool RememberMe { get; set; }
         }
@@ -91,50 +68,153 @@ namespace InTakeWise.Areas.Identity.Pages.Account
                 ModelState.AddModelError(string.Empty, ErrorMessage);
             }
 
-            returnUrl ??= Url.Content("~/");
+            // Clear any incomplete external-login cookie.
+            await HttpContext.SignOutAsync(
+                IdentityConstants.ExternalScheme);
 
-            // Clear the existing external cookie to ensure a clean login process
-            await HttpContext.SignOutAsync(IdentityConstants.ExternalScheme);
-
-            ExternalLogins = (await _signInManager.GetExternalAuthenticationSchemesAsync()).ToList();
-
-            ReturnUrl = returnUrl;
+            await LoadPageStateAsync(returnUrl);
         }
 
-        public async Task<IActionResult> OnPostAsync(string returnUrl = null)
+        public async Task<IActionResult> OnPostAsync(
+            string returnUrl = null)
         {
-            returnUrl ??= Url.Content("~/");
+            await LoadPageStateAsync(returnUrl);
 
-            ExternalLogins = (await _signInManager.GetExternalAuthenticationSchemesAsync()).ToList();
-
-            if (ModelState.IsValid)
+            if (!ModelState.IsValid)
             {
-                // This doesn't count login failures towards account lockout
-                // To enable password failures to trigger account lockout, set lockoutOnFailure: true
-                var result = await _signInManager.PasswordSignInAsync(Input.Email, Input.Password, Input.RememberMe, lockoutOnFailure: false);
-                if (result.Succeeded)
-                {
-                    _logger.LogInformation("User logged in.");
-                    return LocalRedirect(returnUrl);
-                }
-                if (result.RequiresTwoFactor)
-                {
-                    return RedirectToPage("./LoginWith2fa", new { ReturnUrl = returnUrl, RememberMe = Input.RememberMe });
-                }
-                if (result.IsLockedOut)
-                {
-                    _logger.LogWarning("User account locked out.");
-                    return RedirectToPage("./Lockout");
-                }
-                else
-                {
-                    ModelState.AddModelError(string.Empty, "Invalid login attempt.");
-                    return Page();
-                }
+                return Page();
             }
 
-            // If we got this far, something failed, redisplay form
+            var result = await _signInManager.PasswordSignInAsync(
+                Input.Email,
+                Input.Password,
+                Input.RememberMe,
+                lockoutOnFailure: false);
+
+            if (result.Succeeded)
+            {
+                _logger.LogInformation("User logged in.");
+                return LocalRedirect(ReturnUrl);
+            }
+
+            if (result.RequiresTwoFactor)
+            {
+                return RedirectToPage(
+                    "./LoginWith2fa",
+                    new
+                    {
+                        ReturnUrl,
+                        RememberMe = Input.RememberMe
+                    });
+            }
+
+            if (result.IsLockedOut)
+            {
+                _logger.LogWarning("User account locked out.");
+                return RedirectToPage("./Lockout");
+            }
+
+            ModelState.AddModelError(
+                string.Empty,
+                "Invalid login attempt.");
+
             return Page();
+        }
+
+        public async Task<IActionResult> OnPostDemoAsync(
+            string returnUrl = null)
+        {
+            var safeReturnUrl = GetSafeReturnUrl(returnUrl);
+
+            if (!_configuration.GetValue<bool>("Demo:Enabled"))
+            {
+                _logger.LogWarning(
+                    "A demo sign-in was attempted while demo mode was disabled.");
+
+                return NotFound();
+            }
+
+            var demoUser = await _userManager.FindByEmailAsync(
+                DbSeeder.DemoEmail);
+
+            if (demoUser is null)
+            {
+                _logger.LogError(
+                    "Demo sign-in failed because the seeded demo user was not found.");
+
+                return await DemoUnavailableAsync(safeReturnUrl);
+            }
+
+            var claims = await _userManager.GetClaimsAsync(demoUser);
+
+            var hasDemoClaim = claims.Any(claim =>
+                claim.Type == DbSeeder.DemoClaimType &&
+                claim.Value == DbSeeder.DemoClaimValue);
+
+            var hasPassword =
+                await _userManager.HasPasswordAsync(demoUser);
+
+            // Do not sign in solely because the email matches.
+            // These checks prove step 1 completed safely.
+            if (!hasDemoClaim ||
+                hasPassword ||
+                !demoUser.EmailConfirmed)
+            {
+                _logger.LogCritical(
+                    "Refused demo sign-in because the account was not safely configured. " +
+                    "HasDemoClaim: {HasDemoClaim}; " +
+                    "IsPasswordless: {IsPasswordless}; " +
+                    "EmailConfirmed: {EmailConfirmed}.",
+                    hasDemoClaim,
+                    !hasPassword,
+                    demoUser.EmailConfirmed);
+
+                return await DemoUnavailableAsync(safeReturnUrl);
+            }
+
+            await _signInManager.SignInAsync(
+                demoUser,
+                isPersistent: false);
+
+            _logger.LogInformation("Demo user signed in.");
+
+            return LocalRedirect(safeReturnUrl);
+        }
+
+        private async Task<IActionResult> DemoUnavailableAsync(
+            string safeReturnUrl)
+        {
+            await LoadPageStateAsync(safeReturnUrl);
+
+            ModelState.AddModelError(
+                string.Empty,
+                "The demo is temporarily unavailable. Please try again later.");
+
+            return Page();
+        }
+
+        private async Task LoadPageStateAsync(string returnUrl)
+        {
+            ReturnUrl = GetSafeReturnUrl(returnUrl);
+
+            DemoEnabled =
+                _configuration.GetValue<bool>("Demo:Enabled");
+
+            ExternalLogins =
+                (await _signInManager
+                    .GetExternalAuthenticationSchemesAsync())
+                .ToList();
+        }
+
+        private string GetSafeReturnUrl(string returnUrl)
+        {
+            if (!string.IsNullOrWhiteSpace(returnUrl) &&
+                Url.IsLocalUrl(returnUrl))
+            {
+                return returnUrl;
+            }
+
+            return Url.Content("~/");
         }
     }
 }
