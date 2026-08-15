@@ -3,6 +3,7 @@
 
 @{
     ViewData["Title"] = "Whats in your Pantry";
+    var isDemo = User.HasClaim(DbSeeder.DemoClaimType, DbSeeder.DemoClaimValue);
 }
 
 <div class="auth-page">
@@ -15,8 +16,12 @@
                    asp-controller="Receipt"
                    asp-action="Index"
                    asp-route-returnUrl="@Url.Action("Index", "Pantry", new { returnUrl = Model.ReturnUrl })">
-                    <div class="menu-action-title">Receipt to Pantry</div>
-                    <div class="menu-action-sub">Take a photo of the Receipt</div>
+                    <div class="menu-action-title">
+                        @(isDemo ? "Demo Receipt Import" : "Receipt Photo Import")
+                    </div>
+                    <div class="menu-action-sub">
+                        @(isDemo ? "Try the flow with one built-in fictional receipt" : "Upload a receipt photo or load a fictional sample")
+                    </div>
                 </a>
 
                 <h1 class="auth-title">@ViewData["Title"]</h1>
@@ -47,9 +52,7 @@
                         @for (int i = 0; i < Model.Items.Count - 1; i++)
                         {
                             var item = Model.Items[i];
-                            var quantityValue = item.Quantity.HasValue
-                            ? item.Quantity.Value.ToString(CultureInfo.InvariantCulture)
-                            : "";
+                            var quantityValue = item.Quantity.HasValue ? item.Quantity.Value.ToString(CultureInfo.InvariantCulture) : "";
 
                             <div class="menu-action pantry-card" data-row>
                                 <input type="hidden" name="Items[@i].Id" value="@item.Id" data-field="Id" />
@@ -124,9 +127,8 @@
 
         @await Component.InvokeAsync("FloatingBackButton", new
         {
-            text = "BACK",
-            fallbackUrl = Model.ReturnUrl ?? Url.Action("Index", "Home")
-        }) 
+            text = "BACK", fallbackUrl = Model.ReturnUrl ?? Url.Action("Index", "Home") 
+        })
 
     </div>
 </div>

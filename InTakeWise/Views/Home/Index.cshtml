@@ -102,36 +102,21 @@
                     </div>
                 </a>
 
-                @if (isDemo)
-                {
-                    <div class="menu-action demo-unavailable-action"
-                         aria-disabled="true">
+                <a class="menu-action"
+                   asp-controller="Receipt"
+                   asp-action="Index"
+                   asp-route-returnUrl="@Url.Action("Index", "Home")">
 
-                        <div class="menu-action-title">
-                            Receipt scanner unavailable
-                        </div>
-
-                        <div class="menu-action-sub">
-                            Sample pantry items are already provided in demo mode.
-                        </div>
+                    <div class="menu-action-title">
+                        @(isDemo ? "Demo Receipt Import" : "Receipt Photo Import")
                     </div>
-                }
-                else
-                {
-                    <a class="menu-action"
-                       asp-controller="Receipt"
-                       asp-action="Index"
-                       asp-route-returnUrl="@Url.Action("Index", "Home")">
 
-                        <div class="menu-action-title">
-                            Receipt to Pantry
-                        </div>
-
-                        <div class="menu-action-sub">
-                            Take a photo of the receipt
-                        </div>
-                    </a>
-                }
+                    <div class="menu-action-sub">
+                        @(isDemo
+                                                ? "Try the flow with one built-in fictional receipt"
+                                                : "Upload a receipt photo or load a fictional sample")
+                    </div>
+                </a>
 
                 <a class="menu-action"
                    asp-controller="Pantry"

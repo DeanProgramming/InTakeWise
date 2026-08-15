@@ -5,7 +5,10 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using InTakeWise.Middleware;
 using InTakeWise.Security;
+using Microsoft.AspNetCore.RateLimiting;
 using OpenAI.Chat;
+using System.Security.Claims;
+using System.Threading.RateLimiting;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -61,6 +64,33 @@ builder.Services.AddScoped<ILogEntryService, LogEntryService>();
 builder.Services.AddSingleton<IAppClock, AppClock>();
 builder.Services.AddScoped<IPantryUnitService, PantryUnitService>();
 builder.Services.AddScoped<IDemoAiGuard, DemoAiGuard>();
+builder.Services.AddSingleton<ReceiptVisionClient>();
+builder.Services.AddScoped<IReceiptImageAnalyzer, OpenAiReceiptImageAnalyzer>();
+
+builder.Services.AddRateLimiter(options =>
+{
+    options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
+    options.OnRejected = async (context, cancellationToken) =>
+    {
+        context.HttpContext.Response.ContentType = "text/plain";
+        await context.HttpContext.Response.WriteAsync(
+            "Too many receipt-analysis attempts. Please wait a few minutes and try again.",
+            cancellationToken);
+    };
+
+    options.AddPolicy("receipt-analysis", httpContext =>
+        RateLimitPartition.GetFixedWindowLimiter(
+            partitionKey: httpContext.User.FindFirstValue(ClaimTypes.NameIdentifier)
+                ?? httpContext.Connection.RemoteIpAddress?.ToString()
+                ?? "anonymous",
+            factory: _ => new FixedWindowRateLimiterOptions
+            {
+                AutoReplenishment = true,
+                PermitLimit = 5,
+                QueueLimit = 0,
+                Window = TimeSpan.FromMinutes(10)
+            }));
+});
 
 builder.Services.AddSingleton(sp =>
 {
@@ -102,7 +132,7 @@ using (var scope = app.Services.CreateScope())
 
         var demoEnabled = app.Configuration.GetValue<bool>("Demo:Enabled");
 
-        await DbSeeder.ConfigureDemoUserAsync(services, demoEnabled); 
+        await DbSeeder.ConfigureDemoUserAsync(services, demoEnabled);
 
         if (demoEnabled)
         {
@@ -137,6 +167,7 @@ app.UseAuthentication();
 app.UseAuthorization();
 
 app.UseMiddleware<DemoReadOnlyMiddleware>();
+app.UseRateLimiter();
 
 app.MapStaticAssets();
 

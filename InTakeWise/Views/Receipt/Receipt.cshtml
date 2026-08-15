@@ -2,7 +2,9 @@
 @using System.Globalization
 
 @{
-    ViewData["Title"] = "Analyse Receipt";
+    var isDemo = User.HasClaim(DbSeeder.DemoClaimType, DbSeeder.DemoClaimValue);
+    ViewData["Title"] = isDemo ? "Demo Receipt Import" : "Receipt Photo Import";
+    var reviewItemCount = Math.Max(0, Model.Items.Count - 1);
 }
 
 <div class="auth-page">
@@ -12,19 +14,155 @@
             <div class="menu-actions">
                 <h1 class="auth-title">@ViewData["Title"]</h1>
 
-                <form asp-controller="Receipt"
-                      asp-action="TakePhoto"
-                      method="post"
-                      class="log-form">
-                    @Html.AntiForgeryToken()
+                @if (isDemo)
+                {
+                    <p class="receipt-intro">
+                        Explore the receipt-review flow with the built-in fictional receipt below.
+                        Uploads, live AI analysis, and pantry changes remain disabled in this read-only demo.
+                    </p>
+                }
+                else
+                {
+                    <p class="receipt-intro">
+                        Upload a clear receipt photo for AI-assisted item extraction, or load
+                        fictional sample items. Always review names, quantities, and units before saving.
+                    </p>
+                }
 
-                    <input type="hidden" name="returnUrl" value="@Model.ReturnUrl" />
+                <div class="receipt-source-grid @(isDemo ? "receipt-source-grid-demo" : "")">
+                    @if (isDemo)
+                    {
+                        <div class="menu-action receipt-source-card receipt-demo-card">
+                            <div class="receipt-demo-card-header">
+                                <div>
+                                    <div class="menu-action-title">Built-in Demo Receipt</div>
+                                    <div class="menu-action-sub">
+                                        One fictional image with preconfigured extraction results
+                                    </div>
+                                </div>
+                                <span class="receipt-demo-badge">Demo only</span>
+                            </div>
 
-                    <button type="submit" class="menu-action pantry-add-btn">
-                        <span class="menu-action-title">Take Photo</span>
-                        <span class="menu-action-sub">Scan a receipt and extract the items</span>
-                    </button>
-                </form>
+                            <figure class="receipt-demo-figure">
+                                <img src="~/images/test-receipt.png"
+                                     class="receipt-demo-image"
+                                     alt="Fictional Pantry Lane Market grocery receipt containing chicken breast, basmati rice, pasta, semi-skimmed milk, and eggs" />
+                                <figcaption>
+                                    This bundled image is fictional and is not submitted to OpenAI.
+                                </figcaption>
+                            </figure>
+
+                            <a asp-controller="Receipt"
+                               asp-action="LoadSampleReceipt"
+                               asp-route-returnUrl="@Model.ReturnUrl"
+                               class="menu-action menu-primary-btn receipt-demo-use-btn">
+                                <span class="menu-action-title">
+                                    @(Model.IsSample ? "Reload Demo Receipt" : "Use Demo Receipt")
+                                </span>
+                                <span class="menu-action-sub">
+                                    Load the matching hard-coded items for review
+                                </span>
+                            </a>
+
+                            <div class="receipt-privacy-note">
+                                Demo accounts cannot select another image or trigger a live AI request.
+                            </div>
+                        </div>
+                    }
+                    else
+                    {
+                        <form id="receiptUploadForm"
+                              asp-controller="Receipt"
+                              asp-action="AnalyzePhoto"
+                              method="post"
+                              enctype="multipart/form-data"
+                              class="menu-action receipt-source-card receipt-upload-form">
+                            @Html.AntiForgeryToken()
+
+                            <input type="hidden" name="returnUrl" value="@Model.ReturnUrl" />
+
+                            <label for="receiptImage" class="menu-action-title">
+                                Upload Receipt Photo
+                            </label>
+
+                            <div class="menu-action-sub">
+                                Choose an existing image or use your phone’s rear camera.
+                            </div>
+
+                            <input id="receiptImage"
+                                   name="receiptImage"
+                                   type="file"
+                                   class="receipt-file-input"
+                                   accept="image/jpeg,image/png,image/webp"
+                                   capture="environment"
+                                   aria-describedby="receiptFileHelp"
+                                   required />
+
+                            <div id="receiptFileHelp" class="receipt-file-help">
+                                JPG, PNG, or WebP • maximum 10 MB
+                            </div>
+
+                            <button id="analyseReceiptButton"
+                                    type="submit"
+                                    class="menu-action menu-primary-btn receipt-analyse-btn">
+                                <span class="menu-action-title">Analyse Receipt Photo</span>
+                                <span class="menu-action-sub">Extract food and drink lines for review</span>
+                            </button>
+
+                            <div class="receipt-privacy-note">
+                                The image is sent to OpenAI for analysis. InTakeWise uses it only
+                                for this request and does not persist the original image.
+                            </div>
+                        </form>
+                    }
+
+                    @if (!isDemo)
+                    {
+                        <a asp-controller="Receipt"
+                           asp-action="LoadSampleReceipt"
+                           asp-route-returnUrl="@Model.ReturnUrl"
+                           class="menu-action receipt-source-card receipt-sample-card">
+                            <div class="menu-action-title">Load Fictional Sample Receipt</div>
+                            <div class="menu-action-sub">
+                                Prefill five sample grocery items • no upload or AI call
+                            </div>
+                        </a>
+                    }
+                </div>
+
+                @if (!ViewData.ModelState.IsValid)
+                {
+                    <div asp-validation-summary="ModelOnly" class="menu-validation"></div>
+                }
+
+                @if (Model.IsSample)
+                {
+                    <div class="receipt-notice receipt-notice-sample" role="note">
+                        @if (isDemo)
+                        {
+                            <strong>Simulated demo extraction</strong>
+                            <span>
+                                These hard-coded results match the built-in fictional receipt.
+                                No image upload or AI call took place.
+                            </span>
+                        }
+                        else
+                        {
+                            <strong>Fictional sample data</strong>
+                            <span>
+                                These items were prefilled to demonstrate the editable review-and-save flow.
+                                They were not extracted from a receipt image.
+                            </span>
+                        }
+                    </div>
+                }
+                else if (Model.WasPhotoAnalysed)
+                {
+                    <div class="receipt-notice receipt-notice-review" role="status">
+                        <strong>@reviewItemCount item@(reviewItemCount == 1 ? "" : "s") extracted</strong>
+                        AI extraction can make mistakes. Correct every item below before saving it.
+                    </div>
+                }
 
                 <form id="receiptForm"
                       asp-controller="Receipt"
@@ -33,12 +171,26 @@
                       class="pantry-form">
                     @Html.AntiForgeryToken()
 
-                    <input type="hidden" name="returnUrl" value="@Model.ReturnUrl" />
+                    <input type="hidden" asp-for="ReturnUrl" />
+                    <input type="hidden" asp-for="IsSample" />
+                    <input type="hidden" asp-for="WasPhotoAnalysed" />
 
-                    @if (!ViewData.ModelState.IsValid)
+                    <div class="receipt-review-heading">
+                        <h2>Review Pantry Items</h2>
+                        <span>@reviewItemCount item@(reviewItemCount == 1 ? "" : "s")</span>
+                    </div>
+
+                    @if (reviewItemCount == 0)
                     {
-                        <div asp-validation-summary="ModelOnly" class="menu-validation"></div>
-                    }
+                        <div class="menu-action receipt-empty-state">
+                            <div class="menu-action-title">No items to review yet</div>
+                            <div class="menu-action-sub">
+                                @(isDemo
+                                                            ? "Use the built-in demo receipt above to load its simulated results."
+                                                            : "Upload a receipt, load the fictional sample, or add an item manually.")
+                        </div>
+                    </div>
+                                        }
 
                     <div id="receiptRows" class="pantry-list">
                         @for (int i = 0; i < Model.Items.Count - 1; i++)
@@ -54,44 +206,54 @@
 
                                 <div class="pantry-fields">
                                     <div class="pantry-field pantry-field-name">
-                                        <label class="pantry-label">Food</label>
-                                        <input type="text"
+                                        <label class="pantry-label" for="receipt-name-@i">Food</label>
+                                        <input id="receipt-name-@i"
+                                               type="text"
                                                name="Items[@i].Name"
                                                value="@item.Name"
                                                data-field="Name"
                                                class="menu-input pantry-input"
-                                               placeholder="Food item" />
+                                               placeholder="Food item"
+                                               maxlength="120"
+                                               readonly="@isDemo" />
                                         @Html.ValidationMessage($"Items[{i}].Name", "", new { @class = "menu-field-error" })
                                     </div>
 
                                     <div class="pantry-field pantry-field-qty">
-                                        <label class="pantry-label">Amount</label>
-                                        <input type="number"
+                                        <label class="pantry-label" for="receipt-quantity-@i">Amount</label>
+                                        <input id="receipt-quantity-@i"
+                                               type="number"
                                                name="Items[@i].Quantity"
                                                value="@quantityValue"
                                                data-field="Quantity"
                                                class="menu-input pantry-input"
                                                placeholder="Amount"
                                                min="0.01"
-                                               step="0.01" />
+                                               max="100000"
+                                               step="0.01"
+                                               readonly="@isDemo" />
                                         @Html.ValidationMessage($"Items[{i}].Quantity", "", new { @class = "menu-field-error" })
                                     </div>
 
                                     <div class="pantry-field pantry-field-unit">
-                                        <label class="pantry-label">Unit</label>
-                                        <input type="text"
+                                        <label class="pantry-label" for="receipt-unit-@i">Unit</label>
+                                        <input id="receipt-unit-@i"
+                                               type="text"
                                                name="Items[@i].Unit"
                                                value="@item.Unit"
                                                data-field="Unit"
                                                class="menu-input pantry-input"
-                                               placeholder="Unit (g, kg, ml, tins)" />
+                                               placeholder="Unit (g, kg, ml, items)"
+                                               maxlength="30"
+                                               readonly="@isDemo" />
                                         @Html.ValidationMessage($"Items[{i}].Unit", "", new { @class = "menu-field-error" })
                                     </div>
 
                                     <div class="pantry-field pantry-field-delete">
                                         <label class="pantry-label pantry-label-ghost">Action</label>
                                         <button type="button"
-                                                class="pantry-btn pantry-btn-delete"
+                                                class="pantry-btn pantry-btn-delete @(isDemo ? "demo-control-disabled" : "")"
+                                                disabled="@isDemo"
                                                 onclick="removeRow(this)">
                                             Delete
                                         </button>
@@ -102,15 +264,29 @@
                     </div>
 
                     <div class="pantry-bottom-actions">
-                        <button type="button" class="menu-action pantry-add-btn" onclick="addRow()">
-                            <span class="menu-action-title">Add Item</span>
-                            <span class="menu-action-sub">Add another receipt item</span>
-                        </button>
+                        @if (isDemo)
+                        {
+                            <div class="menu-action demo-action-note receipt-demo-readonly" role="note">
+                                <span class="menu-action-title">Read-only Demo</span>
+                                <span class="menu-action-sub">
+                                    Review the simulated result above. Adding, editing, and saving pantry items is disabled.
+                                </span>
+                            </div>
+                        }
+                        else
+                        {
+                            <button type="button" class="menu-action pantry-add-btn" onclick="addRow()">
+                                <span class="menu-action-title">Add Item Manually</span>
+                                <span class="menu-action-sub">Add another item to this review</span>
+                            </button>
 
-                        <button type="submit" class="menu-action menu-primary-btn pantry-save-btn">
-                            <span class="menu-action-title">Save To Pantry</span>
-                            <span class="menu-action-sub">Add these items into your pantry</span>
-                        </button>
+                            <button type="submit" class="menu-action menu-primary-btn pantry-save-btn">
+                                <span class="menu-action-title">Save to Pantry</span>
+                                <span class="menu-action-sub">
+                                    @(Model.IsSample ? "Save these fictional sample items" : "Save the reviewed items")
+                                </span>
+                            </button>
+                        }
                     </div>
                 </form>
             </div>
@@ -120,14 +296,41 @@
         @await Component.InvokeAsync("FloatingBackButton", new
         {
             text = "BACK",
-            fallbackUrl = Model.ReturnUrl ?? Url.Action("Index", "Home")
-         })
+                fallbackUrl = Model.ReturnUrl ?? Url.Action("Index", "Home")
+                })
     </div>
 </div>
 
-
-
 <script>
+    const maxReceiptImageBytes = 10 * 1024 * 1024;
+    const receiptUploadForm = document.getElementById("receiptUploadForm");
+    const receiptImageInput = document.getElementById("receiptImage");
+
+    receiptImageInput?.addEventListener("change", function () {
+        this.setCustomValidity("");
+    });
+
+    receiptUploadForm?.addEventListener("submit", function (event) {
+        const file = receiptImageInput?.files?.[0];
+
+        if (file && file.size > maxReceiptImageBytes) {
+            event.preventDefault();
+            receiptImageInput.setCustomValidity("The receipt photo must be 10 MB or smaller.");
+            receiptImageInput.reportValidity();
+            return;
+        }
+
+        const button = document.getElementById("analyseReceiptButton");
+        if (!button) {
+            return;
+        }
+
+        button.disabled = true;
+        button.setAttribute("aria-busy", "true");
+        button.querySelector(".menu-action-title").textContent = "Analysing Receipt…";
+        button.querySelector(".menu-action-sub").textContent = "Reading visible grocery lines";
+    });
+
     function addRow() {
         const container = document.getElementById("receiptRows");
         const index = container.querySelectorAll("[data-row]").length;
@@ -148,7 +351,8 @@
                            value=""
                            data-field="Name"
                            class="menu-input pantry-input"
-                           placeholder="Food item" />
+                           placeholder="Food item"
+                           maxlength="120" />
                     <span class="menu-field-error" data-valmsg-field="Name"></span>
                 </div>
 
@@ -161,6 +365,7 @@
                            class="menu-input pantry-input"
                            placeholder="Amount"
                            min="0.01"
+                           max="100000"
                            step="0.01" />
                     <span class="menu-field-error" data-valmsg-field="Quantity"></span>
                 </div>
@@ -172,7 +377,8 @@
                            value=""
                            data-field="Unit"
                            class="menu-input pantry-input"
-                           placeholder="Unit (g, kg, ml, tins)" />
+                           placeholder="Unit (g, kg, ml, items)"
+                           maxlength="30" />
                     <span class="menu-field-error" data-valmsg-field="Unit"></span>
                 </div>
 
@@ -213,7 +419,7 @@
         });
     }
 
-    document.getElementById("receiptForm").addEventListener("submit", function () {
+    document.getElementById("receiptForm")?.addEventListener("submit", function () {
         reindexRows();
     });
 </script>
