@@ -25,15 +25,34 @@ builder.Services.AddDatabaseDeveloperPageExceptionFilter();
 builder.Services.AddDefaultIdentity<IdentityUser>(options =>
 {
     options.SignIn.RequireConfirmedAccount = true;
+
+    options.Lockout.AllowedForNewUsers = true;
+    options.Lockout.MaxFailedAccessAttempts = 5;
+    options.Lockout.DefaultLockoutTimeSpan = TimeSpan.FromMinutes(15);
 })
 .AddEntityFrameworkStores<ApplicationDbContext>();
+
+builder.Services.AddAuthorization(options =>
+{
+    options.AddPolicy(
+        DemoPolicies.NonDemoIdentityManagement,
+        policy =>
+        {
+            policy.RequireAuthenticatedUser();
+
+            policy.RequireAssertion(context => !context.User.HasClaim(DbSeeder.DemoClaimType, DbSeeder.DemoClaimValue));
+        });
+});
 
 builder.Services.AddControllersWithViews(options =>
 {
     options.Filters.Add<RequireProfileCompletedAttribute>();
 });
 
-builder.Services.AddRazorPages();
+builder.Services.AddRazorPages(options =>
+{
+    options.Conventions.AuthorizeAreaFolder("Identity", "/Account/Manage", DemoPolicies.NonDemoIdentityManagement);
+});
 
 builder.Services.AddScoped<IFoodItemService, FoodItemService>();
 builder.Services.AddScoped<IShoppingSuggestionService, ShoppingSuggestionService>();
