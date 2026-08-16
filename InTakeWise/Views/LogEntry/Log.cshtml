@@ -16,7 +16,7 @@
                 <h1 class="auth-title">@ViewData["Title"]</h1>
 
                 <div class="menu-action log-intro-card">
-                    @if (isDemo) 
+                    @if (isDemo)
                     {
 
                         <div class="menu-action log-intro-card">
@@ -28,7 +28,7 @@
                         <div class="menu-action-sub">
                             This is pre-generated sample data.
                             Live AI analysis is disabled in demo mode.
-                        </div> 
+                        </div>
                     }
                     else
                     {
@@ -105,7 +105,15 @@
                     </div>
                 }
                 else
-                {  
+                {
+                    @if (!string.IsNullOrWhiteSpace(Model.Error))
+                    {
+                        <div class="menu-action log-intro-card" role="alert">
+                            <div class="menu-action-title">Could not generate analysis</div>
+                            <div class="menu-action-sub">@Model.Error</div>
+                        </div>
+                    }
+
                     <form asp-controller="LogEntry"
                           asp-action="@(isMeal ? "Meal" : "Workout")"
                           method="post"
@@ -124,9 +132,16 @@
                         </label>
 
                         <textarea name="userInput"
-                                  class="log-text-box menu-action"
-                                  rows="5"
-                                  placeholder="@(isMeal ? "Example: 200g chicken, rice, broccoli, yogurt..." : "Example: 30 min run, 20 min weights, moderate intensity...")">@Model.UserInput</textarea>
+                              class="log-text-box menu-action"
+                              rows="5"
+                              maxlength="@InTakeWise.Services.AiInputValidator.MaximumLogInputCharacters"
+                              required
+                              aria-describedby="log-input-help"
+                              placeholder="@(isMeal ? "Example: 200g chicken, rice, broccoli, yogurt..." : "Example: 30 min run, 20 min weights, moderate intensity...")">@Model.UserInput</textarea>
+
+                        <div id="log-input-help" class="menu-action-sub">
+                            Maximum @InTakeWise.Services.AiInputValidator.MaximumLogInputCharacters.ToString("N0") characters.
+                        </div>
 
                         <button type="submit" class="menu-action menu-primary-btn log-submit-btn">
                             <span class="menu-action-title">Generate</span>
@@ -134,7 +149,7 @@
                                 @(isMeal ? "Estimate calories and macros" : "Estimate workout burn")
                             </span>
                         </button>
-                    </form> 
+                    </form>
                 }
 
                 @if (isMeal && Model.GeneratedMealLog != null)
@@ -346,6 +361,6 @@
             form?.addEventListener('submit', () => localStorage.removeItem(key));
 
 
-        })(); 
+        })();
     </script>
 }

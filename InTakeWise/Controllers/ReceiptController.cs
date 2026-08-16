@@ -7,7 +7,6 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.AspNetCore.WebUtilities;
 using Microsoft.EntityFrameworkCore;
 using System.Security.Claims;
@@ -65,7 +64,6 @@ namespace InTakeWise.Controllers
 
         [HttpPost]
         [ValidateAntiForgeryToken]
-        [EnableRateLimiting("receipt-analysis")]
         [RequestFormLimits(MultipartBodyLengthLimit = ReceiptImageUpload.MaxRequestBytes)]
         [RequestSizeLimit(ReceiptImageUpload.MaxRequestBytes)]
         public async Task<IActionResult> AnalyzePhoto(
@@ -84,35 +82,26 @@ namespace InTakeWise.Controllers
             if (!upload.IsValid)
             {
                 ModelState.AddModelError("", upload.Error ?? "The receipt photo is invalid.");
+
                 EnsureBlankRow(model);
                 return View("Receipt", model);
             }
 
             try
             {
-                var analysis = await _receiptImageAnalyzer.AnalyzeAsync(
-                    userId,
-                    upload.Bytes!,
-                    upload.MediaType!,
-                    cancellationToken);
+                var analysis = await _receiptImageAnalyzer.AnalyzeAsync(userId, upload.Bytes!, upload.MediaType!, cancellationToken);
 
                 if (!analysis.IsReceipt)
                 {
-                    ModelState.AddModelError(
-                        "",
-                        "That image does not look like a grocery receipt. Try a clear photo of the full receipt.");
+                    ModelState.AddModelError("", "That image does not look like a grocery receipt. Try a clear photo of the full receipt.");
                 }
                 else if (!analysis.IsReadable)
                 {
-                    ModelState.AddModelError(
-                        "",
-                        "A receipt was detected, but its item lines were not clear enough to read. Try a sharper, well-lit photo.");
+                    ModelState.AddModelError("", "A receipt was detected, but its item lines were not clear enough to read. Try a sharper, well-lit photo.");
                 }
                 else if (analysis.Items.Count == 0)
                 {
-                    ModelState.AddModelError(
-                        "",
-                        "No food or drink items could be extracted from that receipt.");
+                    ModelState.AddModelError("", "No food or drink items could be extracted from that receipt.");
                 }
                 else
                 {
@@ -126,10 +115,7 @@ namespace InTakeWise.Controllers
                         })
                         .ToList();
 
-                    _logger.LogInformation(
-                        "Extracted {ItemCount} pantry candidates from a receipt for user {UserId}.",
-                        model.Items.Count,
-                        userId);
+                    _logger.LogInformation("Extracted {ItemCount} pantry candidates from a receipt for user {UserReference}.", model.Items.Count, AiLogSanitizer.UserReference(userId));
                 }
             }
             catch (DemoAiAccessDeniedException ex)
@@ -138,27 +124,28 @@ namespace InTakeWise.Controllers
             }
             catch (ReceiptImageAnalysisException ex)
             {
-                _logger.LogWarning(
-                    ex,
-                    "Receipt photo analysis could not be completed for user {UserId}.",
-                    userId);
+                _logger.LogWarning("Receipt photo analysis was rejected safely. User={UserReference}; FailureType={FailureType}.", AiLogSanitizer.UserReference(userId),ex.GetType().Name);
 
                 ModelState.AddModelError("", ex.Message);
             }
-            catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+            catch (AiOperationException ex)
+            {
+                ApplyFailureStatus(ex);
+
+                _logger.LogWarning("Receipt photo analysis was rejected safely. User={UserReference}; FailureType={FailureType}.", AiLogSanitizer.UserReference(userId), ex.GetType().Name);
+
+                ModelState.AddModelError("", ex.UserMessage);
+            }
+            catch (OperationCanceledException)
+                when (cancellationToken.IsCancellationRequested)
             {
                 throw;
             }
             catch (Exception ex)
             {
-                _logger.LogError(
-                    ex,
-                    "Unexpected receipt photo analysis failure for user {UserId}.",
-                    userId);
+                _logger.LogError("Unexpected receipt photo analysis failure. User={UserReference}; FailureType={FailureType}.", AiLogSanitizer.UserReference(userId), ex.GetType().Name);
 
-                ModelState.AddModelError(
-                    "",
-                    "Receipt photo analysis is temporarily unavailable. Please try again.");
+                ModelState.AddModelError("", "Receipt photo analysis is temporarily unavailable. Please try again.");
             }
 
             EnsureBlankRow(model);
@@ -167,20 +154,20 @@ namespace InTakeWise.Controllers
 
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> SaveToPantryInfo(ReceiptViewModel model)
+        public async Task<IActionResult> SaveToPantryInfo(
+            ReceiptViewModel model)
         {
             var user = await _userManager.GetUserAsync(User);
             var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
 
-            if (user == null || string.IsNullOrWhiteSpace(userId))
+            if (user == null || string.IsNullOrWhiteSpace(userId)){
                 return Unauthorized();
+            }
 
             model.ReturnUrl = GetSafeReturnUrl(model.ReturnUrl);
             model.Items ??= new List<PantryItemInputViewModel>();
 
-            var rows = model.Items
-                .Where(RowHasAnyValue)
-                .ToList();
+            var rows = model.Items.Where(RowHasAnyValue).ToList();
 
             for (int i = 0; i < model.Items.Count; i++)
             {
@@ -190,19 +177,43 @@ namespace InTakeWise.Controllers
                     continue;
 
                 if (string.IsNullOrWhiteSpace(row.Name))
-                    ModelState.AddModelError($"Items[{i}].Name", "Food is required.");
+                {
+                    ModelState.AddModelError(
+                        $"Items[{i}].Name",
+                        "Food is required.");
+                }
                 else if (row.Name.Trim().Length > 120)
-                    ModelState.AddModelError($"Items[{i}].Name", "Food must be 120 characters or fewer.");
+                {
+                    ModelState.AddModelError(
+                        $"Items[{i}].Name",
+                        "Food must be 120 characters or fewer.");
+                }
 
                 if (!row.Quantity.HasValue || row.Quantity <= 0)
-                    ModelState.AddModelError($"Items[{i}].Quantity", "Amount is required.");
+                {
+                    ModelState.AddModelError(
+                        $"Items[{i}].Quantity",
+                        "Amount is required.");
+                }
                 else if (row.Quantity > 100_000)
-                    ModelState.AddModelError($"Items[{i}].Quantity", "Amount must be 100,000 or less.");
+                {
+                    ModelState.AddModelError(
+                        $"Items[{i}].Quantity",
+                        "Amount must be 100,000 or less.");
+                }
 
                 if (string.IsNullOrWhiteSpace(row.Unit))
-                    ModelState.AddModelError($"Items[{i}].Unit", "Unit is required.");
+                {
+                    ModelState.AddModelError(
+                        $"Items[{i}].Unit",
+                        "Unit is required.");
+                }
                 else if (row.Unit.Trim().Length > 30)
-                    ModelState.AddModelError($"Items[{i}].Unit", "Unit must be 30 characters or fewer.");
+                {
+                    ModelState.AddModelError(
+                        $"Items[{i}].Unit",
+                        "Unit must be 30 characters or fewer.");
+                }
             }
 
             if (rows.Count == 0)
@@ -220,7 +231,8 @@ namespace InTakeWise.Controllers
                 return View("Receipt", model);
             }
 
-            var mergeResult = _pantryUnitService.MergeRowsByFoodName(rows);
+            var mergeResult =
+                _pantryUnitService.MergeRowsByFoodName(rows);
 
             if (mergeResult.HasErrors)
             {
@@ -236,7 +248,7 @@ namespace InTakeWise.Controllers
 
             var mergedReceiptRows = mergeResult.Rows;
 
-            await using var tx = await _db.Database.BeginTransactionAsync();
+            await using var tx =await _db.Database.BeginTransactionAsync();
 
             try
             {
@@ -251,14 +263,20 @@ namespace InTakeWise.Controllers
 
                 foreach (var receiptRow in mergedReceiptRows)
                 {
-                    var cleanName = FoodItemNameNormalizer.CleanDisplayName(receiptRow.Name);
-                    var normalizedName = FoodItemNameNormalizer.NormalizeName(receiptRow.Name);
+                    var cleanName =
+                        FoodItemNameNormalizer.CleanDisplayName(
+                            receiptRow.Name);
+
+                    var normalizedName =
+                        FoodItemNameNormalizer.NormalizeName(
+                            receiptRow.Name);
 
                     var food = foodMap[normalizedName];
 
                     var existingMatches = existingPantry
-                        .Where(x => x.FoodItem != null &&
-                                    x.FoodItem.NormalizedName == normalizedName)
+                        .Where(x =>
+                            x.FoodItem != null
+                            && x.FoodItem.NormalizedName == normalizedName)
                         .ToList();
 
                     if (existingMatches.Count == 0)
@@ -276,15 +294,17 @@ namespace InTakeWise.Controllers
                         continue;
                     }
 
-                    var mergeExistingResult = _pantryUnitService.MergeWithExisting(
-                        cleanName,
-                        receiptRow.Quantity ?? 0m,
-                        receiptRow.Unit,
-                        existingMatches.Select(x => new PantryQuantityItem
-                        {
-                            Quantity = x.Quantity,
-                            Unit = x.Unit
-                        }));
+                    var mergeExistingResult =
+                        _pantryUnitService.MergeWithExisting(
+                            cleanName,
+                            receiptRow.Quantity ?? 0m,
+                            receiptRow.Unit,
+                            existingMatches.Select(x =>
+                                new PantryQuantityItem
+                                {
+                                    Quantity = x.Quantity,
+                                    Unit = x.Unit
+                                }));
 
                     if (mergeExistingResult.HasErrors)
                     {
@@ -301,7 +321,9 @@ namespace InTakeWise.Controllers
                     keeper.Quantity = mergeExistingResult.Quantity;
                     keeper.Unit = mergeExistingResult.Unit;
 
-                    var duplicates = existingMatches.Skip(1).ToList();
+                    var duplicates =
+                        existingMatches.Skip(1).ToList();
+
                     if (duplicates.Count > 0)
                     {
                         _db.PantryItems.RemoveRange(duplicates);
@@ -324,29 +346,27 @@ namespace InTakeWise.Controllers
                 await _db.SaveChangesAsync();
                 await tx.CommitAsync();
 
-                TempData["PantrySaved"] = model.IsSample
-                    ? "Fictional sample receipt items added to pantry."
-                    : "Receipt items added to pantry.";
+                TempData["PantrySaved"] = model.IsSample ? "Fictional sample receipt items added to pantry." : "Receipt items added to pantry.";
 
-                return RedirectToAction("Index", "Pantry", new
-                {
-                    returnUrl = GetPantryParentReturnUrl(model.ReturnUrl)
-                });
+                return RedirectToAction("Index", "Pantry", new { returnUrl = GetPantryParentReturnUrl(model.ReturnUrl) });
             }
             catch (DbUpdateException ex)
             {
                 await tx.RollbackAsync();
-                _logger.LogError(ex, "Error saving receipt items to pantry for user {UserId}", userId);
+
+                _logger.LogError("Error saving receipt items to pantry. User={UserReference}; FailureType={FailureType}.", AiLogSanitizer.UserReference(userId), ex.GetType().Name);
 
                 TempData["PantrySaved"] = "Could not save receipt items (database error).";
+
                 EnsureBlankRow(model);
                 return View("Receipt", model);
             }
         }
 
-        private async Task<Dictionary<string, FoodItem>> GetOrCreateFoodItemsAsync(
-            IEnumerable<string> rawNames,
-            CancellationToken cancellationToken = default)
+        private async Task<Dictionary<string, FoodItem>>
+            GetOrCreateFoodItemsAsync(
+                IEnumerable<string> rawNames,
+                CancellationToken cancellationToken = default)
         {
             var normalizedNames = rawNames
                 .Where(x => !string.IsNullOrWhiteSpace(x))
@@ -363,6 +383,7 @@ namespace InTakeWise.Controllers
             foreach (var rawName in rawNames.Where(x => !string.IsNullOrWhiteSpace(x)))
             {
                 var cleanName = FoodItemNameNormalizer.CleanDisplayName(rawName);
+
                 var normalizedName = FoodItemNameNormalizer.NormalizeName(rawName);
 
                 if (foodMap.ContainsKey(normalizedName))
@@ -402,19 +423,23 @@ namespace InTakeWise.Controllers
             var safeReturnUrl = GetSafeReturnUrl(receiptReturnUrl);
 
             var pantryPath = Url.Action("Index", "Pantry") ?? "/Pantry";
+
             var absolute = new Uri(new Uri($"{Request.Scheme}://{Request.Host}"), safeReturnUrl);
 
             if (!absolute.AbsolutePath.Equals(pantryPath, StringComparison.OrdinalIgnoreCase))
+            {
                 return safeReturnUrl;
+            }
 
-            var query = QueryHelpers.ParseQuery(absolute.Query);
+            var query =QueryHelpers.ParseQuery(absolute.Query);
 
             if (query.TryGetValue("returnUrl", out var nested))
             {
                 var nestedReturnUrl = nested.FirstOrDefault();
 
-                if (Url.IsLocalUrl(nestedReturnUrl))
+                if (Url.IsLocalUrl(nestedReturnUrl)){
                     return nestedReturnUrl!;
+                }
             }
 
             return safeDefault;
@@ -422,19 +447,32 @@ namespace InTakeWise.Controllers
 
         private static bool RowHasAnyValue(PantryItemInputViewModel item)
         {
-            return !string.IsNullOrWhiteSpace(item.Name)
-                || item.Quantity.HasValue
-                || !string.IsNullOrWhiteSpace(item.Unit);
+            return !string.IsNullOrWhiteSpace(item.Name) || item.Quantity.HasValue || !string.IsNullOrWhiteSpace(item.Unit);
         }
 
         private static void EnsureBlankRow(ReceiptViewModel model)
         {
-            model.Items ??= new List<PantryItemInputViewModel>();
+            if (model.Items == null)
+            {
+                model.Items = new List<PantryItemInputViewModel>();
+            }
 
-            if (model.Items.Count == 0 || RowHasAnyValue(model.Items.Last()))
+            if (model.Items.Count == 0|| RowHasAnyValue(model.Items.Last()))
             {
                 model.Items.Add(new PantryItemInputViewModel());
             }
+        }
+
+        private void ApplyFailureStatus(AiOperationException exception)
+        {
+            if (exception is not AiRequestLimitException limitException)
+            {
+                return;
+            }
+
+            Response.StatusCode = StatusCodes.Status429TooManyRequests;
+
+            Response.Headers["Retry-After"] = Math.Max(1, (int)Math.Ceiling(limitException.RetryAfter.TotalSeconds)).ToString();
         }
     }
 }

@@ -19,7 +19,7 @@ public sealed record ReceiptExtractedItem(
     decimal Quantity,
     string Unit);
 
-public sealed class ReceiptImageAnalysisException : InvalidOperationException
+public sealed class ReceiptImageAnalysisException : AiOperationException
 {
     public ReceiptImageAnalysisException(string message)
         : base(message)

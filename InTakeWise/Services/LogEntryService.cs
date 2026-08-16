@@ -19,9 +19,27 @@ namespace InTakeWise.Services
             _clock = clock;
         }
 
-        public async Task<MealLogEntry> LogMealInfoAsync(string userId, string userInput, MealType logTime)
+        public async Task<MealLogEntry> LogMealInfoAsync(
+            string userId,
+            string userInput,
+            MealType logTime,
+            CancellationToken cancellationToken = default)
         {
-            var mealInfo = await _aiLogParser.AnalyzeMealAsync(userId, userInput);
+            if (!Enum.IsDefined(logTime))
+            {
+                throw new AiInputValidationException(
+                    "Select a valid meal time.");
+            }
+
+            var normalizedInput = AiInputValidator.NormalizeLogInput(
+                userInput,
+                AiOperation.MealAnalysis);
+
+            var mealInfo = await _aiLogParser.AnalyzeMealAsync(
+                userId,
+                normalizedInput,
+                cancellationToken);
+
             var (startUtc, endUtc) = _clock.GetTodayLondonRangeUtc();
 
             var oldLog = await _db.MealLogs
@@ -30,7 +48,7 @@ namespace InTakeWise.Services
                          && x.Timestamp >= startUtc
                          && x.Timestamp < endUtc)
                 .OrderByDescending(x => x.Timestamp)
-                .FirstOrDefaultAsync();
+                .FirstOrDefaultAsync(cancellationToken);
 
             if (oldLog != null)
             {
@@ -42,7 +60,7 @@ namespace InTakeWise.Services
                 UserId = userId,
                 TimeEat = logTime,
                 Timestamp = _clock.UtcNow,
-                RawInput = userInput,
+                RawInput = normalizedInput,
                 Calories = mealInfo.Calories,
                 Protein = mealInfo.Protein,
                 Carbs = mealInfo.Carbs,
@@ -51,7 +69,7 @@ namespace InTakeWise.Services
             };
 
             _db.MealLogs.Add(log);
-            await _db.SaveChangesAsync();
+            await _db.SaveChangesAsync(cancellationToken);
             return log;
         }
 
@@ -74,19 +92,32 @@ namespace InTakeWise.Services
             return meal != null;
         }
 
-        public async Task<WorkoutLogEntry> LogWorkoutInfoAsync(string userId, string userInput)
+        public async Task<WorkoutLogEntry> LogWorkoutInfoAsync(
+            string userId,
+            string userInput,
+            CancellationToken cancellationToken = default)
         {
+            var normalizedInput = AiInputValidator.NormalizeLogInput(
+                userInput,
+                AiOperation.WorkoutAnalysis);
+
             var profile = await _db.UsersInformation
                 .AsNoTracking()
-                .FirstOrDefaultAsync(x => x.UserId == userId);
+                .FirstOrDefaultAsync(
+                    x => x.UserId == userId,
+                    cancellationToken);
 
-            var workInfo = await _aiLogParser.AnalyzeWorkoutAsync(userId, userInput, profile);
+            var workInfo = await _aiLogParser.AnalyzeWorkoutAsync(
+                userId,
+                normalizedInput,
+                profile,
+                cancellationToken);
 
             var log = new WorkoutLogEntry
             {
                 UserId = userId,
                 Timestamp = _clock.UtcNow,
-                RawInput = userInput,
+                RawInput = normalizedInput,
                 CaloriesBurned = workInfo.CaloriesBurned,
                 ActivityType = workInfo.ActivityType,
                 DurationMinutes = workInfo.DurationMinutes,
@@ -94,7 +125,7 @@ namespace InTakeWise.Services
             };
 
             _db.WorkoutLogs.Add(log);
-            await _db.SaveChangesAsync();
+            await _db.SaveChangesAsync(cancellationToken);
             return log;
         }
 

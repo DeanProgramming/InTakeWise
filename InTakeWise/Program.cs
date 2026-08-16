@@ -4,11 +4,7 @@ using InTakeWise.Middleware;
 using InTakeWise.Security;
 using InTakeWise.Services;
 using Microsoft.AspNetCore.Identity;
-using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.EntityFrameworkCore;
-using OpenAI.Chat;
-using System.Security.Claims;
-using System.Threading.RateLimiting;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -17,10 +13,7 @@ if (builder.Environment.IsDevelopment())
     builder.Configuration.AddUserSecrets<Program>();
 }
 
-var connectionString =
-    builder.Configuration.GetConnectionString("DefaultConnection")
-    ?? throw new InvalidOperationException(
-        "Connection string 'DefaultConnection' not found.");
+var connectionString = builder.Configuration.GetConnectionString("DefaultConnection") ?? throw new InvalidOperationException("Connection string 'DefaultConnection' not found.");
 
 builder.Services.AddDbContext<ApplicationDbContext>(options =>
     options.UseSqlServer(
@@ -76,62 +69,23 @@ builder.Services.AddSingleton(TimeProvider.System);
 builder.Services.AddSingleton<IAppClock, AppClock>();
 builder.Services.AddSingleton<INutritionTargetCalculator, NutritionTargetCalculator>();
 
+builder.Services
+    .AddOptions<AiSafetyOptions>()
+    .Bind(builder.Configuration.GetSection(AiSafetyOptions.SectionName))
+    .Validate(options => options.IsValid(), "AiSafety configuration contains an invalid timeout or request limit.")
+    .ValidateOnStart();
+
+builder.Services.AddSingleton<IAiRequestGate, AiRequestGate>();
+
+// Keep provider clients lazy: demo pages use seeded, pre-generated results and
+// must remain available when OpenAI is unavailable or not configured.
+builder.Services.AddSingleton<IOpenAiChatClientProvider, OpenAiChatClientProvider>();
+builder.Services.AddSingleton<IAiLogResponseParser, AiLogResponseParser>();
+builder.Services.AddSingleton<IShoppingPlanResponseParser, ShoppingPlanResponseParser>();
+
 builder.Services.AddScoped<IPantryUnitService, PantryUnitService>();
 builder.Services.AddScoped<IDemoAiGuard, DemoAiGuard>();
-builder.Services.AddSingleton<ReceiptVisionClient>();
 builder.Services.AddScoped<IReceiptImageAnalyzer, OpenAiReceiptImageAnalyzer>();
-
-builder.Services.AddRateLimiter(options =>
-{
-    options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
-
-    options.OnRejected = async (context, cancellationToken) =>
-    {
-        context.HttpContext.Response.ContentType = "text/plain";
-
-        await context.HttpContext.Response.WriteAsync(
-            "Too many receipt-analysis attempts. " +
-            "Please wait a few minutes and try again.",
-            cancellationToken);
-    };
-
-    options.AddPolicy(
-        "receipt-analysis",
-        httpContext =>
-            RateLimitPartition.GetFixedWindowLimiter(
-                partitionKey:
-                    httpContext.User.FindFirstValue(
-                        ClaimTypes.NameIdentifier)
-                    ?? httpContext.Connection.RemoteIpAddress?.ToString()
-                    ?? "anonymous",
-                factory: _ => new FixedWindowRateLimiterOptions
-                {
-                    AutoReplenishment = true,
-                    PermitLimit = 5,
-                    QueueLimit = 0,
-                    Window = TimeSpan.FromMinutes(10)
-                }));
-});
-
-builder.Services.AddSingleton(sp =>
-{
-    var config = sp.GetRequiredService<IConfiguration>();
-
-    var apiKey = config["OpenAI:ApiKey"] ?? Environment.GetEnvironmentVariable("OPENAI_API_KEY");
-
-    if (string.IsNullOrWhiteSpace(apiKey))
-    {
-        throw new InvalidOperationException("OPENAI_API_KEY is missing.");
-    }
-
-    var model = config["OpenAI:LoggingModel"] ?? "gpt-5.1";
-
-    return new ChatClient(
-        model: model,
-        apiKey: apiKey);
-});
-
-builder.Services.AddSingleton<IAiLogResponseParser, AiLogResponseParser>();
 
 builder.Services.AddScoped<IAiLogParser, OpenAiLogParser>();
 
@@ -200,7 +154,6 @@ app.UseAuthentication();
 app.UseAuthorization();
 
 app.UseMiddleware<DemoReadOnlyMiddleware>();
-app.UseRateLimiter();
 
 app.MapStaticAssets();
 

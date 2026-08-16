@@ -1,5 +1,7 @@
 ﻿using System.Text.Json;
+using System.Text.Json.Serialization;
 using InTakeWise.Security;
+using Microsoft.Extensions.Options;
 using OpenAI.Chat;
 
 namespace InTakeWise.Services;
@@ -7,7 +9,11 @@ namespace InTakeWise.Services;
 public sealed class OpenAiReceiptImageAnalyzer : IReceiptImageAnalyzer
 {
     private const int MaximumExtractedItems = 75;
-    private static readonly TimeSpan AnalysisTimeout = TimeSpan.FromSeconds(30);
+    private const int MaximumResponseCharacters = 250_000;
+
+    private static readonly HashSet<string> SupportedMediaTypes = new(
+        ["image/jpeg", "image/png", "image/webp"],
+        StringComparer.OrdinalIgnoreCase);
 
     private static readonly HashSet<string> SupportedUnits = new(
         ["mg", "g", "kg", "ml", "l", "items", "tins", "cans", "packs", "bottles"],
@@ -15,40 +21,39 @@ public sealed class OpenAiReceiptImageAnalyzer : IReceiptImageAnalyzer
 
     private static readonly JsonSerializerOptions JsonOptions = new()
     {
-        PropertyNameCaseInsensitive = true
+        PropertyNameCaseInsensitive = true,
+        UnmappedMemberHandling = JsonUnmappedMemberHandling.Disallow
     };
 
-    private readonly ReceiptVisionClient _receiptVisionClient;
+    private readonly IOpenAiChatClientProvider _clientProvider;
     private readonly IDemoAiGuard _demoAiGuard;
+    private readonly IAiRequestGate _requestGate;
+    private readonly AiSafetyOptions _safetyOptions;
     private readonly ILogger<OpenAiReceiptImageAnalyzer> _logger;
 
     public OpenAiReceiptImageAnalyzer(
-        ReceiptVisionClient receiptVisionClient,
+        IOpenAiChatClientProvider clientProvider,
         IDemoAiGuard demoAiGuard,
+        IAiRequestGate requestGate,
+        IOptions<AiSafetyOptions> safetyOptions,
         ILogger<OpenAiReceiptImageAnalyzer> logger)
     {
-        _receiptVisionClient = receiptVisionClient;
+        _clientProvider = clientProvider;
         _demoAiGuard = demoAiGuard;
+        _requestGate = requestGate;
+        _safetyOptions = safetyOptions.Value;
         _logger = logger;
     }
 
-    public async Task<ReceiptImageAnalysis> AnalyzeAsync(
-        string userId,
-        byte[] imageBytes,
-        string mediaType,
-        CancellationToken cancellationToken = default)
+    public async Task<ReceiptImageAnalysis> AnalyzeAsync(string userId, byte[] imageBytes, string mediaType, CancellationToken cancellationToken = default)
     {
+        ValidateRequest(imageBytes, mediaType);
+
         await _demoAiGuard.EnsureLiveAiAllowedAsync(userId);
 
-        if (imageBytes.Length == 0)
-        {
-            throw new ReceiptImageAnalysisException("The receipt photo is empty.");
-        }
+        var client = _clientProvider.GetClient(AiOperation.ReceiptAnalysis);
 
-        if (string.IsNullOrWhiteSpace(mediaType))
-        {
-            throw new ReceiptImageAnalysisException("The receipt photo type is missing.");
-        }
+        await _requestGate.EnsureAllowedAsync(userId, AiOperation.ReceiptAnalysis, cancellationToken);
 
         var messages = new List<ChatMessage>
         {
@@ -91,11 +96,12 @@ public sealed class OpenAiReceiptImageAnalyzer : IReceiptImageAnalyzer
                     "isReadable": { "type": "boolean" },
                     "items": {
                       "type": "array",
+                      "maxItems": 75,
                       "items": {
                         "type": "object",
                         "properties": {
-                          "name": { "type": "string" },
-                          "quantity": { "type": "number" },
+                          "name": { "type": "string", "minLength": 1, "maxLength": 120 },
+                          "quantity": { "type": "number", "exclusiveMinimum": 0, "maximum": 100000 },
                           "unit": {
                             "type": "string",
                             "enum": ["mg", "g", "kg", "ml", "l", "items", "tins", "cans", "packs", "bottles"]
@@ -114,17 +120,35 @@ public sealed class OpenAiReceiptImageAnalyzer : IReceiptImageAnalyzer
         };
 
         using var timeout = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
-        timeout.CancelAfter(AnalysisTimeout);
+
+        timeout.CancelAfter(_safetyOptions.GetTimeout(AiOperation.ReceiptAnalysis));
 
         ChatCompletion completion;
 
         try
         {
-            completion = await _receiptVisionClient.Client.CompleteChatAsync(messages, options, timeout.Token);
+            completion = await client.CompleteChatAsync(messages, options, timeout.Token);
         }
-        catch (OperationCanceledException ex) when (!cancellationToken.IsCancellationRequested)
+        catch (OperationCanceledException exception)
+            when (!cancellationToken.IsCancellationRequested)
         {
-            throw new ReceiptImageAnalysisException("Receipt analysis timed out. Please try again with a clear, well-lit photo.", ex);
+            _logger.LogWarning("Receipt analysis timed out for user {UserReference}.", AiLogSanitizer.UserReference(userId));
+
+            throw new AiRequestTimeoutException("Receipt analysis timed out. Please try again with a clear, well-lit photo.", exception);
+        }
+        catch (OperationCanceledException)
+        {
+            throw;
+        }
+        catch (AiOperationException)
+        {
+            throw;
+        }
+        catch (Exception exception)
+        {
+            _logger.LogError("Receipt-analysis provider request failed. User={UserReference}; FailureType={FailureType}.", AiLogSanitizer.UserReference(userId), exception.GetType().Name);
+
+            throw new AiServiceUnavailableException("Receipt photo analysis is temporarily unavailable. Please try again.", exception);
         }
 
         if (completion.Content is null || completion.Content.Count == 0)
@@ -139,53 +163,119 @@ public sealed class OpenAiReceiptImageAnalyzer : IReceiptImageAnalyzer
             throw new ReceiptImageAnalysisException("Receipt analysis returned no result.");
         }
 
+        if (json.Length > MaximumResponseCharacters)
+        {
+            throw new ReceiptImageAnalysisException("Receipt analysis returned an oversized result. Please try another photo.");
+        }
+
         ReceiptVisionResponse response;
 
         try
         {
-            response = JsonSerializer.Deserialize<ReceiptVisionResponse>(json, JsonOptions) ?? throw new JsonException("The receipt response was empty.");
+            response =
+                JsonSerializer.Deserialize<ReceiptVisionResponse>(
+                    json,
+                    JsonOptions)
+                ?? throw new JsonException(
+                    "The receipt response was empty.");
         }
-        catch (JsonException ex)
+        catch (JsonException exception)
         {
-            _logger.LogWarning(ex, "Receipt analysis returned invalid structured JSON.");
-            throw new ReceiptImageAnalysisException("The receipt result could not be read. Please try another photo.", ex);
+            _logger.LogWarning(
+                "Receipt response failed JSON validation. User={UserReference}; ResponseCharacters={ResponseCharacters}; FailureType={FailureType}.",
+                AiLogSanitizer.UserReference(userId),
+                json.Length,
+                exception.GetType().Name);
+
+            throw new ReceiptImageAnalysisException("The receipt result could not be read. Please try another photo.", exception);
         }
 
         if (!response.IsReceipt || !response.IsReadable)
         {
-            return new ReceiptImageAnalysis(response.IsReceipt, response.IsReadable, Array.Empty<ReceiptExtractedItem>());
+            return new ReceiptImageAnalysis(
+                response.IsReceipt,
+                response.IsReadable,
+                Array.Empty<ReceiptExtractedItem>());
         }
 
-        var items = (response.Items ?? new List<ReceiptVisionItem>())
-            .Select(ToExtractedItem)
-            .Where(item => item is not null)
-            .Cast<ReceiptExtractedItem>()
-            .Take(MaximumExtractedItems)
-            .ToList();
+        try
+        {
+            var items = NormalizeItems(response.Items);
 
-        return new ReceiptImageAnalysis(true, true, items);
+            return new ReceiptImageAnalysis(
+                true,
+                true,
+                items);
+        }
+        catch (InvalidOperationException exception)
+        {
+            _logger.LogWarning("Receipt response failed domain validation. User={UserReference}; ResponseCharacters={ResponseCharacters}; FailureType={FailureType}.", AiLogSanitizer.UserReference(userId), json.Length, exception.GetType().Name);
+
+            throw new ReceiptImageAnalysisException("The receipt result contained invalid item data. Please try another photo.", exception);
+        }
     }
 
-    private static ReceiptExtractedItem? ToExtractedItem(ReceiptVisionItem item)
+    private static void ValidateRequest(byte[]? imageBytes, string? mediaType)
     {
-        var name = (item.Name ?? string.Empty).Trim();
-        var unit = (item.Unit ?? string.Empty).Trim().ToLowerInvariant();
-
-        if (string.IsNullOrWhiteSpace(name) || name.Length > 120)
+        if (imageBytes is null || imageBytes.Length == 0)
         {
-            return null;
+            throw new ReceiptImageAnalysisException("The receipt photo is empty.");
         }
 
-        if (item.Quantity <= 0 || item.Quantity > 100_000)
+        if (imageBytes.Length > ReceiptImageUpload.MaxImageBytes)
         {
-            return null;
-        } 
-
-        if (!SupportedUnits.Contains(unit)){
-            return null;
+            throw new ReceiptImageAnalysisException("The receipt photo must be 10 MB or smaller.");
         }
 
-        return new ReceiptExtractedItem(name, item.Quantity, unit);
+        if (string.IsNullOrWhiteSpace(mediaType) || !SupportedMediaTypes.Contains(mediaType))
+        {
+            throw new ReceiptImageAnalysisException("Use a JPG, PNG, or WebP receipt photo.");
+        }
+    }
+
+    private static IReadOnlyList<ReceiptExtractedItem> NormalizeItems(List<ReceiptVisionItem>? responseItems)
+    {
+        if (responseItems is null)
+        {
+            throw new InvalidOperationException("Receipt response is missing its items collection.");
+        }
+
+        if (responseItems.Count > MaximumExtractedItems)
+        {
+            throw new InvalidOperationException("Receipt response contains too many items.");
+        }
+
+        var items = new List<ReceiptExtractedItem>(responseItems.Count);
+
+        foreach (var item in responseItems)
+        {
+            if (item is null)
+            {
+                throw new InvalidOperationException("Receipt response contains an empty item.");
+            }
+
+            var name = item.Name?.Trim() ?? string.Empty;
+            var unit = item.Unit?.Trim().ToLowerInvariant() ?? string.Empty;
+
+            if (string.IsNullOrWhiteSpace(name) || name.Length > 120)
+            {
+                throw new InvalidOperationException("Receipt response contains an invalid item name.");
+            }
+
+            if (item.Quantity <= 0 || item.Quantity > 100_000)
+            {
+                throw new InvalidOperationException("Receipt response contains an invalid item quantity.");
+            }
+
+            if (!SupportedUnits.Contains(unit))
+            {
+                throw new InvalidOperationException("Receipt response contains an unsupported item unit.");
+            }
+
+            items.Add(new ReceiptExtractedItem(name, item.Quantity, unit));
+        }
+
+        return items;
     }
 
     private sealed class ReceiptVisionResponse
@@ -201,28 +291,4 @@ public sealed class OpenAiReceiptImageAnalyzer : IReceiptImageAnalyzer
         public decimal Quantity { get; set; }
         public string? Unit { get; set; }
     }
-}
-
-public sealed class ReceiptVisionClient
-{
-    private readonly Lazy<ChatClient> _client;
-
-    public ReceiptVisionClient(IConfiguration configuration)
-    {
-        _client = new Lazy<ChatClient>(() =>
-        {
-            var apiKey = configuration["OpenAI:ApiKey"] ?? Environment.GetEnvironmentVariable("OPENAI_API_KEY");
-
-            if (string.IsNullOrWhiteSpace(apiKey))
-            {
-                throw new ReceiptImageAnalysisException("Receipt photo analysis is not configured.");
-            }
-
-            var model = configuration["OpenAI:ReceiptModel"] ?? configuration["OpenAI:LoggingModel"] ?? "gpt-5.1";
-
-            return new ChatClient(model: model, apiKey: apiKey);
-        });
-    }
-
-    public ChatClient Client => _client.Value;
 }

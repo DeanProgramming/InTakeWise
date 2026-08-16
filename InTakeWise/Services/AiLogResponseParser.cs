@@ -15,8 +15,11 @@ public sealed class AiLogResponseParser : IAiLogResponseParser
     private const int MaximumMealCalories = 10_000;
     private const int MaximumMacroGrams = 1_000;
     private const int MaximumFiberGrams = 250;
-    private const int MaximumWorkoutMinutes = 480;
+    private const int MaximumMealSummaryCharacters = 300;
+    private const int MaximumWorkoutMinutes = 240;
     private const int MaximumWorkoutCalories = 5_000;
+    private const int MaximumActivityTypeCharacters = 100;
+    private const int MaximumIntensityCharacters = 50;
 
     private static readonly JsonSerializerOptions JsonOptions = new()
     {
@@ -34,6 +37,11 @@ public sealed class AiLogResponseParser : IAiLogResponseParser
         EnsureRequired(response.Carbs, "Carbs");
         EnsureRequired(response.Fat, "Fat");
         EnsureRequired(response.Fiber, "Fiber");
+
+        EnsureTextLength(
+            response.Summary!,
+            MaximumMealSummaryCharacters,
+            "Meal summary");
 
         EnsureInRange(response.Calories.Value, 0, MaximumMealCalories, "Calories");
         EnsureInRange(response.Protein.Value, 0, MaximumMacroGrams, "Protein");
@@ -60,6 +68,16 @@ public sealed class AiLogResponseParser : IAiLogResponseParser
         EnsureRequiredText(response.Intensity, "Intensity");
         EnsureRequired(response.DurationMinutes, "Duration minutes");
         EnsureRequired(response.CaloriesBurned, "Calories burned");
+
+        EnsureTextLength(
+            response.ActivityType!,
+            MaximumActivityTypeCharacters,
+            "Activity type");
+
+        EnsureTextLength(
+            response.Intensity!,
+            MaximumIntensityCharacters,
+            "Intensity");
 
         EnsureInRange(response.DurationMinutes.Value, 1, MaximumWorkoutMinutes, "Duration minutes");
         EnsureInRange(response.CaloriesBurned.Value, 0, MaximumWorkoutCalories, "Calories burned");
@@ -113,6 +131,18 @@ public sealed class AiLogResponseParser : IAiLogResponseParser
         {
             throw new InvalidOperationException(
                 $"AI response {name} must be between {minimum} and {maximum}.");
+        }
+    }
+
+    private static void EnsureTextLength(
+        string value,
+        int maximumCharacters,
+        string name)
+    {
+        if (value.Trim().Length > maximumCharacters)
+        {
+            throw new InvalidOperationException(
+                $"AI response {name} must be {maximumCharacters} characters or fewer.");
         }
     }
 

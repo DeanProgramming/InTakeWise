@@ -1,129 +1,154 @@
-﻿using System.Net;
-using System.Security.Claims;
+﻿using System.Security.Claims;
+using InTakeWise.Data;
 using InTakeWise.Services;
 using InTakeWise.ViewModels;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using InTakeWise.Data;
 
-namespace InTakeWise.Controllers
+namespace InTakeWise.Controllers;
+
+[Authorize]
+public class ShoppingSuggestionController : Controller
 {
-    [Authorize]
-    public class ShoppingSuggestionController : Controller
+    private readonly IFoodItemService _foodItemService;
+    private readonly IShoppingSuggestionService _shoppingSuggestionService;
+    private readonly ILogger<ShoppingSuggestionController> _logger;
+
+    public ShoppingSuggestionController(
+        IFoodItemService foodItemService,
+        IShoppingSuggestionService shoppingSuggestionService,
+        ILogger<ShoppingSuggestionController> logger)
     {
-        private readonly IFoodItemService _foodItemService;
-        private readonly IShoppingSuggestionService _shoppingSuggestionService;
-        private readonly ILogger<ShoppingSuggestionController> _logger;
+        _foodItemService = foodItemService;
+        _shoppingSuggestionService = shoppingSuggestionService;
+        _logger = logger;
+    }
 
-        public ShoppingSuggestionController(
-            IFoodItemService foodItemService,
-            IShoppingSuggestionService shoppingSuggestionService,
-            ILogger<ShoppingSuggestionController> logger)
+    [HttpGet]
+    public async Task<IActionResult> Index(
+        CancellationToken cancellationToken = default)
+    {
+        var userId = User.FindFirstValue(
+            ClaimTypes.NameIdentifier);
+
+        if (string.IsNullOrWhiteSpace(userId))
         {
-            _foodItemService = foodItemService;
-            _shoppingSuggestionService = shoppingSuggestionService;
-            _logger = logger;
+            return Unauthorized();
         }
 
-        [HttpGet]
-        public async Task<IActionResult> Index()
-        {
-            var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
-            if (string.IsNullOrWhiteSpace(userId))
-                return Unauthorized();
+        var savedPlan =
+            await _shoppingSuggestionService.GetSavedWeekPlanAsync(
+                userId,
+                cancellationToken);
 
-            var savedPlan = await _shoppingSuggestionService.GetSavedWeekPlanAsync(userId);
-
-            var vm = new ShoppingSuggestionViewModel
+        return View(
+            "ShoppingSuggestion",
+            new ShoppingSuggestionViewModel
             {
-                ShoppingList = savedPlan?.ShoppingList ?? new(),
-                WeekMealsSummary = savedPlan?.WeekMealsSummary ?? new()
-            };
+                ShoppingList =
+                    savedPlan?.ShoppingList ?? new(),
+                WeekMealsSummary =
+                    savedPlan?.WeekMealsSummary ?? new()
+            });
+    }
 
-            return View("ShoppingSuggestion", vm);
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    [RequestSizeLimit(16 * 1024)]
+    public async Task<IActionResult> GetShoppingList(
+        CancellationToken cancellationToken = default)
+    {
+        var userId = User.FindFirstValue(
+            ClaimTypes.NameIdentifier);
+
+        if (string.IsNullOrWhiteSpace(userId))
+        {
+            return Unauthorized();
         }
 
-        [HttpPost]
-        [ValidateAntiForgeryToken]
-        public async Task<IActionResult> GetShoppingList()
+        if (IsDemoUser())
         {
-            var vm = new ShoppingSuggestionViewModel();
+            _logger.LogWarning(
+                "Blocked demo shopping-plan generation request.");
 
-            var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
-            if (string.IsNullOrWhiteSpace(userId))
-                return Unauthorized();
+            return RedirectToAction(nameof(Index));
+        }
 
-            if (IsDemoUser())
-            {
-                _logger.LogWarning("Blocked demo shopping-plan generation request.");
+        try
+        {
+            var pantryItems =
+                await _foodItemService.GetFoodItemsAsync(
+                    userId);
 
-                return RedirectToAction(nameof(Index));
-            }
+            var plan =
+                await _shoppingSuggestionService.GenerateWeekPlanAsync(
+                    userId,
+                    pantryItems,
+                    cancellationToken);
 
-            try
-            {
-                var pantryItems = await _foodItemService.GetFoodItemsAsync(userId);
-                var plan = await _shoppingSuggestionService.GenerateWeekPlanAsync(userId, pantryItems);
+            await _shoppingSuggestionService.SaveWeekPlanAsync(
+                userId,
+                plan,
+                cancellationToken);
 
-                await _shoppingSuggestionService.SaveWeekPlanAsync(userId, plan);
+            return RedirectToAction(nameof(Index));
+        }
+        catch (OperationCanceledException)
+            when (cancellationToken.IsCancellationRequested)
+        {
+            throw;
+        }
+        catch (AiOperationException exception)
+        {
+            ApplyFailureStatus(exception);
 
-                return RedirectToAction(nameof(Index));
-            }
-            catch (TaskCanceledException ex)
-            {
-                _logger.LogError(ex, "OpenAI call timed out while generating shopping plan.");
-                vm.Error = "The request timed out. Please try again.";
-                return View("ShoppingSuggestion", vm);
-            }
-            catch (InvalidOperationException ex)
-            {
-                _logger.LogWarning(ex, "Shopping plan generation could not be completed.");
-                vm.Error = ex.Message;
-                return View("ShoppingSuggestion", vm);
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "OpenAI call failed while generating shopping plan.");
+            _logger.LogWarning(
+                "Shopping-plan failure handled safely. User={UserReference}; FailureType={FailureType}.",
+                AiLogSanitizer.UserReference(userId),
+                exception.GetType().Name);
 
-                var statusCode = TryGetStatusCode(ex);
-
-                vm.Error = statusCode switch
+            return View(
+                "ShoppingSuggestion",
+                new ShoppingSuggestionViewModel
                 {
-                    401 => "Authentication failed (invalid or revoked API key). Check OPENAI_API_KEY and try again.",
-                    403 => "Permission denied. Your key or project may not have access, or your region/IP may be restricted.",
-                    429 => "Rate limit or quota exceeded. Check your billing and usage limits, then try again.",
-                    500 or 503 => "OpenAI service is having trouble. Please retry in a moment.",
-                    _ => "Something went wrong while generating the shopping plan. Check logs for details."
-                };
-
-                return View("ShoppingSuggestion", vm);
-            }
+                    Error = exception.UserMessage
+                });
         }
-
-        private static int? TryGetStatusCode(Exception ex)
+        catch (Exception exception)
         {
-            var t = ex.GetType();
-            var prop =
-                t.GetProperty("StatusCode") ??
-                t.GetProperty("Status") ??
-                t.GetProperty("HttpStatusCode");
+            _logger.LogError(
+                "Unexpected shopping-plan failure. User={UserReference}; FailureType={FailureType}.",
+                AiLogSanitizer.UserReference(userId),
+                exception.GetType().Name);
 
-            if (prop == null) return null;
-
-            var val = prop.GetValue(ex);
-            return val switch
-            {
-                int i => i,
-                HttpStatusCode code => (int)code,
-                _ => null
-            };
+            return View(
+                "ShoppingSuggestion",
+                new ShoppingSuggestionViewModel
+                {
+                    Error =
+                        "Shopping-plan generation is temporarily unavailable. Please try again."
+                });
         }
+    }
 
-        private bool IsDemoUser()
+    private bool IsDemoUser() =>
+        User.HasClaim(
+            DbSeeder.DemoClaimType,
+            DbSeeder.DemoClaimValue);
+
+    private void ApplyFailureStatus(
+        AiOperationException exception)
+    {
+        if (exception is not AiRequestLimitException limitException)
         {
-            return User.HasClaim(
-                DbSeeder.DemoClaimType,
-                DbSeeder.DemoClaimValue);
+            return;
         }
+
+        Response.StatusCode = StatusCodes.Status429TooManyRequests;
+        Response.Headers["Retry-After"] = Math.Max(
+                1,
+                (int)Math.Ceiling(
+                    limitException.RetryAfter.TotalSeconds))
+            .ToString();
     }
 }

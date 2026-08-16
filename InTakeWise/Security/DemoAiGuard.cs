@@ -1,4 +1,5 @@
 ﻿using InTakeWise.Data;
+using InTakeWise.Services;
 using Microsoft.AspNetCore.Identity;
 
 namespace InTakeWise.Security;
@@ -25,16 +26,14 @@ public sealed class DemoAiGuard : IDemoAiGuard
     {
         if (string.IsNullOrWhiteSpace(userId))
         {
-            throw new UnauthorizedAccessException(
-                "A valid user is required to use live AI.");
+            throw new UnauthorizedAccessException("A valid user is required to use live AI.");
         }
 
         var user = await _userManager.FindByIdAsync(userId);
 
         if (user is null)
         {
-            throw new UnauthorizedAccessException(
-                "The authenticated user could not be found.");
+            throw new UnauthorizedAccessException("The authenticated user could not be found.");
         }
 
         var claims = await _userManager.GetClaimsAsync(user);
@@ -48,9 +47,7 @@ public sealed class DemoAiGuard : IDemoAiGuard
             return;
         }
 
-        _logger.LogWarning(
-            "Blocked live AI access for demo user {UserId}.",
-            userId);
+        _logger.LogWarning("Blocked live AI access for demo user {UserReference}.",AiLogSanitizer.UserReference(userId));
 
         throw new DemoAiAccessDeniedException();
     }
