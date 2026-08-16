@@ -1,6 +1,250 @@
 ﻿@{
-    ViewData["Title"] = "Privacy Policy";
+    ViewData["Title"] = "Privacy";
 }
-<h1>@ViewData["Title"]</h1>
 
-<p>Use this page to detail your site's privacy policy.</p>
+<div class="auth-page">
+    <div class="auth-card menu-card">
+        <article class="auth-main privacy-page" aria-labelledby="privacy-title">
+            <header class="privacy-header">
+                <h1 id="privacy-title" class="auth-title">Privacy</h1>
+
+                <p class="privacy-updated">
+                    Last updated
+                    <time datetime="2026-08-16">16 August 2026</time>
+                </p>
+            </header>
+
+            <div class="menu-actions">
+                <section class="menu-action log-intro-card privacy-section"
+                         aria-labelledby="portfolio-heading">
+                    <h2 id="portfolio-heading" class="menu-action-title">
+                        Portfolio project
+                    </h2>
+
+                    <p class="menu-action-sub privacy-copy">
+                        InTakeWise is a personal portfolio project created by
+                        Dean Holland to demonstrate application development,
+                        user accounts and AI-assisted fitness features.
+                    </p>
+
+                    <p class="menu-action-sub privacy-copy">
+                        This is a concise privacy layout for the current
+                        demonstration build. It should receive a formal legal
+                        and data-protection review before real public accounts
+                        are enabled.
+                    </p>
+                </section>
+
+                <section class="menu-action log-intro-card privacy-section"
+                         aria-labelledby="information-heading">
+                    <h2 id="information-heading" class="menu-action-title">
+                        Information the application uses
+                    </h2>
+
+                    <ul class="privacy-list">
+                        <li>
+                            Account information, including your email address,
+                            account identifiers and authentication records.
+                        </li>
+                        <li>
+                            Profile information such as your profile name, age,
+                            gender selection, height, weight, activity level,
+                            gym days and fitness goals.
+                        </li>
+                        <li>
+                            Calculated calorie, nutrition and workout targets.
+                        </li>
+                        <li>
+                            Meal and workout entries and their generated results.
+                        </li>
+                        <li>
+                            Pantry items, shopping lists and saved meal plans.
+                        </li>
+                        <li>
+                            Technical session and security information needed to
+                            keep you signed in and protect the application.
+                        </li>
+                    </ul>
+                </section>
+
+                <section class="menu-action log-intro-card privacy-section"
+                         aria-labelledby="purpose-heading">
+                    <h2 id="purpose-heading" class="menu-action-title">
+                        Why information is used
+                    </h2>
+
+                    <p class="menu-action-sub privacy-copy">
+                        Information is used to create and secure accounts,
+                        personalise calorie and activity estimates, save the
+                        entries and plans you request, and provide the
+                        application’s meal, pantry and workout features.
+                    </p>
+
+                    <p class="menu-action-sub privacy-copy">
+                        The portfolio build does not claim that a production
+                        lawful-basis assessment has been completed. An
+                        appropriate lawful basis, and any additional condition
+                        required for health data, must be documented before
+                        accepting real public users.
+                    </p>
+                </section>
+
+                <section class="menu-action log-intro-card privacy-section"
+                         aria-labelledby="ai-heading">
+                    <h2 id="ai-heading" class="menu-action-title">
+                        Information sent to OpenAI
+                    </h2>
+
+                    <p class="menu-action-sub privacy-copy">
+                        When you choose an AI-assisted feature, InTakeWise may
+                        send OpenAI the information needed to complete that
+                        particular request. Depending on the feature, this may
+                        include:
+                    </p>
+
+                    <ul class="privacy-list">
+                        <li>Meal or workout text that you enter.</li>
+                        <li>
+                            Relevant profile values, goals, calculated targets
+                            and pantry items.
+                        </li>
+                        <li>
+                            A receipt image submitted for pantry-item extraction.
+                        </li>
+                    </ul>
+
+                    <p class="menu-action-sub privacy-copy">
+                        Receipt images are read for that request and are not
+                        saved to InTakeWise’s database or file storage. Extracted
+                        pantry items are only saved when you choose to confirm
+                        and save them.
+                    </p>
+
+                    <p class="menu-action-sub privacy-copy">
+                        OpenAI may process and retain API request information
+                        according to its current data controls and legal
+                        obligations. See
+                        <a class="menu-link"
+                           href="https://developers.openai.com/api/docs/guides/your-data">
+                            OpenAI API data controls
+                        </a>.
+                    </p>
+                </section>
+
+                <section class="menu-action log-intro-card privacy-section"
+                         aria-labelledby="cookies-heading">
+                    <h2 id="cookies-heading" class="menu-action-title">
+                        Essential cookies
+                    </h2>
+
+                    <p class="menu-action-sub privacy-copy">
+                        InTakeWise uses essential authentication, session and
+                        security cookies. These are required to sign users in,
+                        maintain a session and protect submitted forms.
+                    </p>
+
+                    <p class="menu-action-sub privacy-copy">
+                        The current build does not intentionally configure
+                        analytics or advertising cookies.
+                    </p>
+                </section>
+
+                <section class="menu-action log-intro-card privacy-section"
+                         aria-labelledby="sharing-heading">
+                    <h2 id="sharing-heading" class="menu-action-title">
+                        Storage and service providers
+                    </h2>
+
+                    <p class="menu-action-sub privacy-copy">
+                        Information may be processed by the hosting and database
+                        services configured for the deployment. OpenAI is used
+                        as the AI-processing provider for features that you
+                        specifically request.
+                    </p>
+
+                    <p class="menu-action-sub privacy-copy">
+                        The current project contains no advertising or
+                        personal-data-sale functionality. Provider contracts,
+                        locations and any international-transfer safeguards
+                        should be confirmed before a production launch.
+                    </p>
+                </section>
+
+                <section class="menu-action log-intro-card privacy-section"
+                         aria-labelledby="retention-heading">
+                    <h2 id="retention-heading" class="menu-action-title">
+                        How long information is kept
+                    </h2>
+
+                    <p class="menu-action-sub privacy-copy">
+                        The current portfolio build does not implement an
+                        automated retention or expiry schedule. Non-demo records
+                        remain in the configured database until they are
+                        manually removed, the demonstration database is reset,
+                        or the deployment is retired.
+                    </p>
+                </section>
+
+                <section class="menu-action log-intro-card privacy-section"
+                         aria-labelledby="rights-heading">
+                    <h2 id="rights-heading" class="menu-action-title">
+                        Your information rights
+                    </h2>
+
+                    <p class="menu-action-sub privacy-copy">
+                        You may contact the operator to ask for access to your
+                        information or request that inaccurate information is
+                        corrected or deleted. The current build does not provide
+                        an automated account-deletion feature, so requests must
+                        be made using the privacy email above.
+                    </p>
+
+                    <p class="menu-action-sub privacy-copy">
+                        Your exact rights depend on the circumstances and
+                        applicable law. You may also raise a concern with the
+                        <a class="menu-link"
+                           href="https://ico.org.uk/make-a-complaint/">
+                            Information Commissioner’s Office
+                        </a>.
+                    </p>
+                </section>
+
+                <section class="menu-action log-intro-card privacy-section"
+                         aria-labelledby="health-heading">
+                    <h2 id="health-heading" class="menu-action-title">
+                        Fitness and health information
+                    </h2>
+
+                    <p class="menu-action-sub privacy-copy">
+                        Do not submit diagnoses, medical records, treatment
+                        information or other sensitive medical details to
+                        InTakeWise.
+                    </p>
+
+                    <p class="menu-action-sub privacy-copy">
+                        Nutrition, calorie and workout values generated by the
+                        application or its AI features are estimates. They are
+                        not medical advice or a substitute for guidance from a
+                        qualified professional.
+                    </p>
+
+                    <p class="menu-action-sub privacy-copy">
+                        Profile and fitness information may constitute health
+                        data when it reveals or allows conclusions about a
+                        person’s health. This classification and any additional
+                        protections must be confirmed before enabling real
+                        public accounts.
+                    </p>
+                </section>
+
+                <a asp-area=""
+                   asp-controller="Home"
+                   asp-action="Index"
+                   class="menu-action menu-primary-btn">
+                    <span class="menu-action-title">Return to InTakeWise</span>
+                    <span class="menu-action-sub">Go back to the application</span>
+                </a>
+            </div>
+        </article>
+    </div>
+</div>
