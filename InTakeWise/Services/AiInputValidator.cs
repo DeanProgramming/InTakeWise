@@ -1,11 +1,16 @@
-﻿namespace InTakeWise.Services;
+﻿using InTakeWise.Validation;
+
+namespace InTakeWise.Services;
 
 public static class AiInputValidator
 {
-    public const int MaximumLogInputCharacters = 2_000;
+    public const int MaximumLogInputCharacters =
+        ValidationLimits.MaximumAiLogInputCharacters;
     public const int MaximumPantryItemsInPrompt = 150;
-    public const int MaximumPantryNameCharacters = 100;
-    public const int MaximumPantryUnitCharacters = 30;
+    public const int MaximumPantryNameCharacters =
+        ValidationLimits.MaximumFoodNameCharacters;
+    public const int MaximumPantryUnitCharacters =
+        ValidationLimits.MaximumPantryUnitCharacters;
 
     public static string NormalizeLogInput(string? userInput, AiOperation operation)
     {

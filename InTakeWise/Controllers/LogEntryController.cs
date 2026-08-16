@@ -16,7 +16,7 @@ public class LogEntryController : Controller
     private readonly UserManager<IdentityUser> _userManager;
     private readonly ILogEntryService _logEntryService;
 
-    public LogEntryController(ILogger<LogEntryController> logger, UserManager<IdentityUser> userManager,ILogEntryService logEntryService)
+    public LogEntryController(ILogger<LogEntryController> logger, UserManager<IdentityUser> userManager, ILogEntryService logEntryService)
     {
         _logger = logger;
         _userManager = userManager;
@@ -74,6 +74,18 @@ public class LogEntryController : Controller
         if (user is null)
         {
             return Unauthorized();
+        }
+
+        if (!ModelState.IsValid || !Enum.IsDefined(logTime))
+        {
+            return View(
+                "Log",
+                await BuildViewModelAsync(
+                    user,
+                    LogType.LoggingType.Meal,
+                    MealType.Breakfast,
+                    userInput,
+                    "Select a valid meal time."));
         }
 
         if (IsDemoUser())

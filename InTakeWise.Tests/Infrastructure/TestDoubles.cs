@@ -28,10 +28,20 @@ internal sealed class StubAiLogParser : IAiLogParser
     public Task<MealAnalysisDto> AnalyzeMealAsync(string userId, string userInput) =>
         Task.FromResult(MealResult);
 
+    public Task<MealAnalysisDto> AnalyzeMealAsync(string userId, string userInput, CancellationToken cancellationToken = default)
+    {
+        throw new NotImplementedException();
+    }
+
     public Task<WorkoutAnalysisDto> AnalyzeWorkoutAsync(
         string userId,
         string userInput,
         UsersInformation? profile) => Task.FromResult(WorkoutResult);
+
+    public Task<WorkoutAnalysisDto> AnalyzeWorkoutAsync(string userId, string userInput, UsersInformation? profile, CancellationToken cancellationToken = default)
+    {
+        throw new NotImplementedException();
+    }
 }
 
 internal sealed class TestAppClock : IAppClock

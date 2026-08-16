@@ -1,5 +1,6 @@
 using InTakeWise.Data;
 using InTakeWise.Dto;
+using InTakeWise.Models;
 using InTakeWise.Services;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Identity;
@@ -147,6 +148,21 @@ public sealed class InTakeWiseWebApplicationFactory : WebApplicationFactory<Prog
         {
             _plans.TryGetValue(userId, out var plan);
             return Task.FromResult(plan);
+        }
+
+        public Task<ShoppingPlanDto> GenerateWeekPlanAsync(string userId, List<UserFoodItemDto> currentInHouse, CancellationToken cancellationToken = default)
+        {
+            throw new NotImplementedException();
+        }
+
+        public Task SaveWeekPlanAsync(string userId, ShoppingPlanDto plan, CancellationToken cancellationToken = default)
+        {
+            throw new NotImplementedException();
+        }
+
+        public Task<ShoppingPlanDto?> GetSavedWeekPlanAsync(string userId, CancellationToken cancellationToken = default)
+        {
+            throw new NotImplementedException();
         }
     }
 }

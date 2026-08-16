@@ -58,9 +58,14 @@ public static class DemoDataSeeder
         var profile = await UpsertProfileAsync(db, demoUser.Id, cancellationToken);
         var foodMap = await GetOrCreateFoodsAsync(db, cancellationToken);
 
-        await UpsertPantryAsync(db, demoUser.Id, foodMap, todayLocal,cancellationToken);
+        await UpsertPantryAsync(db, demoUser.Id, foodMap, todayLocal, cancellationToken);
 
-        await UpsertTodayMealsAsync(db, demoUser.Id, utcNow, cancellationToken);
+        await UpsertTodayMealsAsync(
+            db,
+            demoUser.Id,
+            todayLocal,
+            utcNow,
+            cancellationToken);
 
         await UpsertRecentWorkoutAsync(db, demoUser.Id, profile.ChosenGymDays, todayLocal, utcNow, cancellationToken);
 
@@ -217,7 +222,12 @@ public static class DemoDataSeeder
             285, 27, 30, 6, 5)
     ];
 
-    private static async Task UpsertTodayMealsAsync( ApplicationDbContext db, string userId, DateTime timestampUtc, CancellationToken cancellationToken)
+    private static async Task UpsertTodayMealsAsync(
+        ApplicationDbContext db,
+        string userId,
+        DateTime logDateLocal,
+        DateTime timestampUtc,
+        CancellationToken cancellationToken)
     {
         var existing = await db.MealLogs
             .Where(x => x.UserId == userId)
@@ -237,6 +247,7 @@ public static class DemoDataSeeder
             }
 
             log.TimeEat = seed.TimeEat;
+            log.LogDateLocal = logDateLocal.Date;
             log.Timestamp = timestampUtc;
             log.RawInput = seed.RawInput;
             log.Calories = seed.Calories;

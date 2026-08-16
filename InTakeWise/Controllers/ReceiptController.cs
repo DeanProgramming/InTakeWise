@@ -2,6 +2,7 @@
 using InTakeWise.Models;
 using InTakeWise.Security;
 using InTakeWise.Services;
+using InTakeWise.Validation;
 using InTakeWise.ViewModels;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
@@ -124,7 +125,7 @@ namespace InTakeWise.Controllers
             }
             catch (ReceiptImageAnalysisException ex)
             {
-                _logger.LogWarning("Receipt photo analysis was rejected safely. User={UserReference}; FailureType={FailureType}.", AiLogSanitizer.UserReference(userId),ex.GetType().Name);
+                _logger.LogWarning("Receipt photo analysis was rejected safely. User={UserReference}; FailureType={FailureType}.", AiLogSanitizer.UserReference(userId), ex.GetType().Name);
 
                 ModelState.AddModelError("", ex.Message);
             }
@@ -160,7 +161,8 @@ namespace InTakeWise.Controllers
             var user = await _userManager.GetUserAsync(User);
             var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
 
-            if (user == null || string.IsNullOrWhiteSpace(userId)){
+            if (user == null || string.IsNullOrWhiteSpace(userId))
+            {
                 return Unauthorized();
             }
 
@@ -182,11 +184,12 @@ namespace InTakeWise.Controllers
                         $"Items[{i}].Name",
                         "Food is required.");
                 }
-                else if (row.Name.Trim().Length > 120)
+                else if (row.Name.Trim().Length >
+                         ValidationLimits.MaximumFoodNameCharacters)
                 {
                     ModelState.AddModelError(
                         $"Items[{i}].Name",
-                        "Food must be 120 characters or fewer.");
+                        $"Food must be {ValidationLimits.MaximumFoodNameCharacters} characters or fewer.");
                 }
 
                 if (!row.Quantity.HasValue || row.Quantity <= 0)
@@ -195,7 +198,8 @@ namespace InTakeWise.Controllers
                         $"Items[{i}].Quantity",
                         "Amount is required.");
                 }
-                else if (row.Quantity > 100_000)
+                else if (row.Quantity >
+                         ValidationLimits.MaximumPantryQuantity)
                 {
                     ModelState.AddModelError(
                         $"Items[{i}].Quantity",
@@ -208,11 +212,12 @@ namespace InTakeWise.Controllers
                         $"Items[{i}].Unit",
                         "Unit is required.");
                 }
-                else if (row.Unit.Trim().Length > 30)
+                else if (row.Unit.Trim().Length >
+                         ValidationLimits.MaximumPantryUnitCharacters)
                 {
                     ModelState.AddModelError(
                         $"Items[{i}].Unit",
-                        "Unit must be 30 characters or fewer.");
+                        $"Unit must be {ValidationLimits.MaximumPantryUnitCharacters} characters or fewer.");
                 }
             }
 
@@ -248,7 +253,7 @@ namespace InTakeWise.Controllers
 
             var mergedReceiptRows = mergeResult.Rows;
 
-            await using var tx =await _db.Database.BeginTransactionAsync();
+            await using var tx = await _db.Database.BeginTransactionAsync();
 
             try
             {
@@ -431,13 +436,14 @@ namespace InTakeWise.Controllers
                 return safeReturnUrl;
             }
 
-            var query =QueryHelpers.ParseQuery(absolute.Query);
+            var query = QueryHelpers.ParseQuery(absolute.Query);
 
             if (query.TryGetValue("returnUrl", out var nested))
             {
                 var nestedReturnUrl = nested.FirstOrDefault();
 
-                if (Url.IsLocalUrl(nestedReturnUrl)){
+                if (Url.IsLocalUrl(nestedReturnUrl))
+                {
                     return nestedReturnUrl!;
                 }
             }
@@ -457,7 +463,7 @@ namespace InTakeWise.Controllers
                 model.Items = new List<PantryItemInputViewModel>();
             }
 
-            if (model.Items.Count == 0|| RowHasAnyValue(model.Items.Last()))
+            if (model.Items.Count == 0 || RowHasAnyValue(model.Items.Last()))
             {
                 model.Items.Add(new PantryItemInputViewModel());
             }

@@ -1,23 +1,32 @@
 ﻿using System.ComponentModel.DataAnnotations;
 using InTakeWise.Models;
+using InTakeWise.Validation;
 
 namespace InTakeWise.ViewModels
 {
     public class ProfileStep1ViewModel
     {
-        [Required, MaxLength(25)]
+        [Required, StringLength(
+            ValidationLimits.MaximumProfileNameCharacters,
+            MinimumLength = ValidationLimits.MinimumProfileNameCharacters)]
         public string ProfileUserName { get; set; } = "";
 
-        [Required, Range(1, 99)]
+        [Range(
+            ValidationLimits.MinimumProfileAge,
+            ValidationLimits.MaximumProfileAge)]
         public int Age { get; set; }
 
         [Required]
         public Genders Gender { get; set; }
 
-        [Required, Range(1, 999)]
+        [Range(
+            ValidationLimits.MinimumHeightCentimetres,
+            ValidationLimits.MaximumHeightCentimetres)]
         public int HeightInCM { get; set; }
 
-        [Required, Range(1, 999)]
+        [Range(
+            ValidationLimits.MinimumWeightKilograms,
+            ValidationLimits.MaximumWeightKilograms)]
         public int WeightInKg { get; set; }
     }
 
@@ -40,7 +49,7 @@ namespace InTakeWise.ViewModels
 
 
         public int Months { get; set; }
-         
+
         public string GoalLabel(FitnessGoal goal) => goal switch
         {
             FitnessGoal.HeavyCut => "Heavy Cut",
@@ -49,7 +58,7 @@ namespace InTakeWise.ViewModels
             FitnessGoal.LightBulk => "Light Bulk",
             FitnessGoal.HeavyBulk => "Heavy Bulk",
             _ => goal.ToString()
-        }; 
+        };
 
     }
 }

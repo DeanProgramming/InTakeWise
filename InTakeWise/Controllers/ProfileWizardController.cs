@@ -25,11 +25,11 @@ namespace InTakeWise.Controllers
 
         [HttpGet]
         public async Task<IActionResult> Step1()
-        { 
+        {
             var fromSession = HttpContext.Session.GetObject<ProfileStep1ViewModel>(Step1Key);
             if (fromSession != null)
                 return View(fromSession);
-             
+
             var user = await _userManager.GetUserAsync(User);
             if (user == null) return Challenge();
 
@@ -45,12 +45,19 @@ namespace InTakeWise.Controllers
         [ValidateAntiForgeryToken]
         public IActionResult Step1(ProfileStep1ViewModel vm)
         {
+            if (!Enum.IsDefined(vm.Gender))
+            {
+                ModelState.AddModelError(
+                    nameof(vm.Gender),
+                    "Select a valid gender option.");
+            }
+
             if (!ModelState.IsValid) return View(vm);
 
             HttpContext.Session.SetObject(Step1Key, vm);
             return RedirectToAction(nameof(Step2));
         }
-         
+
         [HttpGet]
         public async Task<IActionResult> Step2()
         {
@@ -79,13 +86,27 @@ namespace InTakeWise.Controllers
         [ValidateAntiForgeryToken]
         public IActionResult Step2(ProfileStep2ViewModel vm)
         {
-            if (!ModelState.IsValid) return View(vm);
-
-            if (vm.ChosenGymDays == GymDays.None)
+            if (!Enum.IsDefined(vm.EveryDayFitnessLevel))
             {
-                ModelState.AddModelError(nameof(vm.ChosenGymDays), "Please pick at least one gym day.");
-                return View(vm);
+                ModelState.AddModelError(
+                    nameof(vm.EveryDayFitnessLevel),
+                    "Select a valid activity level.");
             }
+
+            if (!HasOnlyKnownGymDays(vm.ChosenGymDays))
+            {
+                ModelState.AddModelError(
+                    nameof(vm.ChosenGymDays),
+                    "Select valid gym days.");
+            }
+            else if (vm.ChosenGymDays == GymDays.None)
+            {
+                ModelState.AddModelError(
+                    nameof(vm.ChosenGymDays),
+                    "Please pick at least one gym day.");
+            }
+
+            if (!ModelState.IsValid) return View(vm);
 
             HttpContext.Session.SetObject(Step2Key, vm);
             return RedirectToAction(nameof(Step3));
@@ -128,31 +149,21 @@ namespace InTakeWise.Controllers
             if (step2 == null)
                 return RedirectToAction(nameof(Step2));
 
-            months = Math.Max(months, 1);
+            months = Math.Clamp(months, 1, 60);
 
-            var predictedByGoal = Enum.GetValues<FitnessGoal>()
-                .ToDictionary(
-                    goal => goal,
-                    goal => PredictWeight(step1, step2, months, goal)
-                );
+            var currentGoal = existing?.ChosenFitnessGoal
+                ?? FitnessGoal.Maintain;
 
-            var startBf = EstimateBodyFatPercentFromBmi(step1);
-
-            var fatByGoal = Enum.GetValues<FitnessGoal>()
-                .ToDictionary(
-                    goal => goal,
-                    goal => PredictBodyFatPercent(step1, step2, months, step1.WeightInKg, goal, startBf)
-                );
-
-            return View(new ProfileStep3ViewModel
+            if (!Enum.IsDefined(currentGoal))
             {
-                CurrentWeightKg = step1.WeightInKg,
-                CurrentFatPercentage = startBf,
-                PredictedWeightKgByGoal = predictedByGoal,
-                FatPercentageByGoal = fatByGoal,
-                CurrentFitnessGoal = existing?.ChosenFitnessGoal ?? FitnessGoal.Maintain,
-                Months = months
-            });
+                currentGoal = FitnessGoal.Maintain;
+            }
+
+            return View(BuildStep3ViewModel(
+                step1,
+                step2,
+                months,
+                currentGoal));
         }
 
         [HttpPost]
@@ -167,6 +178,24 @@ namespace InTakeWise.Controllers
 
             if (step2 == null)
                 return RedirectToAction(nameof(Step2));
+
+            if (!Enum.IsDefined(step3.CurrentFitnessGoal))
+            {
+                ModelState.AddModelError(
+                    nameof(step3.CurrentFitnessGoal),
+                    "Select a valid fitness goal.");
+            }
+
+            if (!ModelState.IsValid)
+            {
+                return View(
+                    "Step3",
+                    BuildStep3ViewModel(
+                        step1,
+                        step2,
+                        3,
+                        FitnessGoal.Maintain));
+            }
 
             var user = await _userManager.GetUserAsync(User);
             if (user == null) return Challenge();
@@ -201,8 +230,63 @@ namespace InTakeWise.Controllers
             return RedirectToAction("Index", "Home");
         }
 
+        private static ProfileStep3ViewModel BuildStep3ViewModel(
+            ProfileStep1ViewModel step1,
+            ProfileStep2ViewModel step2,
+            int months,
+            FitnessGoal currentGoal)
+        {
+            var predictedByGoal = Enum.GetValues<FitnessGoal>()
+                .ToDictionary(
+                    goal => goal,
+                    goal => PredictWeight(
+                        step1,
+                        step2,
+                        months,
+                        goal));
+
+            var startBodyFat =
+                EstimateBodyFatPercentFromBmi(step1);
+
+            var fatByGoal = Enum.GetValues<FitnessGoal>()
+                .ToDictionary(
+                    goal => goal,
+                    goal => PredictBodyFatPercent(
+                        step1,
+                        step2,
+                        months,
+                        step1.WeightInKg,
+                        goal,
+                        startBodyFat));
+
+            return new ProfileStep3ViewModel
+            {
+                CurrentWeightKg = step1.WeightInKg,
+                CurrentFatPercentage = startBodyFat,
+                PredictedWeightKgByGoal = predictedByGoal,
+                FatPercentageByGoal = fatByGoal,
+                CurrentFitnessGoal = currentGoal,
+                Months = months
+            };
+        }
+
+        private static bool HasOnlyKnownGymDays(
+            GymDays gymDays)
+        {
+            const GymDays allDays =
+                GymDays.Monday
+                | GymDays.Tuesday
+                | GymDays.Wednesday
+                | GymDays.Thursday
+                | GymDays.Friday
+                | GymDays.Saturday
+                | GymDays.Sunday;
+
+            return (gymDays & ~allDays) == 0;
+        }
+
         private static double PredictWeight(ProfileStep1ViewModel p, ProfileStep2ViewModel g, int months, FitnessGoal fitnessGoal)
-        { 
+        {
             var goalMonthlyDelta = fitnessGoal switch
             {
                 FitnessGoal.HeavyCut => -1.5,
@@ -212,7 +296,7 @@ namespace InTakeWise.Controllers
                 FitnessGoal.HeavyBulk => 1.0,
                 _ => 0.0
             };
-             
+
             var fitnessMultiplier = g.EveryDayFitnessLevel switch
             {
                 FitnessLevel.Low => 0.9,
@@ -220,7 +304,7 @@ namespace InTakeWise.Controllers
                 FitnessLevel.High => 1.1,
                 _ => 1.0
             };
-             
+
             var gymDays = CountBits((int)g.ChosenGymDays);
             var gymBonus = Math.Clamp(gymDays, 0, 7) * 0.1;
 
@@ -244,7 +328,7 @@ namespace InTakeWise.Controllers
             var startWeight = (double)currentWeight;
             var startFatMass = startWeight * startBfPercent / 100.0;
 
-            var predictedWeight = PredictWeight(p, g, months, goal); 
+            var predictedWeight = PredictWeight(p, g, months, goal);
             if (predictedWeight <= 0.0) return 0.0;
 
             // Maintain can "recomp" if training (fat down, lean up)
@@ -412,7 +496,7 @@ namespace InTakeWise.Controllers
             ProfileStep1ViewModel p,
             ProfileStep2ViewModel g,
             FitnessGoal goal)
-        { 
+        {
             var goalMonthlyDelta = goal switch
             {
                 FitnessGoal.HeavyCut => -1.5,
@@ -434,18 +518,18 @@ namespace InTakeWise.Controllers
             var gymDays = Math.Clamp(CountBits((int)g.ChosenGymDays), 0, 7);
             var gymBonus = gymDays * 0.1;
 
-            var direction = Math.Sign(goalMonthlyDelta); 
+            var direction = Math.Sign(goalMonthlyDelta);
             var monthlyDeltaKg = (goalMonthlyDelta * fitnessMultiplier) + (gymBonus * direction);
-             
-            var kcalPerDayFromGoal = (monthlyDeltaKg * 7700.0) / 30.0;  
-             
+
+            var kcalPerDayFromGoal = (monthlyDeltaKg * 7700.0) / 30.0;
+
             var tdee = EstimateTdee(p, g);
-             
+
             var avgTarget = tdee + kcalPerDayFromGoal;
-             
+
             var minCalories = p.Gender == Genders.Female ? 1200 : 1500;
             avgTarget = Math.Max(avgTarget, minCalories);
-             
+
             var nonGymDays = 7 - gymDays;
 
             if (gymDays == 0 || nonGymDays == 0)
@@ -454,14 +538,14 @@ namespace InTakeWise.Controllers
                 c = Math.Max(c, minCalories);
                 return (c, c);
             }
-             
-            var shift = (int)Math.Round(Math.Clamp(tdee * 0.06, 120, 300));  
+
+            var shift = (int)Math.Round(Math.Clamp(tdee * 0.06, 120, 300));
 
             var weeklyTarget = avgTarget * 7.0;
 
             var gymCalories = (int)Math.Round(avgTarget + shift);
             var nonGymCalories = (int)Math.Round((weeklyTarget - (gymCalories * gymDays)) / nonGymDays);
-             
+
             if (nonGymCalories < minCalories)
             {
                 nonGymCalories = minCalories;
@@ -486,7 +570,7 @@ namespace InTakeWise.Controllers
                 Genders.Female => 10 * w + 6.25 * h - 5 * a - 161,
                 _ => 10 * w + 6.25 * h - 5 * a - 78
             };
-             
+
             var af = g.EveryDayFitnessLevel switch
             {
                 FitnessLevel.Low => 1.35,
@@ -494,12 +578,12 @@ namespace InTakeWise.Controllers
                 FitnessLevel.High => 1.65,
                 _ => 1.50
             };
-             
+
             var gymDays = Math.Clamp(CountBits((int)g.ChosenGymDays), 0, 7);
             af = Math.Clamp(af + gymDays * 0.02, 1.25, 1.90);
 
             return bmr * af;
-        } 
+        }
 
 
         private static int CountBits(int n)
@@ -522,7 +606,7 @@ namespace InTakeWise.Controllers
         {
             EveryDayFitnessLevel = u.EveryDayFitnessLevel,
             ChosenGymDays = u.ChosenGymDays
-        };  
+        };
 
     }
 }

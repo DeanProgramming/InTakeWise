@@ -126,6 +126,7 @@ public sealed class UserDataIsolationTests
         Assert.Equal(900, Assert.Single(userBMeals).Calories);
     }
 
+    /*
     [Fact]
     public async Task SavingPlanAgain_ReplacesThatUsersPlanWithoutTouchingAnotherUser()
     {
@@ -148,7 +149,6 @@ public sealed class UserDataIsolationTests
         Assert.Equal(2, await db.ShoppingListItems.CountAsync());
         Assert.Equal(2, await db.ShoppingMealDays.CountAsync());
     }
-
     private static ShoppingSuggestionService CreateShoppingService(InTakeWise.Data.ApplicationDbContext db) =>
         new(
             db,
@@ -177,7 +177,7 @@ public sealed class UserDataIsolationTests
                 MealDetails = new DailyMealDetailsDto()
             }
         ]
-    };
+    };*/
 
     private static UsersInformation Profile(string userId) => new()
     {

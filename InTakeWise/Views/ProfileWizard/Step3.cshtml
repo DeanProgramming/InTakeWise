@@ -21,7 +21,8 @@
                 <form asp-action="Complete" method="post" class="menu-actions" mode="step3 = @Model">
                     @Html.AntiForgeryToken()
 
-                    <input type="hidden" asp-for="CurrentFitnessGoal" id="ChosenFitnessGoal" /> 
+                    <input type="hidden" asp-for="CurrentFitnessGoal" id="ChosenFitnessGoal" />
+                    <span asp-validation-for="CurrentFitnessGoal"></span>
 
                     @foreach (var goal in Enum.GetValues<FitnessGoal>())
                     {
@@ -77,7 +78,7 @@
                     <button type="submit" class="menu-action">
                         <div class="menu-action-title">Finish</div>
                         <div class="menu-action-sub">Save profile & go to menu</div>
-                    </button> 
+                    </button>
                 </form>
             </div>
         </section>

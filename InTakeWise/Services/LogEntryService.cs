@@ -40,13 +40,12 @@ namespace InTakeWise.Services
                 normalizedInput,
                 cancellationToken);
 
-            var (startUtc, endUtc) = _clock.GetTodayLondonRangeUtc();
+            var logDateLocal = _clock.LondonNow.Date;
 
             var oldLog = await _db.MealLogs
                 .Where(x => x.UserId == userId
                          && x.TimeEat == logTime
-                         && x.Timestamp >= startUtc
-                         && x.Timestamp < endUtc)
+                         && x.LogDateLocal == logDateLocal)
                 .OrderByDescending(x => x.Timestamp)
                 .FirstOrDefaultAsync(cancellationToken);
 
@@ -59,6 +58,7 @@ namespace InTakeWise.Services
             {
                 UserId = userId,
                 TimeEat = logTime,
+                LogDateLocal = logDateLocal,
                 Timestamp = _clock.UtcNow,
                 RawInput = normalizedInput,
                 Calories = mealInfo.Calories,
@@ -75,13 +75,12 @@ namespace InTakeWise.Services
 
         public async Task<MealLogEntry?> GetTodayMealAsync(string userId, MealType timeOfDay)
         {
-            var (startUtc, endUtc) = _clock.GetTodayLondonRangeUtc();
+            var todayLocal = _clock.LondonNow.Date;
 
             return await _db.MealLogs.AsNoTracking()
                 .Where(x => x.UserId == userId
                             && x.TimeEat == timeOfDay
-                            && x.Timestamp >= startUtc
-                            && x.Timestamp < endUtc)
+                            && x.LogDateLocal == todayLocal)
                 .OrderByDescending(x => x.Timestamp)
                 .FirstOrDefaultAsync();
         }
@@ -142,13 +141,13 @@ namespace InTakeWise.Services
                 return null;
 
             var (startUtc, endUtc) = _clock.GetTodayLondonRangeUtc();
+            var logDateLocal = _clock.LondonNow.Date;
             var todayLocal = _clock.LondonDayOfWeek;
 
             var meals = await _db.MealLogs
                 .AsNoTracking()
                 .Where(x => x.UserId == userId
-                            && x.Timestamp >= startUtc
-                            && x.Timestamp < endUtc)
+                            && x.LogDateLocal == logDateLocal)
                 .ToListAsync();
 
             var workouts = await _db.WorkoutLogs

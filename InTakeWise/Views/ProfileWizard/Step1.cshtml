@@ -1,4 +1,4 @@
-﻿@using InTakeWise.ViewModels 
+﻿@using InTakeWise.ViewModels
 @model ProfileStep1ViewModel
 
 @{
@@ -25,7 +25,7 @@
                     <div class="menu-action menu-action-profile">
                         <div class="menu-action-title">Age</div>
                         <div class="menu-action-sub">
-                            <input class="menu-action menu-text-box-profile" asp-for="Age" type="number" min="1" />
+                            <input class="menu-action menu-text-box-profile" asp-for="Age" type="number" min="18" max="120" />
                             <span asp-validation-for="Age"></span>
                         </div>
                     </div>
@@ -33,7 +33,7 @@
                     <div class="menu-action menu-action-profile">
                         <div class="menu-action-title">Height (cm)</div>
                         <div class="menu-action-sub">
-                            <input class="menu-action menu-action menu-text-box-profile" asp-for="HeightInCM" type="number" min="1" />
+                            <input class="menu-action menu-action menu-text-box-profile" asp-for="HeightInCM" type="number" min="120" max="250" />
                             <span asp-validation-for="HeightInCM"></span>
                         </div>
                     </div>
@@ -52,7 +52,7 @@
                     <div class="menu-action menu-action-profile">
                         <div class="menu-action-title">Weight (kg)</div>
                         <div class="menu-action-sub">
-                            <input class="menu-action menu-text-box-profile" asp-for="WeightInKg" type="number" min="1" />
+                            <input class="menu-action menu-text-box-profile" asp-for="WeightInKg" type="number" min="30" max="350" />
                             <span asp-validation-for="WeightInKg"></span>
                         </div>
                     </div>

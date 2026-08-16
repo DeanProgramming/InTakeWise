@@ -5,6 +5,7 @@ using InTakeWise.Models;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
 using InTakeWise.Security;
+using InTakeWise.Validation;
 using OpenAI.Chat;
 
 namespace InTakeWise.Services
@@ -498,9 +499,12 @@ namespace InTakeWise.Services
         private static void ValidateProfileForPlanning(
             UsersInformation profile)
         {
-            if (profile.Age is < 13 or > 120
-                || profile.WeightInKg is < 30 or > 350
-                || profile.HeightInCM is < 120 or > 250
+            if (profile.Age < ValidationLimits.MinimumProfileAge
+                || profile.Age > ValidationLimits.MaximumProfileAge
+                || profile.WeightInKg < ValidationLimits.MinimumWeightKilograms
+                || profile.WeightInKg > ValidationLimits.MaximumWeightKilograms
+                || profile.HeightInCM < ValidationLimits.MinimumHeightCentimetres
+                || profile.HeightInCM > ValidationLimits.MaximumHeightCentimetres
                 || !Enum.IsDefined(profile.Gender)
                 || !Enum.IsDefined(profile.EveryDayFitnessLevel)
                 || !Enum.IsDefined(profile.ChosenFitnessGoal)

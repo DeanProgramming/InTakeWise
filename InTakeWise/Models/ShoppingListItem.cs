@@ -1,4 +1,5 @@
 ﻿using System.ComponentModel.DataAnnotations;
+using InTakeWise.Validation;
 
 namespace InTakeWise.Models
 {
@@ -12,10 +13,13 @@ namespace InTakeWise.Models
         public int? FoodItemId { get; set; }
         public FoodItem? FoodItem { get; set; }
 
-        [Required]
+        [Required, MaxLength(ValidationLimits.MaximumShoppingItemNameCharacters)]
         public string Name { get; set; } = "";
 
+        [Range(typeof(decimal), "0.01", "100000")]
         public decimal Quantity { get; set; }
+
+        [Required, MaxLength(ValidationLimits.MaximumPantryUnitCharacters)]
         public string Unit { get; set; } = "";
     }
 }

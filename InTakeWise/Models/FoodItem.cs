@@ -1,4 +1,5 @@
 ﻿using System.ComponentModel.DataAnnotations;
+using InTakeWise.Validation;
 
 namespace InTakeWise.Models
 {
@@ -6,10 +7,10 @@ namespace InTakeWise.Models
     {
         public int Id { get; set; }
 
-        [Required, MaxLength(100)]
+        [Required, MaxLength(ValidationLimits.MaximumFoodNameCharacters)]
         public string Name { get; set; } = "";
 
-        [Required, MaxLength(100)]
+        [Required, MaxLength(ValidationLimits.MaximumFoodNameCharacters)]
         public string NormalizedName { get; set; } = "";
 
         public int? CaloriesPer100g { get; set; }

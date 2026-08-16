@@ -1,4 +1,5 @@
 ﻿using System.ComponentModel.DataAnnotations;
+using InTakeWise.Validation;
 using Microsoft.AspNetCore.Identity;
 
 namespace InTakeWise.Models
@@ -25,23 +26,33 @@ namespace InTakeWise.Models
     {
         public int Id { get; set; }
 
-        [Required]
+        [Required, MaxLength(450)]
         public string UserId { get; set; } = default!;
 
-        [Required, MaxLength(25)]
+        public IdentityUser User { get; set; } = default!;
+
+        [Required, StringLength(
+            ValidationLimits.MaximumProfileNameCharacters,
+            MinimumLength = ValidationLimits.MinimumProfileNameCharacters)]
         public string ProfileUserName { get; set; } = default!;
 
-        [Required, Range(1, 99)]
+        [Range(
+            ValidationLimits.MinimumProfileAge,
+            ValidationLimits.MaximumProfileAge)]
         public int Age { get; set; }
 
         [Required]
         public Genders Gender { get; set; }
 
-        [Required, Range(1, 999)]
+        [Range(
+            ValidationLimits.MinimumWeightKilograms,
+            ValidationLimits.MaximumWeightKilograms)]
         public int WeightInKg { get; set; }
 
-        [Required, Range(1, 999)]
-        public int HeightInCM {get; set; }
+        [Range(
+            ValidationLimits.MinimumHeightCentimetres,
+            ValidationLimits.MaximumHeightCentimetres)]
+        public int HeightInCM { get; set; }
 
         [Required]
         public FitnessLevel EveryDayFitnessLevel { get; set; }
