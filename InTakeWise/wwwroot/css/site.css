@@ -1511,3 +1511,15 @@
     font-style: normal;
     overflow-wrap: anywhere;
 }
+
+.receipt-demo-figure {
+    margin: 0;
+}
+
+.receipt-demo-image {
+    display: block;
+    width: 100%;
+    max-width: 100%;
+    height: auto;
+    border-radius: 12px;
+}
