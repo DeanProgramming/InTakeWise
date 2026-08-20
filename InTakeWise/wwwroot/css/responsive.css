@@ -1,0 +1,259 @@
+@media (max-width: 900px) {
+    .whole-container {
+        height: 100dvh;
+        box-sizing: border-box;
+        padding: 0;
+    }
+
+    .auth-page {
+        height: 100%;
+        display: flex;
+        align-items: stretch;
+        justify-content: stretch;
+        padding-top: 0;
+        padding: 0;
+    }
+
+    .main-menu {
+        height: 100%;
+        padding: 0 !important;
+    }
+
+    .auth-card.menu-card {
+        grid-template-columns: 1fr;
+        grid-template-rows: auto 1fr;
+        height: 100%;
+        width: 100%;
+        align-self: stretch;
+        box-shadow: 0 0 0 rgba(0, 0, 0, 0.35);
+        border-radius: 0;
+    }
+
+    .auth-main {
+        padding: 10px;
+        padding-top: 20px;
+        overflow-y: auto;
+    }
+
+    .auth-side.menu-side {
+        order: -1;
+        padding: 20px;
+        padding-top: 15px;
+        padding-bottom: 25px;
+        max-height: 162.5px;
+    }
+
+    .small-menu {
+        padding-bottom: 5px !important;
+    }
+
+    .auth-side-subtitle {
+        margin: 9px 0;
+        font-size: 11px;
+        text-align: center;
+    }
+     
+    .menu-actions > .menu-actions-row:not(.log-meal-tabs):not(.meal-plan-grid):not(.menu-actions-profile) { 
+        gap: 4px !important;
+        height: 80px;
+    }
+
+    .menu-meal-row {
+        padding: 0;
+        place-items: center;
+        align-content: center;
+    }
+
+    .activity-row {
+        padding: 0;
+        place-items: center;
+        align-content: center;
+    }
+
+    .auth-title,
+    .menu-actions {
+        margin: 0;
+        text-align: center;
+    }
+
+    .menu-action-title {
+        font-size: 16px;
+    }
+
+    .log-text-box {
+        width: 100%;
+        margin-bottom: 10px;
+        min-height: 280px;
+    }
+
+    .menu-actions-profile {
+        grid-template-columns: 1fr !important;
+        gap: 12px !important;
+        height: auto !important;
+    }
+
+    .menu-text-box-profile {
+        width: 100%;
+        margin-bottom: 0;
+        min-height: auto;
+    }
+
+    .menu-action-profile {
+        padding: 11px 16px;
+    }
+
+    .gym-day-selection {
+        height: 235px;
+    }
+
+    .floating-back-btn {
+        position: fixed;
+        right: 10px;
+        bottom: calc(14px + env(safe-area-inset-bottom, 0px));
+        z-index: 9;
+    }
+
+    .pantry-list {
+        gap: 10px;
+    }
+
+    .pantry-card {
+        padding: 10px;
+        border-radius: 14px;
+    }
+
+    .pantry-fields {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) 72px 88px 82px;
+        gap: 8px;
+        align-items: start;
+    }
+
+    .pantry-field {
+        min-width: 0;
+        display: flex;
+        flex-direction: column;
+    }
+
+    .pantry-field-name,
+    .pantry-field-qty,
+    .pantry-field-unit,
+    .pantry-field-delete {
+        width: 100%;
+    }
+
+    .pantry-label {
+        font-size: 10px;
+        margin-bottom: 4px;
+        white-space: nowrap;
+    }
+
+    .pantry-input {
+        width: 100%;
+        min-width: 0;
+        padding: 10px 8px;
+        font-size: 14px;
+    }
+
+    .pantry-btn {
+        width: 100%;
+        min-height: 42px;
+        padding: 10px 8px;
+        font-size: 13px;
+    }
+
+    .pantry-field-delete {
+        justify-content: flex-end;
+    }
+
+    .pantry-field-delete .pantry-btn {
+        margin-top: auto;
+    }
+
+    .menu-field-error {
+        font-size: 10px;
+        line-height: 1.2;
+        margin-top: 4px;
+        min-height: 12px;
+    }
+
+    .pantry-bottom-actions {
+        grid-template-columns: 1fr;
+        gap: 10px;
+        margin-bottom: 76px;
+    }
+
+    .pantry-add-btn,
+    .pantry-save-btn {
+        padding: 14px 16px;
+    }
+
+    .shopping-list-grid,
+    .shopping-meal-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .shopping-card-header {
+        align-items: flex-start;
+        text-align: left;
+    }
+
+    .shopping-card-title {
+        font-size: 18px;
+    }
+
+    .shopping-meal-card,
+    .shopping-list-item {
+        padding: 12px;
+    }
+
+    .shopping-macro-grid {
+        grid-template-columns: 1fr 1fr;
+        gap: 8px;
+    }
+
+    .shopping-generate-btn {
+        text-align: left;
+    }
+
+    .log-meal-tabs {
+        grid-template-columns: repeat(2, 1fr);
+        gap: 8px;
+        height: auto;
+    }
+
+    .log-summary-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .log-wide-box {
+        grid-column: span 1;
+    }
+
+    .log-card-title {
+        font-size: 18px;
+    }
+
+    .log-text-box {
+        min-height: 220px;
+    }
+
+    .meal-plan-grid {
+        grid-template-columns: repeat(2, 1fr);
+        gap: 8px;
+        height: auto;
+    }
+
+    .meal-plan-grid .menu-meal-row {
+        min-height: 72px;
+        padding: 10px;
+        place-items: center;
+        align-content: center;
+        text-align: center;
+    }
+
+    .menu-goal-row .goal-sub-metrics {
+        grid-template-columns: 1fr;
+    }
+}
+

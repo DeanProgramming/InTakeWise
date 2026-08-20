@@ -1,0 +1,102 @@
+.pantry-form {
+    display: grid;
+    gap: 14px;
+}
+
+.pantry-list {
+    display: grid;
+    gap: 12px;
+}
+
+.pantry-card {
+    padding: 14px 16px;
+}
+
+.pantry-fields {
+    display: grid;
+    grid-template-columns: minmax(0, 1.5fr) minmax(110px, 0.7fr) minmax(120px, 0.9fr) auto;
+    gap: 12px;
+    align-items: start;
+}
+
+.pantry-field {
+    min-width: 0;
+    display: grid;
+    gap: 6px;
+}
+
+.pantry-label {
+    font-size: 12px;
+    font-weight: 900;
+    color: var(--muted);
+    padding-left: 2px;
+}
+
+.pantry-label-ghost {
+    visibility: hidden;
+}
+
+.pantry-input {
+    min-height: auto;
+    margin-bottom: 0;
+}
+
+.pantry-input[readonly] {
+    background: rgba(15, 23, 42, 0.04);
+    color: var(--text);
+    cursor: default;
+}
+
+.pantry-actions-row {
+    display: flex;
+    gap: 10px;
+    margin-top: 12px;
+    flex-wrap: wrap;
+}
+
+.pantry-btn {
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 10px 14px;
+    font-weight: 900;
+    font-size: 14px;
+    cursor: pointer;
+    background: rgba(255, 255, 255, 0.92);
+    color: var(--text);
+    transition: transform 0.08s ease, box-shadow 0.15s ease, border-color 0.15s ease;
+}
+
+.pantry-btn:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 10px 24px rgba(15, 23, 42, 0.08);
+}
+
+.pantry-btn-edit {
+    border-color: rgba(37, 99, 235, 0.30);
+    color: var(--primary);
+}
+
+.pantry-btn-delete {
+    border-color: rgba(239, 68, 68, 0.28);
+    color: #b91c1c;
+    background: rgba(239, 68, 68, 0.06);
+}
+
+.pantry-bottom-actions {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+    margin-top: 2px;
+}
+
+.pantry-add-btn,
+.pantry-save-btn {
+    width: 100%;
+    text-align: left;
+    cursor: pointer;
+}
+
+.pantry-save-btn {
+    border: none;
+} 
+

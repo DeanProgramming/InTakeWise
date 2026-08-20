@@ -1,0 +1,217 @@
+.receipt-intro {
+    margin: -2px 0 2px;
+    color: var(--muted);
+    font-size: 14px;
+    font-weight: 700;
+    line-height: 1.5;
+    text-align: center;
+}
+
+.receipt-source-grid {
+    display: grid;
+    grid-template-columns: minmax(0, 1.35fr) minmax(0, 0.9fr);
+    gap: 12px;
+    align-items: stretch;
+}
+
+.receipt-source-card {
+    min-width: 0;
+    display: grid;
+    align-content: start;
+    gap: 10px;
+}
+
+.receipt-upload-form:hover,
+.receipt-empty-state:hover {
+    transform: none;
+    border-color: var(--border);
+    box-shadow: 0 10px 24px rgba(15, 23, 42, 0.06);
+}
+
+.receipt-sample-card {
+    align-content: center;
+    border-color: rgba(14, 116, 144, 0.28);
+    background: rgba(236, 254, 255, 0.9);
+}
+
+.receipt-file-input {
+    width: 100%;
+    min-width: 0;
+    box-sizing: border-box;
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 8px;
+    background: rgba(255, 255, 255, 0.94);
+    color: var(--text);
+    font: inherit;
+    font-size: 13px;
+    font-weight: 700;
+}
+
+    .receipt-file-input:focus-visible {
+        outline: none;
+        border-color: rgba(37, 99, 235, 0.45);
+        box-shadow: 0 0 0 4px var(--ring);
+    }
+
+    .receipt-file-input::file-selector-button {
+        margin-right: 10px;
+        border: 0;
+        border-radius: 9px;
+        padding: 8px 10px;
+        background: rgba(37, 99, 235, 0.12);
+        color: var(--primary);
+        font: inherit;
+        font-weight: 900;
+        cursor: pointer;
+    }
+
+.receipt-file-help,
+.receipt-privacy-note {
+    color: var(--muted);
+    font-size: 12px;
+    font-weight: 700;
+    line-height: 1.45;
+}
+
+.receipt-analyse-btn {
+    width: 100%;
+    text-align: left;
+}
+
+    .receipt-analyse-btn:disabled {
+        opacity: 0.72;
+        cursor: wait;
+        transform: none;
+    }
+
+.receipt-notice {
+    display: grid;
+    gap: 3px;
+    border: 1px solid;
+    border-radius: 14px;
+    padding: 12px 14px;
+    font-size: 13px;
+    font-weight: 700;
+    line-height: 1.45;
+}
+
+    .receipt-notice strong {
+        font-size: 14px;
+        font-weight: 900;
+    }
+
+.receipt-notice-sample {
+    border-color: rgba(245, 158, 11, 0.45);
+    background: rgba(254, 243, 199, 0.82);
+    color: #78350f;
+}
+
+.receipt-notice-review {
+    border-color: rgba(34, 197, 94, 0.38);
+    background: rgba(220, 252, 231, 0.78);
+    color: #14532d;
+}
+
+.receipt-review-heading {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+}
+
+.receipt-review-heading h2 {
+    margin: 0;
+    color: var(--text);
+    font-size: 18px;
+    font-weight: 900;
+}
+
+.receipt-review-heading span {
+    flex: 0 0 auto;
+    border-radius: 999px;
+    padding: 4px 9px;
+    background: rgba(15, 23, 42, 0.08);
+    color: var(--muted);
+    font-size: 12px;
+    font-weight: 900;
+}
+
+.receipt-empty-state {
+    cursor: default;
+    border-style: dashed;
+    text-align: center;
+}
+
+.receipt-source-grid {
+    grid-template-columns: 1fr;
+}
+
+.receipt-intro,
+.receipt-source-card,
+.receipt-analyse-btn {
+    text-align: left;
+}
+
+.privacy-page {
+    width: 100%;
+}
+
+.privacy-header {
+    margin-bottom: 18px;
+    text-align: center;
+}
+
+.privacy-updated {
+    margin: -6px 0 0;
+    color: var(--muted);
+    font-size: 0.8125rem;
+    font-weight: 700;
+}
+
+.privacy-section {
+    cursor: default;
+}
+
+.privacy-section:hover {
+    transform: none;
+}
+
+.privacy-copy {
+    font-size: 0.875rem;
+    line-height: 1.6;
+}
+
+.privacy-copy + .privacy-copy {
+    margin-top: 10px;
+}
+
+.privacy-list {
+    margin: 10px 0 0;
+    padding-left: 20px;
+    color: var(--muted);
+    font-size: 0.875rem;
+    font-weight: 600;
+    line-height: 1.6;
+}
+
+.privacy-list li + li {
+    margin-top: 6px;
+}
+
+.privacy-contact {
+    font-style: normal;
+    overflow-wrap: anywhere;
+}
+
+.receipt-demo-figure {
+    margin: 0;
+}
+
+.receipt-demo-image {
+    display: block;
+    width: 100%;
+    max-width: 100%;
+    height: auto;
+    border-radius: 12px;
+}
