@@ -1,0 +1,178 @@
+﻿@page
+@model RegisterModel
+
+@{
+    ViewData["Title"] = "Create account";
+}
+
+<div class="auth-page">
+    <div class="auth-card menu-card">
+
+        <!-- MAIN -->
+        <section class="auth-main">
+            <div class="menu-actions">
+                <h1 class="auth-title">Create your account</h1>
+
+                <p class="registration-intro">
+                    Create your login first. We’ll collect your profile and
+                    fitness information during the next three steps.
+                </p>
+
+                <form id="registerForm"
+                      asp-route-returnUrl="@Model.ReturnUrl"
+                      method="post"
+                      class="menu-actions"
+                      novalidate>
+
+                    <div asp-validation-summary="ModelOnly"
+                         class="menu-validation"
+                         role="alert">
+                    </div>
+
+                    <!-- EMAIL -->
+                    <div class="menu-action menu-input-tile">
+                        <label asp-for="Input.Email"
+                               class="menu-action-title">
+                        </label>
+
+                        <input asp-for="Input.Email"
+                               class="menu-input"
+                               autocomplete="email"
+                               inputmode="email"
+                               aria-required="true"
+                               placeholder="name@example.com" />
+
+                        <span asp-validation-for="Input.Email"
+                              class="menu-field-error">
+                        </span>
+                    </div>
+
+                    <!-- PASSWORD -->
+                    <div class="menu-action menu-input-tile">
+                        <label asp-for="Input.Password"
+                               class="menu-action-title">
+                        </label>
+
+                        <input asp-for="Input.Password"
+                               class="menu-input"
+                               autocomplete="new-password"
+                               aria-required="true"
+                               aria-describedby="password-requirements"
+                               placeholder="Create a password" />
+
+                        <span asp-validation-for="Input.Password"
+                              class="menu-field-error">
+                        </span>
+                    </div>
+
+                    <!-- CONFIRM PASSWORD -->
+                    <div class="menu-action menu-input-tile">
+                        <label asp-for="Input.ConfirmPassword"
+                               class="menu-action-title">
+                        </label>
+
+                        <input asp-for="Input.ConfirmPassword"
+                               class="menu-input"
+                               autocomplete="new-password"
+                               aria-required="true"
+                               placeholder="Enter your password again" />
+
+                        <span asp-validation-for="Input.ConfirmPassword"
+                              class="menu-field-error">
+                        </span>
+                    </div>
+
+                    <!-- PASSWORD REQUIREMENTS -->
+                    <aside id="password-requirements"
+                           class="menu-action login-note-card password-requirements-card"
+                           aria-labelledby="password-requirements-title">
+
+                        <h2 id="password-requirements-title"
+                            class="login-note-title">
+                            Password requirements
+                        </h2>
+
+                        <ul class="password-requirements">
+                            @foreach (var requirement in Model.PasswordRequirements)
+                            {
+                                <li>@requirement</li>
+                            }
+                        </ul>
+                    </aside>
+
+                    <!-- SUBMIT -->
+                    <button type="submit"
+                            class="menu-action menu-primary-btn">
+
+                        <span class="menu-action-title">
+                            Create account
+                        </span>
+
+                        <span class="menu-action-sub">
+                            Next: confirm your email
+                        </span>
+                    </button>
+                </form>
+
+                <!-- ACCOUNT LINKS -->
+                <div class="registration-links">
+                    <p class="registration-login">
+                        Already have an account?
+
+                        <a asp-page="./Login"
+                           asp-route-returnUrl="/"
+                           class="menu-link">
+                            Log in
+                        </a>
+                    </p>
+
+                    <p class="registration-privacy"> 
+                        <a asp-area=""
+                           asp-controller="Home"
+                           asp-action="Privacy"
+                           class="menu-link">
+                            View Privacy
+                        </a>
+                    </p>
+                </div>
+            </div>
+        </section>
+
+        <!-- SIDE -->
+        <aside class="auth-side menu-side">
+            <h2 class="auth-side-title">InTakeWise</h2>
+
+            <p class="auth-side-subtitle">
+                Your account keeps your meals, targets and plans together.
+            </p>
+
+            @if (Model.DemoEnabled)
+            {
+                <form method="post"
+                      asp-page="./Login"
+                      asp-page-handler="Demo"
+                      asp-route-returnUrl="/"
+                      class="menu-actions registration-demo">
+
+                    <button type="submit"
+                            class="menu-action"
+                            aria-label="Open the InTakeWise demo">
+
+                        <span class="menu-action-title">
+                            Try the demo instead
+                        </span>
+
+                        <span class="menu-action-sub">
+                            Explore sample data without creating an account
+                        </span>
+                    </button>
+                </form>
+            }
+        </aside>
+
+    </div>
+</div>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+}

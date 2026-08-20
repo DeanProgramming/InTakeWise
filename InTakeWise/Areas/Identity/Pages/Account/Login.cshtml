@@ -1,7 +1,9 @@
 ﻿@page
 @model LoginModel
+
 @{
     ViewData["Title"] = "Log in";
+    const string registrationReturnUrl = "/ProfileWizard/Step1";
 }
 
 <div class="auth-page">
@@ -22,9 +24,13 @@
                               class="menu-actions">
 
                             <button type="submit"
-                                    class="menu-action menu-primary-btn"
+                                    class="menu-action"
                                     aria-label="Open the InTakeWise demo">
-                                <div class="menu-action-title">Try the demo</div>
+
+                                <div class="menu-action-title">
+                                    Try the demo
+                                </div>
+
                                 <div class="menu-action-sub">
                                     Explore sample data — no account needed
                                 </div>
@@ -34,37 +40,60 @@
 
                     <aside class="menu-action login-note-card desktop-note-card"
                            aria-labelledby="responsive-note-title">
-                        <div id="responsive-note-title" class="login-note-title">
+
+                        <div id="responsive-note-title"
+                             class="login-note-title">
                             Responsive design
                         </div>
 
                         <div class="login-note-copy">
-                            InTakeWise is designed to work across mobile, tablet and desktop screen sizes.
+                            InTakeWise is designed to work across mobile,
+                            tablet and desktop screen sizes.
                         </div>
                     </aside>
                 </div>
 
-                <form id="account" method="post" class="menu-actions" novalidate>
-                    <div asp-validation-summary="ModelOnly" class="menu-validation" role="alert"></div>
+                <!-- LOGIN -->
+                <form id="account"
+                      method="post"
+                      class="menu-actions"
+                      novalidate>
+
+                    <div asp-validation-summary="ModelOnly"
+                         class="menu-validation"
+                         role="alert">
+                    </div>
 
                     <div class="menu-action menu-input-tile">
-                        <label asp-for="Input.Email" class="menu-action-title"></label>
+                        <label asp-for="Input.Email"
+                               class="menu-action-title">
+                        </label>
+
                         <input asp-for="Input.Email"
                                class="menu-input"
                                autocomplete="username"
                                aria-required="true"
                                placeholder="name@example.com" />
-                        <span asp-validation-for="Input.Email" class="menu-field-error"></span>
+
+                        <span asp-validation-for="Input.Email"
+                              class="menu-field-error">
+                        </span>
                     </div>
 
                     <div class="menu-action menu-input-tile">
-                        <label asp-for="Input.Password" class="menu-action-title"></label>
+                        <label asp-for="Input.Password"
+                               class="menu-action-title">
+                        </label>
+
                         <input asp-for="Input.Password"
                                class="menu-input"
                                autocomplete="current-password"
                                aria-required="true"
                                placeholder="••••••••" />
-                        <span asp-validation-for="Input.Password" class="menu-field-error"></span>
+
+                        <span asp-validation-for="Input.Password"
+                              class="menu-field-error">
+                        </span>
 
                         <label class="menu-check">
                             <input asp-for="Input.RememberMe" />
@@ -72,25 +101,54 @@
                         </label>
                     </div>
 
-                    <button type="submit" class="menu-action menu-primary-btn">
-                        <div class="menu-action-title">Log in</div>
-                        <div class="menu-action-sub">Welcome back</div>
+                    <button type="submit"
+                            class="menu-action menu-primary-btn">
+
+                        <div class="menu-action-title">
+                            Log in
+                        </div>
+
+                        <div class="menu-action-sub">
+                            Welcome back
+                        </div>
                     </button>
 
-                    <!--
-                    <div class="menu-links">
-                        <a asp-page="./ForgotPassword" class="menu-link">Forgot your password?</a>
-                        <a asp-page="./Register" asp-route-returnUrl="@Model.ReturnUrl" class="menu-link">Create an account</a>
-                        <a asp-page="./ResendEmailConfirmation" class="menu-link">Resend email confirmation</a>
-                    </div>
-                    -->
+                    <!-- REGISTRATION -->
+                    <div class="menu-actions"
+                         aria-labelledby="create-account-heading">
 
-                    <a asp-area=""
-                       asp-controller="Home"
-                       asp-action="Privacy"
-                       class="menu-link">
-                        View Privacy
-                    </a>
+                        <a asp-page="./Register"
+                           asp-route-returnUrl="@registrationReturnUrl"
+                           class="menu-action">
+
+                            <div class="menu-action-title">
+                                Create an account
+                            </div>
+
+                            <div class="menu-action-sub">
+                                Set up your profile and start tracking
+                            </div>
+                        </a>
+                    </div>
+
+                    <div class="menu-links"> 
+                        <a asp-area=""
+                           asp-controller="Home"
+                           asp-action="Privacy"
+                           class="menu-link">
+                            View Privacy
+                        </a>
+
+                        <a asp-page="./ForgotPassword"
+                           class="menu-link">
+                            Forgot your password?
+                        </a>
+
+                        <a asp-page="./ResendEmailConfirmation"
+                           class="menu-link">
+                            Resend email confirmation
+                        </a>
+                    </div>
                 </form>
             </div>
         </section>
@@ -98,6 +156,7 @@
         <!-- SIDE -->
         <aside class="auth-side menu-side">
             <h2 class="auth-side-title">InTakeWise</h2>
+
             <p class="auth-side-subtitle">
                 Log meals fast. Track macros. Keep it simple.
             </p>
@@ -105,9 +164,14 @@
             @if ((Model.ExternalLogins?.Count ?? 0) > 0)
             {
                 <div class="menu-actions">
-                    <div class="menu-side-box curved">Or continue with</div>
+                    <div class="menu-side-box curved">
+                        Or continue with
+                    </div>
 
-                    <form method="post" asp-page="./ExternalLogin" asp-route-returnUrl="@Model.ReturnUrl">
+                    <form method="post"
+                          asp-page="./ExternalLogin"
+                          asp-route-returnUrl="@Model.ReturnUrl">
+
                         @foreach (var provider in Model.ExternalLogins!)
                         {
                             <button type="submit"
@@ -115,8 +179,14 @@
                                     name="provider"
                                     value="@provider.Name"
                                     title="Log in using @provider.DisplayName">
-                                <div class="menu-action-title">@provider.DisplayName</div>
-                                <div class="menu-action-sub">Secure sign-in</div>
+
+                                <div class="menu-action-title">
+                                    @provider.DisplayName
+                                </div>
+
+                                <div class="menu-action-sub">
+                                    Secure sign-in
+                                </div>
                             </button>
                         }
                     </form>
