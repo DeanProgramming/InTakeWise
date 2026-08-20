@@ -11,9 +11,7 @@
                     return false;
                 }
 
-                const method =
-                    (form.getAttribute("method") || "get")
-                        .toLowerCase();
+                const method = (form.getAttribute("method") || "get").toLowerCase();
 
                 return method !== "get" && method !== "dialog";
             });
@@ -22,14 +20,12 @@
             return;
         }
 
-        let note =
-            document.querySelector(".demo-action-note");
+        let note = document.querySelector(".demo-action-note");
 
         if (!note) {
             note = document.createElement("div");
             note.id = "demo-page-readonly-note";
-            note.className =
-                "menu-action demo-action-note";
+            note.className = "menu-action demo-action-note";
 
             note.setAttribute("role", "note");
 
@@ -48,13 +44,10 @@
             note.id = "demo-page-readonly-note";
         }
 
-        const descriptionId =
-            note.id || "demo-mode-message";
+        const descriptionId = note.id || "demo-mode-message";
 
         const showBanner = () => {
-            document
-                .getElementById("demo-mode-banner")
-                ?.focus();
+            document.getElementById("demo-mode-banner") ?.focus();
         };
 
         writeForms.forEach(form => {
@@ -118,8 +111,7 @@
                 true
             );
 
-            // Also catches anchor-based controls used by the
-            // profile wizard.
+            // Also catches link-based and custom controls.
             form.addEventListener(
                 "click",
                 event => {
@@ -146,10 +138,7 @@
     }
 
     if (document.readyState === "loading") {
-        document.addEventListener(
-            "DOMContentLoaded",
-            initialiseDemoReadOnlyUi
-        );
+        document.addEventListener("DOMContentLoaded", initialiseDemoReadOnlyUi);
     } else {
         initialiseDemoReadOnlyUi();
     }

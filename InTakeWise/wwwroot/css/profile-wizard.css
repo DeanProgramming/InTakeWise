@@ -8,6 +8,25 @@
     padding: 11px 16px;
 }
 
+button.activity-row,
+button.curved-profile-Gym-Button,
+button.menu-goal-row {
+    font: inherit;
+}
+
+button.activity-row,
+button.menu-goal-row {
+    cursor: pointer;
+}
+
+button.curved-profile-Gym-Button {
+    color: inherit;
+}
+
+button.menu-goal-row {
+    text-align: left;
+}
+
 .menu-text-box-profile {
     width: 100%;
     margin-bottom: 0;
@@ -99,4 +118,3 @@
     box-shadow: 0 16px 34px rgba(15, 23, 42, 0.10);
     border-color: rgba(34, 197, 94, 0.55);
 }
- 

@@ -36,10 +36,10 @@
 
                         var wGood = GoodWeightDelta(goal, dw, Model.Months);
                         var bfGood = GoodBodyFatDelta(goal, dbf, Model.Months);
-                        <a href="javascript:void(0)"
-                           class="menu-action menu-goal-row goal-row fitness-goal-tab @(isSelected ? "is-selected" : "") "
-                           data-goal="@goal"
-                           onclick="setGoal('@goal')">
+                        <button type="button"
+                                class="menu-action menu-goal-row goal-row fitness-goal-tab @(isSelected ? "is-selected" : "") "
+                                data-goal="@goal"
+                                aria-pressed="@(isSelected ? "true" : "false")">
 
                             <div class="menu-action-sub goal-sub">
                                 <div class="goal-sub-metrics">
@@ -72,7 +72,7 @@
 
                                 </div>
                             </div>
-                        </a>
+                        </button>
                     }
 
                     <button type="submit" class="menu-action">
@@ -95,33 +95,9 @@
     </div>
 </div>
 
-<script>
-    const rows = Array.from(document.querySelectorAll(".fitness-goal-tab"));
-
-    function setGoal(goal) {
-      document.getElementById("ChosenFitnessGoal").value = goal;
-
-      rows.forEach(row => {
-        row.classList.toggle("is-selected", row.dataset.goal === goal);
-      });
-
-      // Update sidebar label from the clicked row
-      const selected = rows.find(r => r.dataset.goal === goal);
-      if (selected) {
-        const title = selected.querySelector(".menu-action-title")?.textContent ?? goal;
-        document.getElementById("goalLabel").textContent = title;
-      }
-    }
-
-    rows.forEach(row => {
-      row.addEventListener("click", (e) => {
-        e.preventDefault();
-        setGoal(row.dataset.goal);
-      });
-    });
-
-    setGoal("@Model.CurrentFitnessGoal");
-</script>
+@section Scripts {
+    <script src="~/js/profile-step3.js" asp-append-version="true"></script>
+}
 
 
 
@@ -175,3 +151,4 @@
         _ => ""
     };
 }
+

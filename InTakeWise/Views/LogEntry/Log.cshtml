@@ -6,6 +6,8 @@
     var isMeal = Model.Mode == LogType.LoggingType.Meal;
     ViewData["Title"] = isMeal ? "Log Meal" : "Log Workout";
     var isDemo = User.HasClaim(DbSeeder.DemoClaimType, DbSeeder.DemoClaimValue);
+    var logDraftPeriod = isMeal ? Model.SelectedTimeOfDay.ToString() : "Workout";
+    var logDraftKey = $"InTakeWise.LogDraft.{Model.Mode}.{logDraftPeriod}";
 }
 
 <div class="auth-page">
@@ -117,7 +119,8 @@
                     <form asp-controller="LogEntry"
                           asp-action="@(isMeal ? "Meal" : "Workout")"
                           method="post"
-                          class="log-form">
+                          class="log-form"
+                          data-log-draft-key="@logDraftKey">
                         @Html.AntiForgeryToken()
 
                         <input type="hidden" name="mode" value="@Model.Mode" />
@@ -342,25 +345,6 @@
 
 
 @section Scripts {
-    <script>
-        (() => {
-            const mode = '@Model.Mode';
-            const isMeal = '@(isMeal ? "true" : "false")' === "true";
-            const tod = isMeal ? '@Model.SelectedTimeOfDay' : 'Workout';
-            const key = `InTakeWise.LogDraft.${mode}.${tod}`;
-
-            const form = document.querySelector('.log-form');
-            const ta = document.querySelector('textarea[name="userInput"]');
-            if (!ta) return;
-
-            const draft = localStorage.getItem(key);
-            if (draft !== null && !ta.value) ta.value = draft;
-
-            ta.addEventListener('input', () => localStorage.setItem(key, ta.value));
-
-            form?.addEventListener('submit', () => localStorage.removeItem(key));
-
-
-        })();
-    </script>
+    <script src="~/js/log-entry.js" asp-append-version="true"></script>
 }
+

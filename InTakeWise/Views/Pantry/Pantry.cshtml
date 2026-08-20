@@ -100,8 +100,7 @@
                                     <div class="pantry-field pantry-field-delete">
                                         <label class="pantry-label pantry-label-ghost">Action</label>
                                         <button type="button"
-                                                class="pantry-btn pantry-btn-delete"
-                                                onclick="removeRow(this)">
+                                                class="pantry-btn pantry-btn-delete">
                                             Delete
                                         </button>
                                     </div>
@@ -111,7 +110,7 @@
                     </div>
 
                     <div class="pantry-bottom-actions">
-                        <button type="button" class="menu-action pantry-add-btn" onclick="addRow()">
+                        <button id="addPantryRowButton" type="button" class="menu-action pantry-add-btn">
                             <span class="menu-action-title">Add Item</span>
                             <span class="menu-action-sub">Create another pantry row</span>
                         </button>
@@ -136,96 +135,8 @@
     </div>
 </div>
 
-<script>
-    function addRow() {
-        const container = document.getElementById("pantryRows");
-        const index = container.querySelectorAll("[data-row]").length;
+@section Scripts {
+    <script src="~/js/item-rows.js" asp-append-version="true"></script>
+    <script src="~/js/pantry.js" asp-append-version="true"></script>
+}
 
-        const row = document.createElement("div");
-        row.className = "menu-action pantry-card";
-        row.setAttribute("data-row", "");
-
-        row.innerHTML = `
-            <input type="hidden" name="Items[${index}].Id" value="0" data-field="Id" />
-            <input type="hidden" name="Items[${index}].FoodItemId" value="0" data-field="FoodItemId" />
-
-            <div class="pantry-fields">
-                <div class="pantry-field pantry-field-name">
-                    <label class="pantry-label">Food</label>
-                    <input type="text"
-                           name="Items[${index}].Name"
-                           value=""
-                           data-field="Name"
-                           class="menu-input pantry-input"
-                           maxlength="100"
-                           placeholder="Food item" />
-                    <span class="menu-field-error" data-valmsg-field="Name"></span>
-                </div>
-
-                <div class="pantry-field pantry-field-qty">
-                    <label class="pantry-label">Amount</label>
-                    <input type="number"
-                           name="Items[${index}].Quantity"
-                           value=""
-                           data-field="Quantity"
-                           class="menu-input pantry-input"
-                           placeholder="Amount"
-                           min="0.01"
-                           max="100000"
-                           step="0.01" />
-                    <span class="menu-field-error" data-valmsg-field="Quantity"></span>
-                </div>
-
-                <div class="pantry-field pantry-field-unit">
-                    <label class="pantry-label">Unit</label>
-                    <input type="text"
-                           name="Items[${index}].Unit"
-                           value=""
-                           data-field="Unit"
-                           class="menu-input pantry-input"
-                           maxlength="30"
-                           placeholder="Unit (g, kg, ml, tins)" />
-                    <span class="menu-field-error" data-valmsg-field="Unit"></span>
-                </div>
-
-                <div class="pantry-field pantry-field-delete">
-                    <label class="pantry-label pantry-label-ghost">Action</label>
-                    <button type="button"
-                            class="pantry-btn pantry-btn-delete"
-                            onclick="removeRow(this)">
-                        Delete
-                    </button>
-                </div>
-            </div>
-        `;
-
-        container.appendChild(row);
-        reindexRows();
-    }
-
-    function removeRow(button) {
-        const row = button.closest("[data-row]");
-        if (row) {
-            row.remove();
-            reindexRows();
-        }
-    }
-
-    function reindexRows() {
-        const rows = document.querySelectorAll("#pantryRows [data-row]");
-
-        rows.forEach((row, index) => {
-            row.querySelectorAll("[data-field]").forEach(field => {
-                field.name = `Items[${index}].${field.dataset.field}`;
-            });
-
-            row.querySelectorAll("[data-valmsg-field]").forEach(span => {
-                span.setAttribute("data-valmsg-for", `Items[${index}].${span.dataset.valmsgField}`);
-            });
-        });
-    }
-
-    document.getElementById("pantryForm").addEventListener("submit", function () {
-        reindexRows();
-    });
-</script>

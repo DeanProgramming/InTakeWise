@@ -15,27 +15,39 @@
                     @Html.AntiForgeryToken()
 
                     <input type="hidden" asp-for="EveryDayFitnessLevel" id="EveryDayFitnessLevel" />
-                    <input type="hidden" asp-for="ChosenGymDays" id="ChosenGymDays" />
+                    <input type="hidden"
+                           asp-for="ChosenGymDays"
+                           id="ChosenGymDays"
+                           data-initial-gym-days="@((int)Model.ChosenGymDays)" />
 
                     <div class="menu-action">
                         <div class="menu-action-title">How active are you?</div>
                         <div class="menu-action-sub">Choose one</div>
 
                         <div class="menu-actions-row">
-                            <a href="javascript:void(0)" class="menu-action activity-row" onclick="setFitness('Low')">
+                            <button type="button"
+                                    class="menu-action activity-row"
+                                    data-fitness-level="Low"
+                                    aria-pressed="@(Model.EveryDayFitnessLevel == FitnessLevel.Low ? "true" : "false")">
                                 <div class="menu-action-title">Low</div>
                                 <div class="menu-action-sub">Mostly sitting</div>
-                            </a>
+                            </button>
 
-                            <a href="javascript:void(0)" class="menu-action activity-row" onclick="setFitness('Medium')">
+                            <button type="button"
+                                    class="menu-action activity-row"
+                                    data-fitness-level="Medium"
+                                    aria-pressed="@(Model.EveryDayFitnessLevel == FitnessLevel.Medium ? "true" : "false")">
                                 <div class="menu-action-title">Medium</div>
                                 <div class="menu-action-sub">Some movement</div>
-                            </a>
+                            </button>
 
-                            <a href="javascript:void(0)" class="menu-action activity-row" onclick="setFitness('High')">
+                            <button type="button"
+                                    class="menu-action activity-row"
+                                    data-fitness-level="High"
+                                    aria-pressed="@(Model.EveryDayFitnessLevel == FitnessLevel.High ? "true" : "false")">
                                 <div class="menu-action-title">High</div>
                                 <div class="menu-action-sub">Active job / lots of steps</div>
-                            </a>
+                            </button>
                         </div>
 
                         <span asp-validation-for="EveryDayFitnessLevel"></span>
@@ -47,11 +59,15 @@
                         <div class="menu-actions-row profile-gym-toggle">
                             @foreach (var d in new[] { "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday" })
                             {
-                                <div class="menu-side-box curved curved-profile-Gym-Button"
-                                     data-day="@d"
-                                     onclick="toggleDay('@d')">
+                                var gymDay = Enum.Parse<GymDays>(d);
+                                var isSelected = Model.ChosenGymDays.HasFlag(gymDay);
+
+                                <button type="button"
+                                        class="menu-side-box curved curved-profile-Gym-Button"
+                                        data-day="@d"
+                                        aria-pressed="@(isSelected ? "true" : "false")">
                                     @d.ToUpper()
-                                </div>
+                                </button>
                             }
                         </div>
 
@@ -77,54 +93,6 @@
     </div>
 </div>
 
-<script>
-    const dayMap = {
-        Monday: 1,
-        Tuesday: 2,
-        Wednesday: 4,
-        Thursday: 8,
-        Friday: 16,
-        Saturday: 32,
-        Sunday: 64
-    };
-
-    function setFitness(level) {
-        document.getElementById('EveryDayFitnessLevel').value = level;
-        document.getElementById('activityLabel').innerText = level; 
-
-        const buttons = document.querySelectorAll(".activity-row");
-        buttons.forEach(btn => {
-            if (btn.getAttribute("onclick")?.includes(`'${level}'`)) btn.classList.add("is-active");
-            else btn.classList.remove("is-active");
-        });
-    }
-
-    function toggleDay(dayName) {
-        const hidden = document.getElementById("ChosenGymDays");
-        let current = parseInt(hidden.value || "0");
-
-        const bit = dayMap[dayName];
-        current = current ^ bit; 
-
-        hidden.value = current.toString();
-
-        const btn = document.querySelector(`.curved-profile-Gym-Button[data-day='${dayName}']`);
-        if (btn) btn.classList.toggle("is-active");
-    }
-
-    (function init() {
-        setFitness('@Model.EveryDayFitnessLevel');
-
-        let mask = parseInt('@((int)Model.ChosenGymDays)');
-        document.getElementById("ChosenGymDays").value = mask.toString();
-
-        for (const [day, bit] of Object.entries(dayMap)) {
-            if ((mask & bit) !== 0) {
-                const btn = document.querySelector(`.curved-profile-Gym-Button[data-day='${day}']`);
-                if (btn) btn.classList.add("is-active");
-            }
-        }
-    })();
-
-
-</script>
+@section Scripts {
+    <script src="~/js/profile-step2.js" asp-append-version="true"></script>
+}
