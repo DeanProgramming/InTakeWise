@@ -1,23 +1,160 @@
 ﻿@page
 @model RegisterConfirmationModel
+
 @{
-    ViewData["Title"] = "Register confirmation";
+    ViewData["Title"] = "Confirm your account";
 }
 
-<h1>@ViewData["Title"]</h1>
-@{
-    if (@Model.DisplayConfirmAccountLink)
-    {
-<p>
-    This app does not currently have a real email sender registered, see <a href="https://aka.ms/aspaccountconf">these docs</a> for how to configure a real email sender.
-    Normally this would be emailed: <a id="confirm-link" href="@Model.EmailConfirmationUrl">Click here to confirm your account</a>
-</p>
-    }
-    else
-    {
-<p>
-        Please check your email to confirm your account.
-</p>
-    }
-}
+<div class="auth-page">
+    <div class="auth-card menu-card">
 
+        <!-- MAIN -->
+        <section class="auth-main">
+            <div class="menu-actions">
+                <h1 class="auth-title">Confirm your account</h1>
+
+                @if (Model.AccountAlreadyConfirmed)
+                {
+                    <section class="menu-action log-intro-card confirmation-section"
+                             aria-labelledby="already-confirmed-title">
+
+                        <h2 id="already-confirmed-title"
+                            class="menu-action-title">
+                            Account already confirmed
+                        </h2>
+
+                        <p class="menu-action-sub confirmation-copy">
+                            This account has already completed the confirmation
+                            step. You can now log in.
+                        </p>
+                    </section>
+
+                    <a asp-page="./Login"
+                       asp-route-returnUrl="@Model.ReturnUrl"
+                       class="menu-action menu-primary-btn">
+
+                        <span class="menu-action-title">
+                            Continue to log in
+                        </span>
+
+                        <span class="menu-action-sub">
+                            Then complete your InTakeWise profile
+                        </span>
+                    </a>
+                }
+                else if (Model.DisplayConfirmAccountLink && !string.IsNullOrWhiteSpace(Model.EmailConfirmationUrl))
+                {
+                    <section class="menu-action log-intro-card confirmation-section"
+                             aria-labelledby="account-created-title">
+
+                        <h2 id="account-created-title"
+                            class="menu-action-title">
+                            Account created
+                        </h2>
+
+                        <p class="menu-action-sub confirmation-copy">
+                            Your InTakeWise login has been created for:
+                        </p>
+
+                        <p class="confirmation-email">
+                            @Model.Email
+                        </p>
+                    </section>
+
+                    <aside class="menu-action portfolio-note-card" aria-labelledby="portfolio-note-title">
+
+                        <p class="menu-action-sub confirmation-copy">
+                            In a production application, this confirmation link
+                            would be delivered through a email
+                            service.
+                        </p>
+                        <p class="portfolio-warning">
+                            This demonstrates the account-confirmation workflow,
+                            but it does not verify that you own the email
+                            address entered during registration. Please use a
+                            test email address and do not reuse a real password.
+                        </p>
+                    </aside>
+
+                    <div class="menu-action log-intro-card confirmation-section">
+                        <p class="menu-action-sub confirmation-copy">
+                            Normally this would be emailed:
+                        </p>
+
+                        <a id="confirm-account-button"
+                           href="@Model.EmailConfirmationUrl"
+                           class="menu-action menu-primary-btn">
+                            <span class="menu-action-title"> 
+                                Click here to confirm your account
+                            </span>
+                        </a>
+                    </div> 
+                }
+                else
+                {
+                    <section class="menu-action log-intro-card confirmation-section"
+                             aria-labelledby="check-email-title">
+
+                        <h2 id="check-email-title"
+                            class="menu-action-title">
+                            Check your email
+                        </h2>
+
+                        <p class="menu-action-sub confirmation-copy">
+                            If an account was created for @Model.Email, its
+                            confirmation instructions will be delivered using
+                            the configured email service.
+                        </p>
+                    </section>
+                }
+
+                <div class="confirmation-links">
+                    <a asp-page="./Login"
+                       asp-route-returnUrl="/"
+                       class="menu-link">
+                        Return to login
+                    </a>
+
+                    <a asp-area=""
+                       asp-controller="Home"
+                       asp-action="Privacy"
+                       class="menu-link">
+                        View Privacy
+                    </a>
+                </div>
+            </div>
+        </section>
+
+        <!-- SIDE -->
+        <aside class="auth-side menu-side">
+            <h2 class="auth-side-title">InTakeWise</h2>
+
+            <p class="auth-side-subtitle">
+                Your account keeps your meals, targets and plans together.
+            </p>
+
+            @if (Model.DemoEnabled)
+            {
+                <form method="post"
+                      asp-page="./Login"
+                      asp-page-handler="Demo"
+                      asp-route-returnUrl="/"
+                      class="menu-actions registration-demo">
+
+                    <button type="submit"
+                            class="menu-action"
+                            aria-label="Open the InTakeWise demo">
+
+                        <span class="menu-action-title">
+                            Try the demo instead
+                        </span>
+
+                        <span class="menu-action-sub">
+                            Explore sample data without creating an account
+                        </span>
+                    </button>
+                </form>
+            }
+        </aside>
+    </div>
+</div>

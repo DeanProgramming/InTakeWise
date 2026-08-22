@@ -5,7 +5,7 @@ public static class ValidationLimits
     public const int MinimumProfileNameCharacters = 2;
     public const int MaximumProfileNameCharacters = 25;
 
-    public const int MinimumProfileAge = 13;
+    public const int MinimumProfileAge = 18;
     public const int MaximumProfileAge = 120;
     public const int MinimumHeightCentimetres = 120;
     public const int MaximumHeightCentimetres = 250;

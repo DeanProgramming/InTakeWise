@@ -1,8 +1,83 @@
 ﻿@page
 @model ConfirmEmailModel
+
 @{
-    ViewData["Title"] = "Confirm email";
+    ViewData["Title"] = "Account confirmation";
 }
 
-<h1>@ViewData["Title"]</h1>
-<partial name="_StatusMessage" model="Model.StatusMessage" />
+<div class="auth-page">
+    <div class="auth-card menu-card">
+
+        <!-- MAIN -->
+        <section class="auth-main">
+            <div class="menu-actions">
+                <h1 class="auth-title">Account confirmation</h1>
+
+                @if (Model.HasError)
+                {
+                    <section class="menu-action log-intro-card confirmation-section"
+                             aria-labelledby="confirmation-error-title">
+
+                        <h2 id="confirmation-error-title"
+                            class="menu-action-title">
+                            We couldn’t confirm this account
+                        </h2>
+
+                        <p class="menu-action-sub confirmation-copy"
+                           role="alert">
+                            @Model.StatusMessage
+                        </p>
+                    </section>
+
+                    <a asp-page="./Register"
+                       asp-route-returnUrl="@Model.ReturnUrl"
+                       class="menu-action menu-primary-btn">
+
+                        <span class="menu-action-title">
+                            Return to registration
+                        </span>
+
+                        <span class="menu-action-sub">
+                            Create an account or generate a new link
+                        </span>
+                    </a>
+
+                    <div class="confirmation-links">
+                        <a asp-page="./Login"
+                           asp-route-returnUrl="/"
+                           class="menu-link">
+                            Return to login
+                        </a>
+
+                        <a asp-area=""
+                           asp-controller="Home"
+                           asp-action="Privacy"
+                           class="menu-link">
+                            View Privacy
+                        </a>
+                    </div>
+                }
+            </div>
+        </section>
+
+        <!-- SIDE -->
+        <aside class="auth-side menu-side">
+            <h2 class="auth-side-title">InTakeWise</h2>
+
+            <p class="auth-side-subtitle">
+                Secure account confirmation
+            </p>
+
+            <div class="menu-side-box registration-step">
+                <span class="registration-step-title">
+                    Confirmation links
+                </span>
+
+                <span class="registration-step-copy">
+                    A confirmation link can only be successfully used once.
+                </span>
+            </div>
+        </aside>
+
+    </div>
+</div>

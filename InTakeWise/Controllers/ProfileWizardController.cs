@@ -11,13 +11,15 @@ namespace InTakeWise.Controllers
     [Authorize]
     public class ProfileWizardController : Controller
     {
-        private const string Step1Key = "ProfileStep1";
-        private const string Step2Key = "ProfileStep2";
+        private const string Step1KeyPrefix = "ProfileWizard:Step1:";
+        private const string Step2KeyPrefix = "ProfileWizard:Step2:";
 
         private readonly ApplicationDbContext _db;
         private readonly UserManager<IdentityUser> _userManager;
 
-        public ProfileWizardController(ApplicationDbContext db, UserManager<IdentityUser> userManager)
+        public ProfileWizardController(
+            ApplicationDbContext db,
+            UserManager<IdentityUser> userManager)
         {
             _db = db;
             _userManager = userManager;
@@ -26,71 +28,126 @@ namespace InTakeWise.Controllers
         [HttpGet]
         public async Task<IActionResult> Step1()
         {
-            var fromSession = HttpContext.Session.GetObject<ProfileStep1ViewModel>(Step1Key);
-            if (fromSession != null)
-                return View(fromSession);
-
             var user = await _userManager.GetUserAsync(User);
-            if (user == null) return Challenge();
 
-            var existing = await _db.UsersInformation.AsNoTracking()
+            if (user == null)
+            {
+                return Challenge();
+            }
+
+            var step1Key = GetStep1Key(user.Id);
+
+            var fromSession =
+                HttpContext.Session.GetObject<ProfileStep1ViewModel>(step1Key);
+
+            if (fromSession != null)
+            {
+                return View(fromSession);
+            }
+
+            var existing = await _db.UsersInformation
+                .AsNoTracking()
                 .FirstOrDefaultAsync(x => x.UserId == user.Id);
 
-            var vm = existing != null ? MapToStep1(existing) : new ProfileStep1ViewModel();
+            var vm = existing != null
+                ? MapToStep1(existing)
+                : new ProfileStep1ViewModel();
+
             return View(vm);
         }
 
-
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public IActionResult Step1(ProfileStep1ViewModel vm)
+        public async Task<IActionResult> Step1(ProfileStep1ViewModel vm)
         {
-            if (!Enum.IsDefined(vm.Gender))
+            var user = await _userManager.GetUserAsync(User);
+
+            if (user == null)
+            {
+                return Challenge();
+            }
+
+            if (vm.Gender.HasValue &&
+                !Enum.IsDefined(vm.Gender.Value))
             {
                 ModelState.AddModelError(
                     nameof(vm.Gender),
                     "Select a valid gender option.");
             }
 
-            if (!ModelState.IsValid) return View(vm);
+            if (!ModelState.IsValid)
+            {
+                return View(vm);
+            }
 
-            HttpContext.Session.SetObject(Step1Key, vm);
+            HttpContext.Session.SetObject(
+                GetStep1Key(user.Id),
+                vm);
+
+            // Step 1 affects calculations later in the wizard.
+            HttpContext.Session.Remove(GetStep2Key(user.Id));
+
             return RedirectToAction(nameof(Step2));
         }
 
         [HttpGet]
         public async Task<IActionResult> Step2()
         {
-            var step1 = HttpContext.Session.GetObject<ProfileStep1ViewModel>(Step1Key);
-            var fromSession = HttpContext.Session.GetObject<ProfileStep2ViewModel>(Step2Key);
-
-            if (fromSession != null)
-                return View(fromSession);
-
             var user = await _userManager.GetUserAsync(User);
-            if (user == null) return Challenge();
 
-            var existing = await _db.UsersInformation.AsNoTracking()
+            if (user == null)
+            {
+                return Challenge();
+            }
+
+            var step1 = HttpContext.Session
+                .GetObject<ProfileStep1ViewModel>(GetStep1Key(user.Id));
+
+            var fromSession = HttpContext.Session
+                .GetObject<ProfileStep2ViewModel>(GetStep2Key(user.Id));
+
+            var existing = await _db.UsersInformation
+                .AsNoTracking()
                 .FirstOrDefaultAsync(x => x.UserId == user.Id);
 
-            // New user cannot skip Step1
             if (step1 == null && existing == null)
-                return RedirectToAction(nameof(Step1));
+            {
+                return RestartWizardAt(nameof(Step1));
+            }
 
-            var vm = existing != null ? MapToStep2(existing) : new ProfileStep2ViewModel();
+            if (fromSession != null)
+            {
+                return View(fromSession);
+            }
+
+            var vm = existing != null
+                ? MapToStep2(existing)
+                : new ProfileStep2ViewModel();
+
             return View(vm);
         }
 
-
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public IActionResult Step2(ProfileStep2ViewModel vm)
+        public async Task<IActionResult> Step2(ProfileStep2ViewModel vm)
         {
-            if (!Enum.IsDefined(vm.EveryDayFitnessLevel))
+            var user = await _userManager.GetUserAsync(User);
+
+            if (user == null)
             {
-                ModelState.AddModelError(
-                    nameof(vm.EveryDayFitnessLevel),
-                    "Select a valid activity level.");
+                return Challenge();
+            }
+
+            var step1 = HttpContext.Session
+                .GetObject<ProfileStep1ViewModel>(GetStep1Key(user.Id));
+
+            var existingProfile = await _db.UsersInformation
+                .AsNoTracking()
+                .AnyAsync(x => x.UserId == user.Id);
+
+            if (step1 == null && !existingProfile)
+            {
+                return RestartWizardAt(nameof(Step1));
             }
 
             if (!HasOnlyKnownGymDays(vm.ChosenGymDays))
@@ -99,60 +156,75 @@ namespace InTakeWise.Controllers
                     nameof(vm.ChosenGymDays),
                     "Select valid gym days.");
             }
-            else if (vm.ChosenGymDays == GymDays.None)
+
+            // GymDays.None is deliberately valid.
+
+            if (!ModelState.IsValid)
             {
-                ModelState.AddModelError(
-                    nameof(vm.ChosenGymDays),
-                    "Please pick at least one gym day.");
+                return View(vm);
             }
 
-            if (!ModelState.IsValid) return View(vm);
+            HttpContext.Session.SetObject(
+                GetStep2Key(user.Id),
+                vm);
 
-            HttpContext.Session.SetObject(Step2Key, vm);
             return RedirectToAction(nameof(Step3));
         }
 
         [HttpGet]
         public async Task<IActionResult> Step3(int months = 3)
         {
-            var step1 = HttpContext.Session.GetObject<ProfileStep1ViewModel>(Step1Key);
-            var step2 = HttpContext.Session.GetObject<ProfileStep2ViewModel>(Step2Key);
-
             var user = await _userManager.GetUserAsync(User);
-            if (user == null) return Challenge();
 
-            var existing = await _db.UsersInformation.AsNoTracking()
+            if (user == null)
+            {
+                return Challenge();
+            }
+
+            var step1Key = GetStep1Key(user.Id);
+            var step2Key = GetStep2Key(user.Id);
+
+            var step1 = HttpContext.Session
+                .GetObject<ProfileStep1ViewModel>(step1Key);
+
+            var step2 = HttpContext.Session
+                .GetObject<ProfileStep2ViewModel>(step2Key);
+
+            var existing = await _db.UsersInformation
+                .AsNoTracking()
                 .FirstOrDefaultAsync(x => x.UserId == user.Id);
 
-            // Existing user editing profile:
-            // if session is missing, seed it from DB
+            // Existing users can resume from their saved profile.
             if (existing != null)
             {
                 if (step1 == null)
                 {
                     step1 = MapToStep1(existing);
-                    HttpContext.Session.SetObject(Step1Key, step1);
+                    HttpContext.Session.SetObject(step1Key, step1);
                 }
 
                 if (step2 == null)
                 {
                     step2 = MapToStep2(existing);
-                    HttpContext.Session.SetObject(Step2Key, step2);
+                    HttpContext.Session.SetObject(step2Key, step2);
                 }
             }
 
-            // New user cannot skip Step1
-            if (step1 == null)
-                return RedirectToAction(nameof(Step1));
+            if (step1 == null || step1.Gender == null)
+            {
+                return RestartWizardAt(nameof(Step1));
+            }
 
-            // New user cannot skip Step2
-            if (step2 == null)
-                return RedirectToAction(nameof(Step2));
+            if (step2 == null ||
+                step2.EveryDayFitnessLevel == null)
+            {
+                return RestartWizardAt(nameof(Step2));
+            }
 
             months = Math.Clamp(months, 1, 60);
 
-            var currentGoal = existing?.ChosenFitnessGoal
-                ?? FitnessGoal.Maintain;
+            var currentGoal =
+                existing?.ChosenFitnessGoal ?? FitnessGoal.Maintain;
 
             if (!Enum.IsDefined(currentGoal))
             {
@@ -168,16 +240,40 @@ namespace InTakeWise.Controllers
 
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> Complete(ProfileStep3ViewModel step3)
+        public async Task<IActionResult> Complete(
+            ProfileStep3ViewModel step3)
         {
-            var step1 = HttpContext.Session.GetObject<ProfileStep1ViewModel>(Step1Key);
-            var step2 = HttpContext.Session.GetObject<ProfileStep2ViewModel>(Step2Key);
+            var user = await _userManager.GetUserAsync(User);
 
-            if (step1 == null)
-                return RedirectToAction(nameof(Step1));
+            if (user == null)
+            {
+                return Challenge();
+            }
 
-            if (step2 == null)
-                return RedirectToAction(nameof(Step2));
+            var step1Key = GetStep1Key(user.Id);
+            var step2Key = GetStep2Key(user.Id);
+
+            var step1 = HttpContext.Session
+                .GetObject<ProfileStep1ViewModel>(step1Key);
+
+            var step2 = HttpContext.Session
+                .GetObject<ProfileStep2ViewModel>(step2Key);
+
+            if (step1 == null ||
+                step1.Gender == null ||
+                !Enum.IsDefined(step1.Gender.Value))
+            {
+                HttpContext.Session.Remove(step1Key);
+                return RestartWizardAt(nameof(Step1));
+            }
+
+            if (step2 == null ||
+                step2.EveryDayFitnessLevel == null ||
+                !HasOnlyKnownGymDays(step2.ChosenGymDays))
+            {
+                HttpContext.Session.Remove(step2Key);
+                return RestartWizardAt(nameof(Step2));
+            }
 
             if (!Enum.IsDefined(step3.CurrentFitnessGoal))
             {
@@ -188,46 +284,84 @@ namespace InTakeWise.Controllers
 
             if (!ModelState.IsValid)
             {
+                var months = step3.Months == 0
+                    ? 3
+                    : Math.Clamp(step3.Months, 1, 60);
+
                 return View(
                     "Step3",
                     BuildStep3ViewModel(
                         step1,
                         step2,
-                        3,
+                        months,
                         FitnessGoal.Maintain));
             }
-
-            var user = await _userManager.GetUserAsync(User);
-            if (user == null) return Challenge();
 
             var existing = await _db.UsersInformation
                 .FirstOrDefaultAsync(x => x.UserId == user.Id);
 
             if (existing == null)
             {
-                existing = new UsersInformation { UserId = user.Id };
+                existing = new UsersInformation
+                {
+                    UserId = user.Id
+                };
+
                 _db.UsersInformation.Add(existing);
             }
 
             existing.ProfileUserName = step1.ProfileUserName;
             existing.Age = step1.Age;
-            existing.Gender = step1.Gender;
+            existing.Gender = step1.Gender.Value;
             existing.HeightInCM = step1.HeightInCM;
             existing.WeightInKg = step1.WeightInKg;
             existing.EveryDayFitnessLevel = step2.EveryDayFitnessLevel;
             existing.ChosenGymDays = step2.ChosenGymDays;
-            existing.ChosenFitnessGoal = step3.CurrentFitnessGoal;
+            existing.ChosenFitnessGoal =
+                step3.CurrentFitnessGoal;
 
-            var (gymCalories, nonGymCalories) = ComputeCaloriesFromRoughEstimate(step1, step2, step3.CurrentFitnessGoal);
+            var (gymCalories, nonGymCalories) =
+                ComputeCaloriesFromRoughEstimate(
+                    step1,
+                    step2,
+                    step3.CurrentFitnessGoal);
 
-            SetMacroTargets(ref existing, step1.WeightInKg, step3.CurrentFitnessGoal, gymCalories, nonGymCalories);
+            SetMacroTargets(
+                ref existing,
+                step1.WeightInKg,
+                step3.CurrentFitnessGoal,
+                gymCalories,
+                nonGymCalories);
 
             await _db.SaveChangesAsync();
 
-            HttpContext.Session.Remove(Step1Key);
-            HttpContext.Session.Remove(Step2Key);
+            ClearWizardState(user.Id);
 
             return RedirectToAction("Index", "Home");
+        }
+
+        private static string GetStep1Key(string userId)
+        {
+            return $"{Step1KeyPrefix}{userId}";
+        }
+
+        private static string GetStep2Key(string userId)
+        {
+            return $"{Step2KeyPrefix}{userId}";
+        }
+
+        private void ClearWizardState(string userId)
+        {
+            HttpContext.Session.Remove(GetStep1Key(userId));
+            HttpContext.Session.Remove(GetStep2Key(userId));
+        }
+
+        private IActionResult RestartWizardAt(string actionName)
+        {
+            TempData["ProfileWizardMessage"] =
+                "Your profile setup session expired. Please continue from here.";
+
+            return RedirectToAction(actionName);
         }
 
         private static ProfileStep3ViewModel BuildStep3ViewModel(

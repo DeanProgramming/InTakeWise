@@ -124,3 +124,55 @@
 .registration-demo {
     margin-top: 16px;
 }
+
+.confirmation-section {
+    display: grid;
+    gap: 10px;
+}
+
+.confirmation-copy {
+    margin: 0;
+    line-height: 1.55;
+}
+
+.confirmation-email {
+    margin: 0;
+    color: var(--text);
+    font-size: 15px;
+    font-weight: 900;
+    overflow-wrap: anywhere;
+}
+
+.portfolio-note-card {
+    cursor: default;
+    display: grid;
+    gap: 10px;
+    border-color: rgba(37, 99, 235, 0.35);
+    background: rgba(219, 234, 254, 0.88);
+}
+
+    .portfolio-note-card:hover {
+        transform: none;
+        border-color: rgba(37, 99, 235, 0.35);
+        box-shadow: 0 10px 24px rgba(15, 23, 42, 0.06);
+    }
+
+.portfolio-warning {
+    margin: 0;
+    border-radius: 10px;
+    padding: 10px 12px;
+    border: 1px solid rgba(217, 119, 6, 0.35);
+    background: rgba(254, 243, 199, 0.85);
+    color: #92400e;
+    font-size: 12px;
+    font-weight: 800;
+    line-height: 1.5;
+}
+
+.confirmation-links {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 12px 18px;
+    text-align: center;
+}

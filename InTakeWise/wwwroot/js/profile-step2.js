@@ -12,6 +12,7 @@
     const fitnessInput = document.getElementById("EveryDayFitnessLevel");
     const gymDaysInput = document.getElementById("ChosenGymDays");
     const activityLabel = document.getElementById("activityLabel");
+    const noGymButton = document.getElementById("noGymDaysButton");
     const activityButtons = Array.from(document.querySelectorAll(".activity-row"));
     const gymDayButtons = Array.from(document.querySelectorAll(".curved-profile-Gym-Button"));
 
@@ -19,18 +20,38 @@
         return;
     }
 
-    function setFitness(level) {
-        fitnessInput.value = level;
+    function renderFitness(level) {
+        const selectedLevel = level || "";
+
+        fitnessInput.value = selectedLevel;
 
         if (activityLabel) {
-            activityLabel.textContent = level;
+            activityLabel.textContent = selectedLevel || "Not selected";
         }
 
         activityButtons.forEach(button => {
-            const isSelected = button.dataset.fitnessLevel === level;
+            const isSelected = button.dataset.fitnessLevel === selectedLevel;
             button.classList.toggle("is-active", isSelected);
             button.setAttribute("aria-pressed", isSelected.toString());
         });
+    }
+
+    function renderGymDays(mask) {
+        gymDaysInput.value = mask.toString();
+
+        gymDayButtons.forEach(button => {
+            const dayName = button.dataset.day;
+            const bit = dayMap[dayName];
+            const isSelected = Boolean(bit && (mask & bit) !== 0);
+            button.classList.toggle("is-active", isSelected);
+            button.setAttribute("aria-pressed", isSelected.toString());
+        });
+
+        if (noGymButton) {
+            const noGymSelected = mask === 0;
+            noGymButton.classList.toggle("is-active", noGymSelected);
+            noGymButton.setAttribute("aria-pressed", noGymSelected.toString());
+        }
     }
 
     function toggleDay(dayName) {
@@ -40,30 +61,17 @@
             return;
         }
 
-        let current =
-            Number.parseInt(gymDaysInput.value || "0", 10) || 0;
+        let current = Number.parseInt(gymDaysInput.value || "0", 10) || 0;
 
         current ^= bit;
-        gymDaysInput.value = current.toString();
-
-        const button = gymDayButtons.find(
-            item => item.dataset.day === dayName
-        );
-
-        const isSelected = (current & bit) !== 0;
-
-        if (button) {
-            button.classList.toggle("is-active", isSelected);
-            button.setAttribute(
-                "aria-pressed",
-                isSelected.toString()
-            );
-        }
+        renderGymDays(current);
     }
 
     activityButtons.forEach(button => {
         button.addEventListener("click", () => {
-            setFitness(button.dataset.fitnessLevel);
+            renderFitness(
+                button.dataset.fitnessLevel
+            );
         });
     });
 
@@ -73,19 +81,17 @@
         });
     });
 
+    if (noGymButton) {
+        noGymButton.addEventListener("click", () => {
+            renderGymDays(0);
+        });
+    }
+
     const initialFitness = activityButtons.find(button => button.getAttribute("aria-pressed") === "true")?.dataset.fitnessLevel ?? fitnessInput.value;
 
-    setFitness(initialFitness);
+    renderFitness(initialFitness);
 
-    const mask = Number.parseInt(gymDaysInput.dataset.initialGymDays || "0", 10) || 0;
+    const initialGymDays = Number.parseInt(gymDaysInput.dataset.initialGymDays || "0",) || 0;
 
-    gymDaysInput.value = mask.toString();
-
-    gymDayButtons.forEach(button => {
-        const bit = dayMap[button.dataset.day];
-        const isSelected = Boolean(bit && (mask & bit) !== 0);
-
-        button.classList.toggle("is-active", isSelected);
-        button.setAttribute("aria-pressed", isSelected.toString());
-    });
+    renderGymDays(initialGymDays);
 })();

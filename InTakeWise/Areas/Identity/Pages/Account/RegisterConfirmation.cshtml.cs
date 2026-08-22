@@ -1,79 +1,116 @@
-﻿// Licensed to the .NET Foundation under one or more agreements.
-// The .NET Foundation licenses this file to you under the MIT license.
-#nullable disable
-
-using System;
-using System.Text;
-using System.Threading.Tasks;
+﻿using System.Text;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
-using Microsoft.AspNetCore.Identity.UI.Services;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 using Microsoft.AspNetCore.WebUtilities;
 
-namespace InTakeWise.Areas.Identity.Pages.Account
-{
-    [AllowAnonymous]
-    public class RegisterConfirmationModel : PageModel
-    {
-        private readonly UserManager<IdentityUser> _userManager;
-        private readonly IEmailSender _sender;
+namespace InTakeWise.Areas.Identity.Pages.Account;
 
-        public RegisterConfirmationModel(UserManager<IdentityUser> userManager, IEmailSender sender)
+[AllowAnonymous]
+public class RegisterConfirmationModel : PageModel
+{
+    private const string DefaultReturnUrl =
+        "/ProfileWizard/Step1";
+
+    private readonly UserManager<IdentityUser> _userManager;
+    private readonly IConfiguration _configuration;
+
+    public RegisterConfirmationModel(
+        UserManager<IdentityUser> userManager,
+        IConfiguration configuration)
+    {
+        _userManager = userManager;
+        _configuration = configuration;
+    }
+
+    public string Email { get; private set; } = "";
+
+    public string ReturnUrl { get; private set; } =
+        DefaultReturnUrl;
+
+    public bool DisplayConfirmAccountLink { get; private set; }
+
+    public bool AccountAlreadyConfirmed { get; private set; }
+
+    public string? EmailConfirmationUrl { get; private set; }
+
+    public bool DemoEnabled { get; private set; }
+     
+
+    public async Task<IActionResult> OnGetAsync(
+        string? email,
+        string? returnUrl = null)
+    {
+        ReturnUrl = GetSafeReturnUrl(returnUrl);
+        DemoEnabled = _configuration.GetValue<bool>("Demo:Enabled");
+
+        if (string.IsNullOrWhiteSpace(email))
         {
-            _userManager = userManager;
-            _sender = sender;
+            return RedirectToPage(
+                "./Register",
+                new { returnUrl = ReturnUrl });
         }
 
-        /// <summary>
-        ///     This API supports the ASP.NET Core Identity default UI infrastructure and is not intended to be used
-        ///     directly from your code. This API may change or be removed in future releases.
-        /// </summary>
-        public string Email { get; set; }
+        Email = email.Trim();
 
-        /// <summary>
-        ///     This API supports the ASP.NET Core Identity default UI infrastructure and is not intended to be used
-        ///     directly from your code. This API may change or be removed in future releases.
-        /// </summary>
-        public bool DisplayConfirmAccountLink { get; set; }
+        var user = await _userManager.FindByEmailAsync(Email);
 
-        /// <summary>
-        ///     This API supports the ASP.NET Core Identity default UI infrastructure and is not intended to be used
-        ///     directly from your code. This API may change or be removed in future releases.
-        /// </summary>
-        public string EmailConfirmationUrl { get; set; }
-
-        public async Task<IActionResult> OnGetAsync(string email, string returnUrl = null)
+        // Keep the response generic if somebody manually requests this
+        // page with an email address that does not belong to an account.
+        if (user is null)
         {
-            if (email == null)
-            {
-                return RedirectToPage("/Index");
-            }
-            returnUrl = returnUrl ?? Url.Content("~/");
-
-            var user = await _userManager.FindByEmailAsync(email);
-            if (user == null)
-            {
-                return NotFound($"Unable to load user with email '{email}'.");
-            }
-
-            Email = email;
-            // Once you add a real email sender, you should remove this code that lets you confirm the account
-            DisplayConfirmAccountLink = true;
-            if (DisplayConfirmAccountLink)
-            {
-                var userId = await _userManager.GetUserIdAsync(user);
-                var code = await _userManager.GenerateEmailConfirmationTokenAsync(user);
-                code = WebEncoders.Base64UrlEncode(Encoding.UTF8.GetBytes(code));
-                EmailConfirmationUrl = Url.Page(
-                    "/Account/ConfirmEmail",
-                    pageHandler: null,
-                    values: new { area = "Identity", userId = userId, code = code, returnUrl = returnUrl },
-                    protocol: Request.Scheme);
-            }
-
             return Page();
         }
+
+        AccountAlreadyConfirmed =
+            await _userManager.IsEmailConfirmedAsync(user);
+
+        if (AccountAlreadyConfirmed)
+        {
+            return Page();
+        }
+
+        DisplayConfirmAccountLink =
+            _configuration.GetValue<bool>(
+                "Registration:ShowConfirmationLink");
+
+        if (!DisplayConfirmAccountLink)
+        {
+            return Page();
+        }
+
+        var userId = await _userManager.GetUserIdAsync(user);
+
+        var confirmationToken =
+            await _userManager.GenerateEmailConfirmationTokenAsync(user);
+
+        var encodedToken = WebEncoders.Base64UrlEncode(
+            Encoding.UTF8.GetBytes(confirmationToken));
+
+        EmailConfirmationUrl = Url.Page(
+            "/Account/ConfirmEmail",
+            pageHandler: null,
+            values: new
+            {
+                area = "Identity",
+                userId,
+                code = encodedToken,
+                returnUrl = ReturnUrl
+            },
+            protocol: Request.Scheme);
+
+        return Page();
+    }
+
+    private string GetSafeReturnUrl(string? returnUrl)
+    {
+        if (!string.IsNullOrWhiteSpace(returnUrl) &&
+            Url.IsLocalUrl(returnUrl))
+        {
+            return returnUrl;
+        }
+
+        return Url.Content($"~{DefaultReturnUrl}");
     }
 }

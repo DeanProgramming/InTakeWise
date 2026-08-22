@@ -1,6 +1,7 @@
 ﻿@using InTakeWise.ViewModels
 @using InTakeWise.Models
 @model ProfileStep2ViewModel
+
 @{
     ViewData["Title"] = "Fitness Goals";
 }
@@ -11,18 +12,30 @@
         <section class="auth-main">
             <div class="menu-actions">
                 <h1 class="auth-title">Fitness Goals</h1>
+
+                @if (TempData["ProfileWizardMessage"] is string message)
+                {
+                    <div class="profile-wizard-message" role="status">
+                        @message
+                    </div>
+                }
+
                 <form asp-action="Step2" method="post" class="menu-actions-row menu-actions-profile">
-                    @Html.AntiForgeryToken()
+
+                    <div asp-validation-summary="ModelOnly" class="profile-validation"></div>
 
                     <input type="hidden" asp-for="EveryDayFitnessLevel" id="EveryDayFitnessLevel" />
-                    <input type="hidden"
-                           asp-for="ChosenGymDays"
-                           id="ChosenGymDays"
-                           data-initial-gym-days="@((int)Model.ChosenGymDays)" />
+
+                    <input type="hidden" asp-for="ChosenGymDays"  id="ChosenGymDays"  data-initial-gym-days="@((int)Model.ChosenGymDays)" />
 
                     <div class="menu-action">
-                        <div class="menu-action-title">How active are you?</div>
-                        <div class="menu-action-sub">Choose one</div>
+                        <div class="menu-action-title">
+                            How active are you day to day?
+                        </div>
+
+                        <div class="menu-action-sub">
+                            Choose the option that best describes an average day.
+                        </div>
 
                         <div class="menu-actions-row">
                             <button type="button"
@@ -30,7 +43,9 @@
                                     data-fitness-level="Low"
                                     aria-pressed="@(Model.EveryDayFitnessLevel == FitnessLevel.Low ? "true" : "false")">
                                 <div class="menu-action-title">Low</div>
-                                <div class="menu-action-sub">Mostly sitting</div>
+                                <div class="menu-action-sub">
+                                    Mostly sitting
+                                </div>
                             </button>
 
                             <button type="button"
@@ -38,7 +53,9 @@
                                     data-fitness-level="Medium"
                                     aria-pressed="@(Model.EveryDayFitnessLevel == FitnessLevel.Medium ? "true" : "false")">
                                 <div class="menu-action-title">Medium</div>
-                                <div class="menu-action-sub">Some movement</div>
+                                <div class="menu-action-sub">
+                                    Some regular movement
+                                </div>
                             </button>
 
                             <button type="button"
@@ -46,7 +63,9 @@
                                     data-fitness-level="High"
                                     aria-pressed="@(Model.EveryDayFitnessLevel == FitnessLevel.High ? "true" : "false")">
                                 <div class="menu-action-title">High</div>
-                                <div class="menu-action-sub">Active job / lots of steps</div>
+                                <div class="menu-action-sub">
+                                    Active job or lots of movement
+                                </div>
                             </button>
                         </div>
 
@@ -54,19 +73,42 @@
                     </div>
 
                     <div class="menu-action gym-day-selection">
-                        <div class="menu-action-title">Which days of the week at gym</div>
+                        <div class="menu-action-title">
+                            Which days do you train at a gym?
+                        </div>
+
+                        <div class="menu-action-sub">
+                            No gym days is a valid option.
+                        </div>
+
+                        <button type="button"
+                                id="noGymDaysButton"
+                                class="menu-side-box no-gym-days-button"
+                                aria-pressed="@(Model.ChosenGymDays == GymDays.None ? "true" : "false")">
+                            NO GYM / HOME TRAINING ONLY
+                        </button>
 
                         <div class="menu-actions-row profile-gym-toggle">
-                            @foreach (var d in new[] { "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday" })
+                            @foreach (var day in new[]
+                                                        {
+                                                        "Monday",
+                                                        "Tuesday",
+                                                        "Wednesday",
+                                                        "Thursday",
+                                                        "Friday",
+                                                        "Saturday",
+                                                        "Sunday"
+                                                        })
                             {
-                                var gymDay = Enum.Parse<GymDays>(d);
-                                var isSelected = Model.ChosenGymDays.HasFlag(gymDay);
+                                var gymDay = Enum.Parse<GymDays>(day);
+                                var isSelected =
+                                Model.ChosenGymDays.HasFlag(gymDay);
 
                                 <button type="button"
                                         class="menu-side-box curved curved-profile-Gym-Button"
-                                        data-day="@d"
+                                        data-day="@day"
                                         aria-pressed="@(isSelected ? "true" : "false")">
-                                    @d.ToUpper()
+                                    @day.ToUpper()
                                 </button>
                             }
                         </div>
@@ -75,18 +117,28 @@
                     </div>
 
                     <button type="submit" class="menu-action">
-                        <div class="menu-action-title">Save & Continue</div>
-                        <div class="menu-action-sub">Next: your prediction</div>
+                        <div class="menu-action-title">
+                            Save &amp; Continue
+                        </div>
+
+                        <div class="menu-action-sub">
+                            Next: your prediction
+                        </div>
                     </button>
                 </form>
-
             </div>
         </section>
 
         <aside class="auth-side menu-side">
             <div class="side-top">
                 <h2 class="auth-side-title">Step 2 of 3</h2>
-                <div class="menu-action-sub">Selected: <span id="activityLabel">@Model.EveryDayFitnessLevel</span></div>
+
+                <div class="menu-action-sub">
+                    Selected:
+                    <span id="activityLabel">
+                        @(Model.EveryDayFitnessLevel.ToString() ?? "Not selected")
+                    </span>
+                </div>
             </div>
         </aside>
 
@@ -94,5 +146,7 @@
 </div>
 
 @section Scripts {
-    <script src="~/js/profile-step2.js" asp-append-version="true"></script>
+    <partial name="_ValidationScriptsPartial" />
+    <script src="~/js/profile-step2.js"
+            asp-append-version="true"></script>
 }
