@@ -22,17 +22,20 @@ namespace InTakeWise.Controllers
         private readonly ApplicationDbContext _db;
         private readonly IPantryUnitService _pantryUnitService;
         private readonly IReceiptImageAnalyzer _receiptImageAnalyzer;
+        private readonly DbContextOptions<ApplicationDbContext> _dbOptions;
 
         public ReceiptController(
             ILogger<ReceiptController> logger,
             UserManager<IdentityUser> userManager,
             ApplicationDbContext db,
+            DbContextOptions<ApplicationDbContext> dbOptions,
             IPantryUnitService pantryUnitService,
             IReceiptImageAnalyzer receiptImageAnalyzer)
         {
             _logger = logger;
             _userManager = userManager;
             _db = db;
+            _dbOptions = dbOptions;
             _pantryUnitService = pantryUnitService;
             _receiptImageAnalyzer = receiptImageAnalyzer;
         }
@@ -155,8 +158,7 @@ namespace InTakeWise.Controllers
 
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> SaveToPantryInfo(
-            ReceiptViewModel model)
+        public async Task<IActionResult> SaveToPantryInfo(ReceiptViewModel model, CancellationToken cancellationToken = default)            
         {
             var user = await _userManager.GetUserAsync(User);
             var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
@@ -236,8 +238,7 @@ namespace InTakeWise.Controllers
                 return View("Receipt", model);
             }
 
-            var mergeResult =
-                _pantryUnitService.MergeRowsByFoodName(rows);
+            var mergeResult = _pantryUnitService.MergeRowsByFoodName(rows);
 
             if (mergeResult.HasErrors)
             {
@@ -253,146 +254,176 @@ namespace InTakeWise.Controllers
 
             var mergedReceiptRows = mergeResult.Rows;
 
-            await using var tx = await _db.Database.BeginTransactionAsync();
+            var strategy = _db.Database.CreateExecutionStrategy();
 
             try
             {
-                var foodMap = await GetOrCreateFoodItemsAsync(mergedReceiptRows.Select(x => x.Name));
-
-                await _db.SaveChangesAsync();
-
-                var existingPantry = await _db.PantryItems
-                    .Include(x => x.FoodItem)
-                    .Where(x => x.UserId == userId)
-                    .ToListAsync();
-
-                foreach (var receiptRow in mergedReceiptRows)
+                var saved = await strategy.ExecuteAsync(async () =>
                 {
-                    var cleanName =
-                        FoodItemNameNormalizer.CleanDisplayName(
-                            receiptRow.Name);
+                    // A new context is required for each retry attempt.
+                    await using var db =
+                        new ApplicationDbContext(_dbOptions);
 
-                    var normalizedName =
-                        FoodItemNameNormalizer.NormalizeName(
-                            receiptRow.Name);
+                    await using var transaction =
+                        await db.Database.BeginTransactionAsync(
+                            cancellationToken);
 
-                    var food = foodMap[normalizedName];
+                    var foodMap = await GetOrCreateFoodItemsAsync(db, mergedReceiptRows.Select(x => x.Name), cancellationToken);
 
-                    var existingMatches = existingPantry
-                        .Where(x =>
-                            x.FoodItem != null
-                            && x.FoodItem.NormalizedName == normalizedName)
-                        .ToList();
+                    // Generate IDs for newly created FoodItems.
+                    await db.SaveChangesAsync(cancellationToken);
 
-                    if (existingMatches.Count == 0)
+                    var existingPantry = await db.PantryItems
+                        .Include(x => x.FoodItem)
+                        .Where(x => x.UserId == userId)
+                        .ToListAsync(cancellationToken);
+
+                    foreach (var receiptRow in mergedReceiptRows)
                     {
-                        var newPantryItem = new PantryItem
+                        var cleanName = FoodItemNameNormalizer.CleanDisplayName(receiptRow.Name);
+                        var normalizedName = FoodItemNameNormalizer.NormalizeName(receiptRow.Name);
+                        var food = foodMap[normalizedName];
+
+                        var existingMatches = existingPantry
+                            .Where(x =>
+                                x.FoodItem != null &&
+                                x.FoodItem.NormalizedName ==
+                                normalizedName)
+                            .ToList();
+
+                        if (existingMatches.Count == 0)
                         {
-                            UserId = userId,
-                            FoodItemId = food.Id,
-                            Quantity = receiptRow.Quantity ?? 0,
-                            Unit = receiptRow.Unit.Trim()
-                        };
+                            var newPantryItem = new PantryItem
+                            {
+                                UserId = userId,
+                                FoodItemId = food.Id,
+                                Quantity = receiptRow.Quantity ?? 0,
+                                Unit = receiptRow.Unit.Trim()
+                            };
 
-                        _db.PantryItems.Add(newPantryItem);
-                        existingPantry.Add(newPantryItem);
-                        continue;
-                    }
+                            db.PantryItems.Add(newPantryItem);
+                            existingPantry.Add(newPantryItem);
 
-                    var mergeExistingResult =
-                        _pantryUnitService.MergeWithExisting(
-                            cleanName,
-                            receiptRow.Quantity ?? 0m,
-                            receiptRow.Unit,
-                            existingMatches.Select(x =>
-                                new PantryQuantityItem
-                                {
-                                    Quantity = x.Quantity,
-                                    Unit = x.Unit
-                                }));
-
-                    if (mergeExistingResult.HasErrors)
-                    {
-                        foreach (var error in mergeExistingResult.Errors)
-                        {
-                            ModelState.AddModelError("", error);
+                            continue;
                         }
 
-                        break;
-                    }
+                        var mergeExistingResult = _pantryUnitService.MergeWithExisting(
+                                                            cleanName,
+                                                            receiptRow.Quantity ?? 0m,
+                                                            receiptRow.Unit,
+                                                            existingMatches.Select(x =>
+                                                                new PantryQuantityItem
+                                                                {
+                                                                    Quantity = x.Quantity,
+                                                                    Unit = x.Unit
+                                                                }));
 
-                    var keeper = existingMatches.First();
-                    keeper.FoodItemId = food.Id;
-                    keeper.Quantity = mergeExistingResult.Quantity;
-                    keeper.Unit = mergeExistingResult.Unit;
-
-                    var duplicates =
-                        existingMatches.Skip(1).ToList();
-
-                    if (duplicates.Count > 0)
-                    {
-                        _db.PantryItems.RemoveRange(duplicates);
-
-                        foreach (var duplicate in duplicates)
+                        if (mergeExistingResult.HasErrors)
                         {
-                            existingPantry.Remove(duplicate);
+                            foreach (var error in mergeExistingResult.Errors)
+                            {
+                                ModelState.AddModelError("", error);
+                            }
+
+                            break;
+                        }
+
+                        var keeper = existingMatches.First();
+
+                        keeper.FoodItemId = food.Id;
+                        keeper.Quantity = mergeExistingResult.Quantity;
+                        keeper.Unit = mergeExistingResult.Unit;
+                        var duplicates = existingMatches.Skip(1).ToList();
+
+                        if (duplicates.Count > 0)
+                        {
+                            db.PantryItems.RemoveRange(duplicates);
+
+                            foreach (var duplicate in duplicates)
+                            {
+                                existingPantry.Remove(duplicate);
+                            }
                         }
                     }
-                }
 
-                if (!ModelState.IsValid)
+                    if (!ModelState.IsValid)
+                    {
+                        return false;
+                    }
+
+                    await db.SaveChangesAsync(cancellationToken);
+
+                    await transaction.CommitAsync(cancellationToken);
+
+                    return true;
+                });
+
+                if (!saved)
                 {
-                    await tx.RollbackAsync();
                     model.Items = rows;
                     EnsureBlankRow(model);
+
                     return View("Receipt", model);
                 }
 
-                await _db.SaveChangesAsync();
-                await tx.CommitAsync();
-
                 TempData["PantrySaved"] = model.IsSample ? "Fictional sample receipt items added to pantry." : "Receipt items added to pantry.";
 
-                return RedirectToAction("Index", "Pantry", new { returnUrl = GetPantryParentReturnUrl(model.ReturnUrl) });
+                return RedirectToAction("Index", "Pantry", new { returnUrl = GetPantryParentReturnUrl(model.ReturnUrl)});
+            }
+            catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+            {
+                throw;
             }
             catch (DbUpdateException ex)
             {
-                await tx.RollbackAsync();
-
-                _logger.LogError("Error saving receipt items to pantry. User={UserReference}; FailureType={FailureType}.", AiLogSanitizer.UserReference(userId), ex.GetType().Name);
-
-                TempData["PantrySaved"] = "Could not save receipt items (database error).";
-
+                _logger.LogError(ex, "Database error saving receipt items. " + "User={UserReference}; FailureType={FailureType}.", AiLogSanitizer.UserReference(userId), ex.GetType().Name);
+                ModelState.AddModelError("", "Could not save the receipt items because of a database error. Please try again.");
+                model.Items = rows;
                 EnsureBlankRow(model);
+
+                return View("Receipt", model);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Unexpected error saving receipt items. " + "User={UserReference}; FailureType={FailureType}.", AiLogSanitizer.UserReference(userId), ex.GetType().Name);
+                ModelState.AddModelError("", "The receipt items could not be saved. Please try again.");
+                model.Items = rows;
+                EnsureBlankRow(model);
+
                 return View("Receipt", model);
             }
         }
 
-        private async Task<Dictionary<string, FoodItem>>
-            GetOrCreateFoodItemsAsync(
-                IEnumerable<string> rawNames,
-                CancellationToken cancellationToken = default)
+        private static async Task<Dictionary<string, FoodItem>> GetOrCreateFoodItemsAsync(ApplicationDbContext db, IEnumerable<string> rawNames, CancellationToken cancellationToken = default)
         {
-            var normalizedNames = rawNames
+            var rawNameList = rawNames
                 .Where(x => !string.IsNullOrWhiteSpace(x))
+                .ToList();
+
+            var normalizedNames = rawNameList
                 .Select(FoodItemNameNormalizer.NormalizeName)
                 .Distinct(StringComparer.Ordinal)
                 .ToList();
 
-            var existingFoods = await _db.FoodItems
-                .Where(x => normalizedNames.Contains(x.NormalizedName))
-                .ToListAsync(cancellationToken);
+            var existingFoods = await db.FoodItems
+                .Where(x =>
+                    normalizedNames.Contains(x.NormalizedName))
+                    .ToListAsync(cancellationToken);
 
-            var foodMap = existingFoods.ToDictionary(x => x.NormalizedName, StringComparer.Ordinal);
+            var foodMap = existingFoods.ToDictionary(
+                x => x.NormalizedName,
+                StringComparer.Ordinal);
 
-            foreach (var rawName in rawNames.Where(x => !string.IsNullOrWhiteSpace(x)))
+            foreach (var rawName in rawNameList)
             {
                 var cleanName = FoodItemNameNormalizer.CleanDisplayName(rawName);
 
                 var normalizedName = FoodItemNameNormalizer.NormalizeName(rawName);
 
                 if (foodMap.ContainsKey(normalizedName))
+                {
                     continue;
+                }
 
                 var newFood = new FoodItem
                 {
@@ -400,7 +431,7 @@ namespace InTakeWise.Controllers
                     NormalizedName = normalizedName
                 };
 
-                _db.FoodItems.Add(newFood);
+                db.FoodItems.Add(newFood);
                 foodMap[normalizedName] = newFood;
             }
 
@@ -417,9 +448,7 @@ namespace InTakeWise.Controllers
 
         private string GetSafeReturnUrl(string? returnUrl)
         {
-            return Url.IsLocalUrl(returnUrl)
-                ? returnUrl!
-                : Url.Action("Index", "Home")!;
+            return Url.IsLocalUrl(returnUrl) ? returnUrl! : Url.Action("Index", "Home")!;
         }
 
         private string GetPantryParentReturnUrl(string? receiptReturnUrl)

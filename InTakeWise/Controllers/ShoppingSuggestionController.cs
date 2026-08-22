@@ -25,24 +25,18 @@ public class ShoppingSuggestionController : Controller
     }
 
     [HttpGet]
-    public async Task<IActionResult> Index(
-        CancellationToken cancellationToken = default)
+    public async Task<IActionResult> Index(CancellationToken cancellationToken = default)
     {
-        var userId = User.FindFirstValue(
-            ClaimTypes.NameIdentifier);
+        var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
 
         if (string.IsNullOrWhiteSpace(userId))
         {
             return Unauthorized();
         }
 
-        var savedPlan =
-            await _shoppingSuggestionService.GetSavedWeekPlanAsync(
-                userId,
-                cancellationToken);
+        var savedPlan = await _shoppingSuggestionService.GetSavedWeekPlanAsync(userId, cancellationToken);
 
-        return View(
-            "ShoppingSuggestion",
+        return View("ShoppingSuggestion", 
             new ShoppingSuggestionViewModel
             {
                 ShoppingList =
@@ -55,8 +49,7 @@ public class ShoppingSuggestionController : Controller
     [HttpPost]
     [ValidateAntiForgeryToken]
     [RequestSizeLimit(16 * 1024)]
-    public async Task<IActionResult> GetShoppingList(
-        CancellationToken cancellationToken = default)
+    public async Task<IActionResult> GetShoppingList(CancellationToken cancellationToken = default)
     {
         var userId = User.FindFirstValue(
             ClaimTypes.NameIdentifier);
@@ -68,33 +61,20 @@ public class ShoppingSuggestionController : Controller
 
         if (IsDemoUser())
         {
-            _logger.LogWarning(
-                "Blocked demo shopping-plan generation request.");
+            _logger.LogWarning("Blocked demo shopping-plan generation request.");
 
             return RedirectToAction(nameof(Index));
         }
 
         try
         {
-            var pantryItems =
-                await _foodItemService.GetFoodItemsAsync(
-                    userId);
-
-            var plan =
-                await _shoppingSuggestionService.GenerateWeekPlanAsync(
-                    userId,
-                    pantryItems,
-                    cancellationToken);
-
-            await _shoppingSuggestionService.SaveWeekPlanAsync(
-                userId,
-                plan,
-                cancellationToken);
+            var pantryItems = await _foodItemService.GetFoodItemsAsync(userId);
+            var plan = await _shoppingSuggestionService.GenerateWeekPlanAsync(userId, pantryItems, cancellationToken);
+            await _shoppingSuggestionService.SaveWeekPlanAsync(userId, plan, cancellationToken);
 
             return RedirectToAction(nameof(Index));
         }
-        catch (OperationCanceledException)
-            when (cancellationToken.IsCancellationRequested)
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
         {
             throw;
         }
@@ -107,37 +87,22 @@ public class ShoppingSuggestionController : Controller
                 AiLogSanitizer.UserReference(userId),
                 exception.GetType().Name);
 
-            return View(
-                "ShoppingSuggestion",
-                new ShoppingSuggestionViewModel
-                {
-                    Error = exception.UserMessage
-                });
+            return View("ShoppingSuggestion", new ShoppingSuggestionViewModel { Error = exception.UserMessage });
         }
         catch (Exception exception)
         {
-            _logger.LogError(
-                "Unexpected shopping-plan failure. User={UserReference}; FailureType={FailureType}.",
-                AiLogSanitizer.UserReference(userId),
-                exception.GetType().Name);
+            _logger.LogError(exception, "Unexpected shopping-plan failure. User={UserReference}; FailureType={FailureType}.", exception.GetType().Name);
 
-            return View(
-                "ShoppingSuggestion",
-                new ShoppingSuggestionViewModel
-                {
-                    Error =
-                        "Shopping-plan generation is temporarily unavailable. Please try again."
-                });
+            return View("ShoppingSuggestion", new ShoppingSuggestionViewModel 
+            { 
+                Error = "Shopping-plan generation is temporarily unavailable. Please try again." 
+            });
         }
     }
 
-    private bool IsDemoUser() =>
-        User.HasClaim(
-            DbSeeder.DemoClaimType,
-            DbSeeder.DemoClaimValue);
+    private bool IsDemoUser() => User.HasClaim(DbSeeder.DemoClaimType, DbSeeder.DemoClaimValue);
 
-    private void ApplyFailureStatus(
-        AiOperationException exception)
+    private void ApplyFailureStatus(AiOperationException exception)
     {
         if (exception is not AiRequestLimitException limitException)
         {
@@ -145,10 +110,6 @@ public class ShoppingSuggestionController : Controller
         }
 
         Response.StatusCode = StatusCodes.Status429TooManyRequests;
-        Response.Headers["Retry-After"] = Math.Max(
-                1,
-                (int)Math.Ceiling(
-                    limitException.RetryAfter.TotalSeconds))
-            .ToString();
+        Response.Headers["Retry-After"] = Math.Max(1, (int)Math.Ceiling(limitException.RetryAfter.TotalSeconds)).ToString();
     }
 }

@@ -17,16 +17,19 @@ namespace InTakeWise.Controllers
         private readonly UserManager<IdentityUser> _userManager;
         private readonly ApplicationDbContext _db;
         private readonly IPantryUnitService _pantryUnitService;
+        private readonly DbContextOptions<ApplicationDbContext> _dbOptions;
 
         public PantryController(
             ILogger<PantryController> logger,
             UserManager<IdentityUser> userManager,
             ApplicationDbContext db,
+            DbContextOptions<ApplicationDbContext> dbOptions,
             IPantryUnitService pantryUnitService)
         {
             _logger = logger;
             _userManager = userManager;
             _db = db;
+            _dbOptions = dbOptions;
             _pantryUnitService = pantryUnitService;
         }
 
@@ -67,7 +70,7 @@ namespace InTakeWise.Controllers
 
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> SavePantryInfo(PantryViewModel model)
+        public async Task<IActionResult> SavePantryInfo(PantryViewModel model, CancellationToken cancellationToken = default)
         {
             var user = await _userManager.GetUserAsync(User);
             var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
@@ -132,82 +135,98 @@ namespace InTakeWise.Controllers
 
             var mergedRows = mergeResult.Rows;
 
-            await using var tx = await _db.Database.BeginTransactionAsync();
+            var executionStrategy =
+    _db.Database.CreateExecutionStrategy();
 
             try
             {
-                var foodMap = await GetOrCreateFoodItemsAsync(mergedRows.Select(x => x.Name));
-
-                await _db.SaveChangesAsync();
-
-                var existingPantry = await _db.PantryItems
-                    .Include(x => x.FoodItem)
-                    .Where(x => x.UserId == userId)
-                    .ToListAsync();
-
-                var keepIds = new HashSet<int>();
-
-                foreach (var row in mergedRows)
+                await executionStrategy.ExecuteAsync(async () =>
                 {
-                    var normalizedName = FoodItemNameNormalizer.NormalizeName(row.Name);
-                    var food = foodMap[normalizedName];
+                    await using var db = new ApplicationDbContext(_dbOptions);
 
-                    var existing = row.Id > 0
-                        ? existingPantry.FirstOrDefault(x => x.Id == row.Id)
-                        : null;
+                    await using var transaction =await db.Database.BeginTransactionAsync(cancellationToken);
 
-                    existing ??= existingPantry.FirstOrDefault(x =>
-                        x.FoodItem != null &&
-                        x.FoodItem.NormalizedName == normalizedName);
+                    var foodMap = await GetOrCreateFoodItemsAsync(
+                        db,
+                        mergedRows.Select(x => x.Name),
+                        cancellationToken);
 
-                    if (existing == null)
+                    // Generate IDs for new FoodItems.
+                    await db.SaveChangesAsync(cancellationToken);
+
+                    var existingPantry = await db.PantryItems
+                        .Include(x => x.FoodItem)
+                        .Where(x => x.UserId == userId)
+                        .ToListAsync(cancellationToken);
+
+                    var keepIds = new HashSet<int>();
+
+                    foreach (var row in mergedRows)
                     {
-                        var newPantryItem = new PantryItem
+                        var normalizedName = FoodItemNameNormalizer.NormalizeName(row.Name);
+                        var food = foodMap[normalizedName];
+
+                        var existing = row.Id > 0 ? existingPantry.FirstOrDefault(x => x.Id == row.Id) : null;
+
+                        existing ??= existingPantry.FirstOrDefault(x => x.FoodItem != null && x.FoodItem.NormalizedName == normalizedName);
+
+                        if (existing == null)
                         {
-                            UserId = userId,
-                            FoodItemId = food.Id,
-                            Quantity = row.Quantity ?? 0,
-                            Unit = row.Unit?.Trim() ?? ""
-                        };
+                            var newPantryItem = new PantryItem
+                            {
+                                UserId = userId,
+                                FoodItemId = food.Id,
+                                Quantity = row.Quantity ?? 0,
+                                Unit = row.Unit?.Trim() ?? ""
+                            };
 
-                        _db.PantryItems.Add(newPantryItem);
+                            db.PantryItems.Add(newPantryItem);
+                        }
+                        else
+                        {
+                            existing.FoodItemId = food.Id;
+                            existing.Quantity = row.Quantity ?? 0;
+                            existing.Unit = row.Unit?.Trim() ?? "";
+
+                            keepIds.Add(existing.Id);
+                        }
                     }
-                    else
+
+                    var toRemove = existingPantry
+                        .Where(x => !keepIds.Contains(x.Id))
+                        .ToList();
+
+                    if (toRemove.Count > 0)
                     {
-                        existing.FoodItemId = food.Id;
-                        existing.Quantity = row.Quantity ?? 0;
-                        existing.Unit = row.Unit?.Trim() ?? "";
-
-                        keepIds.Add(existing.Id);
+                        db.PantryItems.RemoveRange(toRemove);
                     }
-                }
 
-                var toRemove = existingPantry
-                    .Where(x => !keepIds.Contains(x.Id))
-                    .ToList();
-
-                if (toRemove.Count > 0)
-                    _db.PantryItems.RemoveRange(toRemove);
-
-                // Save pantry changes
-                await _db.SaveChangesAsync();
-                await tx.CommitAsync();
+                    await db.SaveChangesAsync(cancellationToken);
+                    await transaction.CommitAsync(cancellationToken);
+                });
 
                 TempData["PantrySaved"] = "Pantry saved.";
             }
+            catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+            {
+                throw;
+            }
             catch (DbUpdateException ex)
             {
-                await tx.RollbackAsync();
-                _logger.LogError(ex, "Error saving pantry for user {UserId}", userId);
-                TempData["PantrySaved"] = "Could not save pantry (database error).";
+                _logger.LogError(ex, "Database error saving pantry for user {UserId}.", userId);
+                ModelState.AddModelError("", "Could not save the pantry because of a database error. Please try again.");
 
-                if (!model.Items.Any() ||
-                    !string.IsNullOrWhiteSpace(model.Items.Last().Name) ||
-                    model.Items.Last().Quantity.HasValue ||
-                    !string.IsNullOrWhiteSpace(model.Items.Last().Unit))
-                {
-                    model.Items.Add(new PantryItemInputViewModel());
-                }
+                EnsureBlankRow(model);
+
+                return View("Pantry", model);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Unexpected error saving pantry for user {UserId}.", userId);
+
+                ModelState.AddModelError("", "The pantry could not be saved. Please try again.");
+
+                EnsureBlankRow(model);
 
                 return View("Pantry", model);
             }
@@ -215,41 +234,50 @@ namespace InTakeWise.Controllers
             return RedirectToAction(nameof(Index), new { returnUrl = model.ReturnUrl });
         }
 
-        private async Task<Dictionary<string, FoodItem>> GetOrCreateFoodItemsAsync(
-            IEnumerable<string> rawNames,
-            CancellationToken cancellationToken = default)
+        private static async Task<Dictionary<string, FoodItem>> GetOrCreateFoodItemsAsync(ApplicationDbContext db, IEnumerable<string> rawNames, CancellationToken cancellationToken = default)
+        {
+            var rawNameList = rawNames.Where(x => !string.IsNullOrWhiteSpace(x)).ToList();
+
+            var normalizedNames = rawNameList.Select(FoodItemNameNormalizer.NormalizeName).Distinct(StringComparer.Ordinal).ToList();
+
+            var existingFoods = await db.FoodItems.Where(x => normalizedNames.Contains(x.NormalizedName)).ToListAsync(cancellationToken);
+
+            var foodMap = existingFoods.ToDictionary(x => x.NormalizedName, StringComparer.Ordinal);
+
+            foreach (var rawName in rawNameList)
             {
-                var normalizedNames = rawNames
-                    .Where(x => !string.IsNullOrWhiteSpace(x))
-                    .Select(FoodItemNameNormalizer.NormalizeName)
-                    .Distinct(StringComparer.Ordinal)
-                    .ToList();
+                var cleanName = FoodItemNameNormalizer.CleanDisplayName(rawName);
+                var normalizedName = FoodItemNameNormalizer.NormalizeName(rawName);
 
-                var existingFoods = await _db.FoodItems
-                    .Where(x => normalizedNames.Contains(x.NormalizedName))
-                    .ToListAsync(cancellationToken);
-
-                var foodMap = existingFoods.ToDictionary(x => x.NormalizedName, StringComparer.Ordinal);
-
-                foreach (var rawName in rawNames.Where(x => !string.IsNullOrWhiteSpace(x)))
+                if (foodMap.ContainsKey(normalizedName))
                 {
-                    var cleanName = FoodItemNameNormalizer.CleanDisplayName(rawName);
-                    var normalizedName = FoodItemNameNormalizer.NormalizeName(rawName);
-
-                    if (foodMap.ContainsKey(normalizedName))
-                        continue;
-
-                    var newFood = new FoodItem
-                    {
-                        Name = cleanName,
-                        NormalizedName = normalizedName
-                    };
-
-                    _db.FoodItems.Add(newFood);
-                    foodMap[normalizedName] = newFood;
+                    continue;
                 }
 
-                return foodMap;
+                var newFood = new FoodItem
+                {
+                    Name = cleanName,
+                    NormalizedName = normalizedName
+                };
+
+                db.FoodItems.Add(newFood);
+                foodMap[normalizedName] = newFood;
             }
+
+            return foodMap;
+        }
+        private static void EnsureBlankRow(PantryViewModel model)
+        {
+            model.Items ??= new List<PantryItemInputViewModel>();
+
+            if (model.Items.Count == 0 || 
+                !string.IsNullOrWhiteSpace(model.Items.Last().Name) ||
+                model.Items.Last().Quantity.HasValue ||
+                !string.IsNullOrWhiteSpace(model.Items.Last().Unit))
+            {
+                model.Items.Add(
+                    new PantryItemInputViewModel());
+            }
+        } 
     }
 }

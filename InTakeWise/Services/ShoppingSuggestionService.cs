@@ -183,12 +183,9 @@ namespace InTakeWise.Services
                     jsonSchemaIsStrict: true)
             };
 
-            using var timeout = CancellationTokenSource.CreateLinkedTokenSource(
-                cancellationToken);
+            using var timeout = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
 
-            timeout.CancelAfter(
-                _safetyOptions.GetTimeout(
-                    AiOperation.ShoppingPlan));
+            timeout.CancelAfter(_safetyOptions.GetTimeout(AiOperation.ShoppingPlan));
 
             ChatCompletion completion;
 
@@ -199,16 +196,11 @@ namespace InTakeWise.Services
                     options,
                     timeout.Token);
             }
-            catch (OperationCanceledException exception)
-                when (!cancellationToken.IsCancellationRequested)
+            catch (OperationCanceledException exception) when (!cancellationToken.IsCancellationRequested)
             {
-                _logger.LogWarning(
-                    "Shopping-plan generation timed out for user {UserReference}.",
-                    AiLogSanitizer.UserReference(userId));
+                _logger.LogWarning("Shopping-plan generation timed out for user {UserReference}.", AiLogSanitizer.UserReference(userId));
 
-                throw new AiRequestTimeoutException(
-                    "Shopping-plan generation timed out. Please try again.",
-                    exception);
+                throw new AiRequestTimeoutException("Shopping-plan generation timed out. Please try again.", exception);
             }
             catch (OperationCanceledException)
             {
@@ -220,53 +212,32 @@ namespace InTakeWise.Services
             }
             catch (Exception exception)
             {
-                _logger.LogError(
-                    "Shopping-plan provider request failed. User={UserReference}; FailureType={FailureType}.",
-                    AiLogSanitizer.UserReference(userId),
-                    exception.GetType().Name);
+                _logger.LogError("Shopping-plan provider request failed. User={UserReference}; FailureType={FailureType}.", AiLogSanitizer.UserReference(userId), exception.GetType().Name);
 
-                throw new AiServiceUnavailableException(
-                    "Shopping-plan generation is temporarily unavailable. Please try again.",
-                    exception);
+                throw new AiServiceUnavailableException("Shopping-plan generation is temporarily unavailable. Please try again.", exception);
             }
 
             if (completion.Content is null || completion.Content.Count == 0)
             {
-                throw new AiResponseValidationException(
-                    "Shopping-plan generation returned no result. Please try again.",
-                    new InvalidOperationException(
-                        "AI completion content was empty."));
+                throw new AiResponseValidationException("Shopping-plan generation returned no result. Please try again.", new InvalidOperationException("AI completion content was empty."));
             }
 
-            var json = string.Concat(
-                completion.Content.Select(part => part.Text));
+            var json = string.Concat(completion.Content.Select(part => part.Text));
 
-            if (string.IsNullOrWhiteSpace(json)
-                || json.Length > MaximumResponseCharacters)
+            if (string.IsNullOrWhiteSpace(json) || json.Length > MaximumResponseCharacters)
             {
-                throw new AiResponseValidationException(
-                    "Shopping-plan generation returned an invalid result. Please try again.",
-                    new InvalidOperationException(
-                        "AI completion was empty or exceeded the response-size limit."));
+                throw new AiResponseValidationException("Shopping-plan generation returned an invalid result. Please try again.", new InvalidOperationException("AI completion was empty or exceeded the response-size limit."));
             }
 
             try
             {
-                return _responseParser.Parse(
-                    json,
-                    weekTargets);
+                return _responseParser.Parse(json, weekTargets);
             }
             catch (InvalidOperationException exception)
             {
-                _logger.LogWarning(
-                    "Shopping-plan response failed domain validation. User={UserReference}; ResponseCharacters={ResponseCharacters}; FailureType={FailureType}.",
-                    AiLogSanitizer.UserReference(userId),
-                    json.Length,
-                    exception.GetType().Name);
+                _logger.LogWarning("Shopping-plan response failed domain validation. User={UserReference}; ResponseCharacters={ResponseCharacters}; FailureType={FailureType}.", AiLogSanitizer.UserReference(userId), json.Length, exception.GetType().Name);
 
-                throw new AiResponseValidationException(
-                    "The generated shopping plan was incomplete or invalid. Please try again.",
-                    exception);
+                throw new AiResponseValidationException("The generated shopping plan was incomplete or invalid. Please try again.", exception);
             }
         }
         private static List<DailyTargetDto> BuildRemainingWeekTargets(UsersInformation profile, DateTime startLocalDate)
@@ -357,8 +328,7 @@ namespace InTakeWise.Services
                 })
             };
 
-            var planningDataJson = JsonSerializer.Serialize(
-                planningData,
+            var planningDataJson = JsonSerializer.Serialize(planningData,
                 new JsonSerializerOptions
                 {
                     WriteIndented = true
@@ -388,57 +358,42 @@ namespace InTakeWise.Services
                 """;
         }
 
-        private static List<UserFoodItemDto> NormalizePantryItems(
-            List<UserFoodItemDto>? pantryItems)
+        private static List<UserFoodItemDto> NormalizePantryItems(List<UserFoodItemDto>? pantryItems)
         {
             pantryItems ??= new List<UserFoodItemDto>();
 
-            if (pantryItems.Any(item =>
-                    item is null || item.Quantity < 0))
+            if (pantryItems.Any(item => item is null || item.Quantity < 0))
             {
-                throw new AiInputValidationException(
-                    "A pantry item has an invalid quantity. Please update your pantry and try again.");
+                throw new AiInputValidationException("A pantry item has an invalid quantity. Please update your pantry and try again.");
             }
 
-            var activeItems = pantryItems
-                .Where(item => item is not null && item.Quantity > 0)
-                .ToList();
+            var activeItems = pantryItems.Where(item => item is not null && item.Quantity > 0).ToList();
 
-            if (activeItems.Count >
-                AiInputValidator.MaximumPantryItemsInPrompt)
+            if (activeItems.Count > AiInputValidator.MaximumPantryItemsInPrompt)
             {
-                throw new AiInputValidationException(
-                    $"Your pantry contains too many items to generate a safe prompt. Keep it to {AiInputValidator.MaximumPantryItemsInPrompt} active items or fewer.");
+                throw new AiInputValidationException($"Your pantry contains too many items to generate a safe prompt. Keep it to {AiInputValidator.MaximumPantryItemsInPrompt} active items or fewer.");
             }
 
-            var normalized = new List<UserFoodItemDto>(
-                activeItems.Count);
+            var normalized = new List<UserFoodItemDto>(activeItems.Count);
 
             foreach (var item in activeItems)
             {
                 var name = item.Name?.Trim() ?? string.Empty;
                 var unit = item.Unit?.Trim() ?? string.Empty;
 
-                if (string.IsNullOrWhiteSpace(name)
-                    || name.Length >
-                    AiInputValidator.MaximumPantryNameCharacters)
+                if (string.IsNullOrWhiteSpace(name)|| name.Length > AiInputValidator.MaximumPantryNameCharacters)
                 {
-                    throw new AiInputValidationException(
-                        "A pantry item has an invalid name. Please update your pantry and try again.");
+                    throw new AiInputValidationException("A pantry item has an invalid name. Please update your pantry and try again.");
                 }
 
-                if (string.IsNullOrWhiteSpace(unit)
-                    || unit.Length >
-                    AiInputValidator.MaximumPantryUnitCharacters)
+                if (string.IsNullOrWhiteSpace(unit) || unit.Length > AiInputValidator.MaximumPantryUnitCharacters)
                 {
-                    throw new AiInputValidationException(
-                        "A pantry item has an invalid unit. Please update your pantry and try again.");
+                    throw new AiInputValidationException("A pantry item has an invalid unit. Please update your pantry and try again.");
                 }
 
                 if (item.Quantity > 100_000)
                 {
-                    throw new AiInputValidationException(
-                        "A pantry item has an implausible quantity. Please update your pantry and try again.");
+                    throw new AiInputValidationException("A pantry item has an implausible quantity. Please update your pantry and try again.");
                 }
 
                 ValidateOptionalNutrition(
@@ -491,13 +446,11 @@ namespace InTakeWise.Services
         {
             if (value is < 0 || value > maximum)
             {
-                throw new AiInputValidationException(
-                    $"A pantry item has invalid {nutrient}. Please update your pantry and try again.");
+                throw new AiInputValidationException($"A pantry item has invalid {nutrient}. Please update your pantry and try again.");
             }
         }
 
-        private static void ValidateProfileForPlanning(
-            UsersInformation profile)
+        private static void ValidateProfileForPlanning(UsersInformation profile)
         {
             if (profile.Age < ValidationLimits.MinimumProfileAge
                 || profile.Age > ValidationLimits.MaximumProfileAge
@@ -510,8 +463,7 @@ namespace InTakeWise.Services
                 || !Enum.IsDefined(profile.ChosenFitnessGoal)
                 || HasUnknownGymDay(profile.ChosenGymDays))
             {
-                throw new AiInputValidationException(
-                    "Your profile contains implausible values. Please update it before generating a shopping plan.");
+                throw new AiInputValidationException("Your profile contains implausible values. Please update it before generating a shopping plan.");
             }
 
             ValidateDailyTargets(
@@ -542,13 +494,11 @@ namespace InTakeWise.Services
                 || fat is < 0 or > 1_000
                 || fiber is < 0 or > 250)
             {
-                throw new AiInputValidationException(
-                    "Your saved nutrition targets are outside the supported range. Please update your profile and try again.");
+                throw new AiInputValidationException("Your saved nutrition targets are outside the supported range. Please update your profile and try again.");
             }
         }
 
-        private static bool HasUnknownGymDay(
-            GymDays gymDays)
+        private static bool HasUnknownGymDay(GymDays gymDays)
         {
             const GymDays allDays =
                 GymDays.Monday
@@ -592,23 +542,24 @@ namespace InTakeWise.Services
                 : string.Join(", ", selected);
         }
 
-        public async Task SaveWeekPlanAsync(
-            string userId,
-            ShoppingPlanDto plan,
-            CancellationToken cancellationToken = default)
+        public async Task SaveWeekPlanAsync(string userId, ShoppingPlanDto plan, CancellationToken cancellationToken = default)
         {
             if (string.IsNullOrWhiteSpace(userId))
+            {
                 throw new InvalidOperationException("You must be signed in to save a shopping plan.");
+            }
 
-            if (plan == null)
-                throw new ArgumentNullException(nameof(plan));
+            ArgumentNullException.ThrowIfNull(plan);
 
-            plan.ShoppingList ??= new List<ShoppingLineDto>();
-            plan.WeekMealsSummary ??= new List<WeeklyMealDto>();
+            if (plan.ShoppingList == null)
+            {
+                plan.ShoppingList = new List<ShoppingLineDto>();
+            }
 
-            await using var tx =
-                await _db.Database.BeginTransactionAsync(
-                    cancellationToken);
+            if (plan.WeekMealsSummary == null)
+            {
+                plan.WeekMealsSummary = new List<WeeklyMealDto>();
+            }
 
             var existing = await _db.ShoppingLists
                 .Include(x => x.Items)
@@ -639,18 +590,25 @@ namespace InTakeWise.Services
 
             var foodLookup = await _db.FoodItems
                 .AsNoTracking()
-                .Select(x => new { x.Id, x.NormalizedName })
+                .Select(x => new
+                {
+                    x.Id,
+                    x.NormalizedName
+                })
                 .ToListAsync(cancellationToken);
 
             var foodMap = foodLookup
                 .GroupBy(x => x.NormalizedName)
-                .ToDictionary(g => g.Key, g => g.First().Id);
+                .ToDictionary(
+                    group => group.Key,
+                    group => group.First().Id);
 
             existing.Items = plan.ShoppingList
                 .Where(x => !string.IsNullOrWhiteSpace(x.Name))
                 .Select(x =>
                 {
                     var normalized = FoodItemNameNormalizer.NormalizeName(x.Name);
+
                     foodMap.TryGetValue(normalized, out var foodItemId);
 
                     return new ShoppingListItem
@@ -658,23 +616,28 @@ namespace InTakeWise.Services
                         Name = x.Name.Trim(),
                         Quantity = x.Quantity,
                         Unit = x.Unit?.Trim() ?? "",
-                        FoodItemId = foodItemId == 0 ? null : foodItemId
+                        FoodItemId = foodItemId == 0
+                            ? null
+                            : foodItemId
                     };
                 })
                 .ToList();
 
-            existing.WeekStartLocalDate = plan.WeekMealsSummary.Count > 0
-                ? plan.WeekMealsSummary.Min(x => x.MealDateLocal).Date
-                : _clock.LondonNow.Date;
+            existing.WeekStartLocalDate = plan.WeekMealsSummary.Count > 0 ? plan.WeekMealsSummary.Min(x => x.MealDateLocal).Date : _clock.LondonNow.Date;
 
             existing.Meals = plan.WeekMealsSummary
                 .Where(x => !string.IsNullOrWhiteSpace(x.Day))
                 .Select(x => new ShoppingMealDay
                 {
                     Day = x.Day.Trim(),
-                    MealDateLocal = x.MealDateLocal.Date,
+                    MealDateLocal =
+                        x.MealDateLocal.Date,
                     Title = x.Title?.Trim() ?? "",
-                    MealDetailsJson = JsonSerializer.Serialize(x.MealDetails ?? new DailyMealDetailsDto(), JsonOptions),
+                    MealDetailsJson =
+                        JsonSerializer.Serialize(
+                            x.MealDetails ??
+                            new DailyMealDetailsDto(),
+                            JsonOptions),
                     Calories = x.Calories,
                     ProteinGrams = x.ProteinGrams,
                     CarbsGrams = x.CarbsGrams,
@@ -684,15 +647,14 @@ namespace InTakeWise.Services
                 .ToList();
 
             await _db.SaveChangesAsync(cancellationToken);
-            await tx.CommitAsync(cancellationToken);
         }
 
-        public async Task<ShoppingPlanDto?> GetSavedWeekPlanAsync(
-            string userId,
-            CancellationToken cancellationToken = default)
+        public async Task<ShoppingPlanDto?> GetSavedWeekPlanAsync(string userId, CancellationToken cancellationToken = default)
         {
             if (string.IsNullOrWhiteSpace(userId))
-                throw new InvalidOperationException("You must be signed in to load a shopping plan.");
+            {
+                    throw new InvalidOperationException("You must be signed in to load a shopping plan.");
+            }
 
             var saved = await _db.ShoppingLists
                 .AsNoTracking()
@@ -703,7 +665,9 @@ namespace InTakeWise.Services
                     cancellationToken);
 
             if (saved == null)
+            {
                 return null;
+            }
 
             return new ShoppingPlanDto
             {
@@ -738,12 +702,13 @@ namespace InTakeWise.Services
         private static DailyMealDetailsDto DeserializeMealDetails(string? json)
         {
             if (string.IsNullOrWhiteSpace(json))
+            {
                 return new DailyMealDetailsDto();
+            }
 
             try
             {
-                return JsonSerializer.Deserialize<DailyMealDetailsDto>(json, JsonOptions)
-                       ?? new DailyMealDetailsDto();
+                return JsonSerializer.Deserialize<DailyMealDetailsDto>(json, JsonOptions) ?? new DailyMealDetailsDto();
             }
             catch
             {
