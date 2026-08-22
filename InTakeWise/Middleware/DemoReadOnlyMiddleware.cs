@@ -18,8 +18,41 @@ public sealed class DemoReadOnlyMiddleware
 
     public async Task InvokeAsync(HttpContext context)
     {
-        if (!IsDemoUser(context.User) ||
-            IsSafeMethod(context.Request.Method) ||
+        var isAccountOrProfileRoute =
+            IsAccountOrProfileRoute(context);
+
+        if (isAccountOrProfileRoute)
+        {
+            context.Response.OnStarting(() =>
+            {
+                context.Response.Headers["Cache-Control"] =
+                    "no-store, no-cache";
+
+                context.Response.Headers["Pragma"] = "no-cache";
+                context.Response.Headers["Expires"] = "0";
+
+                return Task.CompletedTask;
+            });
+        }
+
+        if (!IsDemoUser(context.User))
+        {
+            await _next(context);
+            return;
+        }
+
+        if (isAccountOrProfileRoute && !IsLogoutPost(context))
+        {
+            _logger.LogInformation(
+                "Redirected demo user away from restricted route: {Method} {Path}",
+                context.Request.Method,
+                context.Request.Path);
+
+            context.Response.Redirect("/");
+            return;
+        }
+
+        if (IsSafeMethod(context.Request.Method) ||
             IsLogoutPost(context))
         {
             await _next(context);
@@ -54,6 +87,22 @@ public sealed class DemoReadOnlyMiddleware
                user.HasClaim(claim =>
                    claim.Type == DbSeeder.DemoClaimType &&
                    claim.Value == DbSeeder.DemoClaimValue);
+    }
+
+    private static bool IsAccountOrProfileRoute(HttpContext context)
+    {
+        var controller = context.Request.RouteValues["controller"]?.ToString();
+
+        if (string.Equals(controller, "ProfileWizard", StringComparison.OrdinalIgnoreCase))
+        {
+            return true;
+        }
+
+        var area = context.Request.RouteValues["area"]?.ToString();
+
+        var page = context.Request.RouteValues["page"]?.ToString();
+
+        return string.Equals(area, "Identity", StringComparison.OrdinalIgnoreCase) && page?.StartsWith("/Account", StringComparison.OrdinalIgnoreCase) == true;
     }
 
     private static bool IsSafeMethod(string method)

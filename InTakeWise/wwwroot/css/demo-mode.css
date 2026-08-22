@@ -14,17 +14,24 @@
     }
 
 .demo-banner-inner {
-    width: min(760px, calc(100% - 32px));
+    width: min(900px, calc(100% - 32px));
     margin: 0 auto;
     padding: 10px 0;
     display: flex;
     align-items: center;
-    justify-content: center;
-    gap: 9px;
-    text-align: center;
+    justify-content: space-between;
+    gap: 16px;
     font-size: 14px;
     line-height: 1.45;
     font-weight: 700;
+}
+
+.demo-banner-copy {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 9px;
+    min-width: 0;
 }
 
 .demo-banner-title {
@@ -39,18 +46,49 @@
     letter-spacing: 0.04em;
 }
 
+.demo-banner-exit {
+    flex: 0 0 auto;
+    margin: 0;
+}
+
+.demo-banner-exit-button {
+    min-height: 36px;
+    padding: 7px 13px;
+    border: 1px solid #92400e;
+    border-radius: 999px;
+    background: #fff;
+    color: #78350f;
+    font: inherit;
+    font-size: 13px;
+    font-weight: 900;
+    line-height: 1;
+    cursor: pointer;
+    transition: background 0.16s ease, color 0.16s ease, box-shadow 0.16s ease;
+}
+
+    .demo-banner-exit-button:hover {
+        background: #92400e;
+        color: #fff;
+        box-shadow: 0 4px 12px rgba(120, 53, 15, 0.2);
+    }
+
+    .demo-banner-exit-button:focus-visible {
+        outline: 3px solid rgba(146, 64, 14, 0.35);
+        outline-offset: 2px;
+    }
+
 .demo-action-note {
     cursor: default;
     border-color: rgba(245, 158, 11, 0.5);
     background: rgba(254, 243, 199, 0.85);
 }
 
-.demo-action-note:hover,
-.demo-unavailable-action:hover {
-    transform: none;
-    border-color: rgba(245, 158, 11, 0.5);
-    box-shadow: 0 10px 24px rgba(15, 23, 42, 0.06);
-}
+    .demo-action-note:hover,
+    .demo-unavailable-action:hover {
+        transform: none;
+        border-color: rgba(245, 158, 11, 0.5);
+        box-shadow: 0 10px 24px rgba(15, 23, 42, 0.06);
+    }
 
 .demo-control-disabled {
     opacity: 0.55 !important;
@@ -79,9 +117,20 @@
 
 @media (max-width: 600px) {
     .demo-banner-inner {
+        align-items: center;
+        gap: 10px;
+    }
+
+    .demo-banner-copy {
         align-items: flex-start;
         text-align: left;
     }
+
+    .demo-banner-title {
+        margin-top: 1px;
+    }
+
+    .demo-banner-exit-button {
+        min-height: 40px;
+    }
 }
-
-

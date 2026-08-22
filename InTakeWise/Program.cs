@@ -151,9 +151,10 @@ app.UseRouting();
 app.UseSession();
 
 app.UseAuthentication();
-app.UseAuthorization();
 
 app.UseMiddleware<DemoReadOnlyMiddleware>();
+
+app.UseAuthorization();
 
 app.MapStaticAssets();
 

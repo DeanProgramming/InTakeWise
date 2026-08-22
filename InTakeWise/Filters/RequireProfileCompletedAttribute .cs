@@ -12,9 +12,15 @@ namespace InTakeWise.Filters
     {
         public async Task OnActionExecutionAsync(ActionExecutingContext context, ActionExecutionDelegate next)
         {
-            // 1. Skip if not signed in.
-            // Let normal auth flow handle challenge/redirect.
             if (context.HttpContext.User?.Identity?.IsAuthenticated != true)
+            {
+                await next();
+                return;
+            }
+
+            if (context.HttpContext.User.HasClaim(
+                    DbSeeder.DemoClaimType,
+                    DbSeeder.DemoClaimValue))
             {
                 await next();
                 return;

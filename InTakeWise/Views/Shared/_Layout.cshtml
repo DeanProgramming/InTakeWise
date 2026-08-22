@@ -39,12 +39,27 @@
              tabindex="-1">
 
             <div class="demo-banner-inner">
-                <span class="demo-banner-title">Demo mode</span>
+                <div class="demo-banner-copy">
+                    <span class="demo-banner-title">Demo mode</span>
 
-                <span id="demo-mode-message">
-                    You’re viewing sample data.
-                    Changes and live AI generation are disabled.
-                </span>
+                    <span id="demo-mode-message">
+                        You’re viewing sample data.
+                        Changes and live AI generation are disabled.
+                    </span>
+                </div>
+
+                <form class="demo-banner-exit"
+                      asp-area="Identity"
+                      asp-page="/Account/Logout"
+                      asp-route-returnUrl="/Identity/Account/Login"
+                      method="post"
+                      data-demo-allow="logout">
+                    <button type="submit"
+                            class="demo-banner-exit-button"
+                            aria-label="End demo and return to the login page">
+                        End demo
+                    </button>
+                </form>
             </div>
         </div>
     }
