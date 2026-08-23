@@ -55,11 +55,11 @@ namespace InTakeWise.Controllers
             model.IsSample = true;
             model.Items = new List<PantryItemInputViewModel>
             {
-                new() { Name = "Chicken Breast", Quantity = 1, Unit = "items" },
+                new() { Name = "Chicken Breast", Quantity = 1, Unit = "kg" },
                 new() { Name = "Basmati Rice", Quantity = 500, Unit = "g" },
                 new() { Name = "Pasta", Quantity = 500, Unit = "g" },
                 new() { Name = "Semi-Skimmed Milk", Quantity = 1, Unit = "l" },
-                new() { Name = "Eggs", Quantity = 12, Unit = "items" }
+                new() { Name = "Eggs", Quantity = 12, Unit = "pcs" }
             };
 
             EnsureBlankRow(model);
