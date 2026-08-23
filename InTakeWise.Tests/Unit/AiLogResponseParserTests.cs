@@ -74,4 +74,27 @@ public sealed class AiLogResponseParserTests
     {
         Assert.Throws<InvalidOperationException>(() => _sut.ParseWorkout(json));
     }
+
+    [Theory]
+    [InlineData("meal")]
+    [InlineData("workout")]
+    public void Parse_RejectsUnknownJsonMembers(string responseType)
+    {
+        if (responseType == "meal")
+        {
+            const string mealJson =
+                "{\"summary\":\"Meal\",\"calories\":500,\"protein\":20," +
+                "\"carbs\":20,\"fat\":10,\"fiber\":5,\"extra\":true}";
+
+            Assert.Throws<InvalidOperationException>(() => _sut.ParseMeal(mealJson));
+            return;
+        }
+
+        const string workoutJson =
+            "{\"activityType\":\"Run\",\"durationMinutes\":30," +
+            "\"intensity\":\"High\",\"caloriesBurned\":300,\"extra\":true}";
+
+        Assert.Throws<InvalidOperationException>(() => _sut.ParseWorkout(workoutJson));
+    }
 }
+

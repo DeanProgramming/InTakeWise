@@ -18,16 +18,13 @@ public sealed class DemoReadOnlyMiddleware
 
     public async Task InvokeAsync(HttpContext context)
     {
-        var isAccountOrProfileRoute =
-            IsAccountOrProfileRoute(context);
+        var isAccountOrProfileRoute = IsAccountOrProfileRoute(context);
 
         if (isAccountOrProfileRoute)
         {
             context.Response.OnStarting(() =>
             {
-                context.Response.Headers["Cache-Control"] =
-                    "no-store, no-cache";
-
+                context.Response.Headers["Cache-Control"] = "no-store, no-cache";
                 context.Response.Headers["Pragma"] = "no-cache";
                 context.Response.Headers["Expires"] = "0";
 
@@ -52,8 +49,7 @@ public sealed class DemoReadOnlyMiddleware
             return;
         }
 
-        if (IsSafeMethod(context.Request.Method) ||
-            IsLogoutPost(context))
+        if (IsSafeMethod(context.Request.Method) || IsLogoutPost(context))
         {
             await _next(context);
             return;
@@ -64,29 +60,25 @@ public sealed class DemoReadOnlyMiddleware
             context.Request.Method,
             context.Request.Path);
 
-        context.Response.StatusCode =
-            StatusCodes.Status403Forbidden;
-
-        context.Response.ContentType =
-            "application/problem+json";
+        context.Response.StatusCode = StatusCodes.Status403Forbidden;
 
         context.Response.Headers["Cache-Control"] = "no-store";
 
-        await context.Response.WriteAsJsonAsync(new
-        {
-            type = "about:blank",
-            title = "Demo mode is read-only",
-            status = StatusCodes.Status403Forbidden,
-            detail = "Changes and live generation are disabled for the demo account."
-        });
+        await context.Response.WriteAsJsonAsync(
+            new
+            {
+                type = "about:blank",
+                title = "Demo mode is read-only",
+                status = StatusCodes.Status403Forbidden,
+                detail = "Changes and live generation are disabled for the demo account."
+            },
+            options: null,
+            contentType: "application/problem+json");
     }
 
     private static bool IsDemoUser(ClaimsPrincipal user)
     {
-        return user.Identity?.IsAuthenticated == true &&
-               user.HasClaim(claim =>
-                   claim.Type == DbSeeder.DemoClaimType &&
-                   claim.Value == DbSeeder.DemoClaimValue);
+        return user.Identity?.IsAuthenticated == true && user.HasClaim(claim => claim.Type == DbSeeder.DemoClaimType && claim.Value == DbSeeder.DemoClaimValue);
     }
 
     private static bool IsAccountOrProfileRoute(HttpContext context)

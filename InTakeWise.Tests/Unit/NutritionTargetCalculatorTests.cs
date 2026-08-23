@@ -149,3 +149,5 @@ public sealed class NutritionTargetCalculatorTests
         ChosenGymDays = GymDays.Monday | GymDays.Wednesday | GymDays.Friday
     };
 }
+
+

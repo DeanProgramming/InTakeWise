@@ -14,6 +14,7 @@ using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Hosting;
 using System.Collections.Concurrent;
 using System.Data.Common;
+using LegacyEmailSender = Microsoft.AspNetCore.Identity.UI.Services.IEmailSender;
 
 namespace InTakeWise.Tests.Infrastructure;
 
@@ -22,7 +23,8 @@ public sealed class InTakeWiseWebApplicationFactory : WebApplicationFactory<Prog
     public const string TestEmail = "smoke@example.test";
     public const string TestPassword = "Test123!";
 
-    private readonly SqliteConnection _connection = new("Data Source=:memory:");
+    private readonly SqliteConnection _connection = new(
+        "Data Source=:memory:;Foreign Keys=True");
 
     public InTakeWiseWebApplicationFactory()
     {
@@ -65,6 +67,14 @@ public sealed class InTakeWiseWebApplicationFactory : WebApplicationFactory<Prog
 
             services.RemoveAll<IShoppingSuggestionService>();
             services.AddSingleton<IShoppingSuggestionService>(new StubShoppingSuggestionService());
+
+            services.RemoveAll<IEmailSender<IdentityUser>>();
+            services.AddSingleton<IEmailSender<IdentityUser>>(
+                new NoOpIdentityEmailSender());
+
+            services.RemoveAll<LegacyEmailSender>();
+            services.AddSingleton<LegacyEmailSender>(
+                new NoOpLegacyEmailSender());
         });
     }
 
@@ -110,8 +120,12 @@ public sealed class InTakeWiseWebApplicationFactory : WebApplicationFactory<Prog
 
         public Task<ShoppingPlanDto> GenerateWeekPlanAsync(
             string userId,
-            List<InTakeWise.Models.UserFoodItemDto> currentInHouse) =>
-            Task.FromResult(new ShoppingPlanDto
+            List<UserFoodItemDto> currentInHouse,
+            CancellationToken cancellationToken = default)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+
+            return Task.FromResult(new ShoppingPlanDto
             {
                 ShoppingList =
                 [
@@ -137,32 +151,26 @@ public sealed class InTakeWiseWebApplicationFactory : WebApplicationFactory<Prog
                     }
                 ]
             });
+        }
 
-        public Task SaveWeekPlanAsync(string userId, ShoppingPlanDto plan)
+        public Task SaveWeekPlanAsync(
+            string userId,
+            ShoppingPlanDto plan,
+            CancellationToken cancellationToken = default)
         {
+            cancellationToken.ThrowIfCancellationRequested();
             _plans[userId] = plan;
             return Task.CompletedTask;
         }
 
-        public Task<ShoppingPlanDto?> GetSavedWeekPlanAsync(string userId)
+        public Task<ShoppingPlanDto?> GetSavedWeekPlanAsync(
+            string userId,
+            CancellationToken cancellationToken = default)
         {
+            cancellationToken.ThrowIfCancellationRequested();
             _plans.TryGetValue(userId, out var plan);
             return Task.FromResult(plan);
         }
-
-        public Task<ShoppingPlanDto> GenerateWeekPlanAsync(string userId, List<UserFoodItemDto> currentInHouse, CancellationToken cancellationToken = default)
-        {
-            throw new NotImplementedException();
-        }
-
-        public Task SaveWeekPlanAsync(string userId, ShoppingPlanDto plan, CancellationToken cancellationToken = default)
-        {
-            throw new NotImplementedException();
-        }
-
-        public Task<ShoppingPlanDto?> GetSavedWeekPlanAsync(string userId, CancellationToken cancellationToken = default)
-        {
-            throw new NotImplementedException();
-        }
     }
 }
+

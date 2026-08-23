@@ -2,11 +2,19 @@ using InTakeWise.Dto;
 using InTakeWise.Models;
 using InTakeWise.Security;
 using InTakeWise.Services;
+using Microsoft.AspNetCore.Identity;
+using LegacyEmailSender = Microsoft.AspNetCore.Identity.UI.Services.IEmailSender;
 
 namespace InTakeWise.Tests.Infrastructure;
 
 internal sealed class StubAiLogParser : IAiLogParser
 {
+    public string? LastMealUserId { get; private set; }
+    public string? LastMealInput { get; private set; }
+    public string? LastWorkoutUserId { get; private set; }
+    public string? LastWorkoutInput { get; private set; }
+    public UsersInformation? LastWorkoutProfile { get; private set; }
+
     public MealAnalysisDto MealResult { get; set; } = new()
     {
         Summary = "Test meal",
@@ -25,22 +33,21 @@ internal sealed class StubAiLogParser : IAiLogParser
         CaloriesBurned = 400
     };
 
-    public Task<MealAnalysisDto> AnalyzeMealAsync(string userId, string userInput) =>
-        Task.FromResult(MealResult);
-
     public Task<MealAnalysisDto> AnalyzeMealAsync(string userId, string userInput, CancellationToken cancellationToken = default)
     {
-        throw new NotImplementedException();
+        cancellationToken.ThrowIfCancellationRequested();
+        LastMealUserId = userId;
+        LastMealInput = userInput;
+        return Task.FromResult(MealResult);
     }
-
-    public Task<WorkoutAnalysisDto> AnalyzeWorkoutAsync(
-        string userId,
-        string userInput,
-        UsersInformation? profile) => Task.FromResult(WorkoutResult);
 
     public Task<WorkoutAnalysisDto> AnalyzeWorkoutAsync(string userId, string userInput, UsersInformation? profile, CancellationToken cancellationToken = default)
     {
-        throw new NotImplementedException();
+        cancellationToken.ThrowIfCancellationRequested();
+        LastWorkoutUserId = userId;
+        LastWorkoutInput = userInput;
+        LastWorkoutProfile = profile;
+        return Task.FromResult(WorkoutResult);
     }
 }
 
@@ -72,3 +79,30 @@ internal sealed class AllowAllDemoAiGuard : IDemoAiGuard
 {
     public Task EnsureLiveAiAllowedAsync(string userId) => Task.CompletedTask;
 }
+
+internal sealed class NoOpIdentityEmailSender : IEmailSender<IdentityUser>
+{
+    public Task SendConfirmationLinkAsync(
+        IdentityUser user,
+        string email,
+        string confirmationLink) => Task.CompletedTask;
+
+    public Task SendPasswordResetLinkAsync(
+        IdentityUser user,
+        string email,
+        string resetLink) => Task.CompletedTask;
+
+    public Task SendPasswordResetCodeAsync(
+        IdentityUser user,
+        string email,
+        string resetCode) => Task.CompletedTask;
+}
+
+internal sealed class NoOpLegacyEmailSender : LegacyEmailSender
+{
+    public Task SendEmailAsync(
+        string email,
+        string subject,
+        string htmlMessage) => Task.CompletedTask;
+}
+

@@ -3,9 +3,8 @@ using InTakeWise.Helper;
 using InTakeWise.Models;
 using InTakeWise.Services;
 using InTakeWise.Tests.Infrastructure;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Configuration;
-using Microsoft.Extensions.Logging.Abstractions;
 
 namespace InTakeWise.Tests.Integration;
 
@@ -16,6 +15,7 @@ public sealed class UserDataIsolationTests
     {
         using var database = new SqliteTestDatabase();
         await using var db = database.CreateContext();
+        await AddUsersAsync(db, "user-a", "user-b");
 
         var oats = new FoodItem { Name = "Oats", NormalizedName = "oats" };
         var rice = new FoodItem { Name = "Rice", NormalizedName = "rice" };
@@ -40,6 +40,7 @@ public sealed class UserDataIsolationTests
     {
         using var database = new SqliteTestDatabase();
         await using var db = database.CreateContext();
+        await AddUsersAsync(db, "user-a", "user-b");
         var clock = new TestAppClock();
 
         var meal = new MealLogEntry
@@ -71,6 +72,7 @@ public sealed class UserDataIsolationTests
     {
         using var database = new SqliteTestDatabase();
         await using var db = database.CreateContext();
+        await AddUsersAsync(db, "user-a", "user-b");
         var clock = new TestAppClock();
 
         db.UsersInformation.Add(Profile("user-a"));
@@ -95,6 +97,7 @@ public sealed class UserDataIsolationTests
     {
         using var database = new SqliteTestDatabase();
         await using var db = database.CreateContext();
+        await AddUsersAsync(db, "user-a", "user-b");
         var clock = new TestAppClock();
 
         db.MealLogs.AddRange(
@@ -126,58 +129,23 @@ public sealed class UserDataIsolationTests
         Assert.Equal(900, Assert.Single(userBMeals).Calories);
     }
 
-    /*
-    [Fact]
-    public async Task SavingPlanAgain_ReplacesThatUsersPlanWithoutTouchingAnotherUser()
+    private static async Task AddUsersAsync(
+        InTakeWise.Data.ApplicationDbContext db,
+        params string[] userIds)
     {
-        using var database = new SqliteTestDatabase();
-        await using var db = database.CreateContext();
-        var service = CreateShoppingService(db);
+        db.Users.AddRange(userIds.Select(userId => new IdentityUser
+        {
+            Id = userId,
+            UserName = $"{userId}@example.test",
+            NormalizedUserName = $"{userId}@example.test".ToUpperInvariant(),
+            Email = $"{userId}@example.test",
+            NormalizedEmail = $"{userId}@example.test".ToUpperInvariant(),
+            EmailConfirmed = true,
+            SecurityStamp = Guid.NewGuid().ToString()
+        }));
 
-        await service.SaveWeekPlanAsync("user-a", Plan("A-old", new DateTime(2026, 8, 15)));
-        await service.SaveWeekPlanAsync("user-b", Plan("B-plan", new DateTime(2026, 8, 15)));
-        await service.SaveWeekPlanAsync("user-a", Plan("A-new", new DateTime(2026, 8, 16)));
-
-        var userAPlan = await service.GetSavedWeekPlanAsync("user-a");
-        var userBPlan = await service.GetSavedWeekPlanAsync("user-b");
-
-        Assert.NotNull(userAPlan);
-        Assert.NotNull(userBPlan);
-        Assert.Equal("A-new", Assert.Single(userAPlan.ShoppingList).Name);
-        Assert.Equal("B-plan", Assert.Single(userBPlan.ShoppingList).Name);
-        Assert.Equal(2, await db.ShoppingLists.CountAsync());
-        Assert.Equal(2, await db.ShoppingListItems.CountAsync());
-        Assert.Equal(2, await db.ShoppingMealDays.CountAsync());
+        await db.SaveChangesAsync();
     }
-    private static ShoppingSuggestionService CreateShoppingService(InTakeWise.Data.ApplicationDbContext db) =>
-        new(
-            db,
-            new ConfigurationBuilder().Build(),
-            NullLogger<ShoppingSuggestionService>.Instance,
-            new TestAppClock(),
-            new AllowAllDemoAiGuard());
-
-    private static ShoppingPlanDto Plan(string itemName, DateTime date) => new()
-    {
-        ShoppingList =
-        [
-            new ShoppingLineDto { Name = itemName, Quantity = 1m, Unit = "item" }
-        ],
-        WeekMealsSummary =
-        [
-            new WeeklyMealDto
-            {
-                Day = date.DayOfWeek.ToString(),
-                MealDateLocal = date,
-                Title = $"{itemName} meals",
-                Calories = 2_000,
-                ProteinGrams = 150,
-                CarbsGrams = 220,
-                FatGrams = 60,
-                MealDetails = new DailyMealDetailsDto()
-            }
-        ]
-    };*/
 
     private static UsersInformation Profile(string userId) => new()
     {
@@ -211,6 +179,7 @@ public sealed class UserDataIsolationTests
             UserId = userId,
             TimeEat = mealType,
             Timestamp = timestamp,
+            LogDateLocal = timestamp.Date,
             Calories = calories
         };
 
@@ -222,3 +191,4 @@ public sealed class UserDataIsolationTests
         CaloriesBurned = calories
     };
 }
+

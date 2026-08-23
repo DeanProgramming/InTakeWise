@@ -6,7 +6,8 @@ namespace InTakeWise.Tests.Infrastructure;
 
 internal sealed class SqliteTestDatabase : IDisposable
 {
-    private readonly SqliteConnection _connection = new("Data Source=:memory:");
+    private readonly SqliteConnection _connection = new(
+        "Data Source=:memory:;Foreign Keys=True");
 
     public SqliteTestDatabase()
     {
@@ -28,3 +29,4 @@ internal sealed class SqliteTestDatabase : IDisposable
 
     public void Dispose() => _connection.Dispose();
 }
+

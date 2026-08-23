@@ -44,6 +44,22 @@ public sealed class AppClockTests
         Assert.Equal(TimeSpan.FromHours(25), endUtc - startUtc);
     }
 
+    [Fact]
+    public void GetTodayLondonRangeUtc_ReturnsTwentyFourHoursOnOrdinaryDay()
+    {
+        var clock = CreateClock(2026, 8, 22, 12);
+
+        var (startUtc, endUtc) = clock.GetTodayLondonRangeUtc();
+
+        Assert.Equal(
+            new DateTime(2026, 8, 21, 23, 0, 0, DateTimeKind.Utc),
+            startUtc);
+        Assert.Equal(
+            new DateTime(2026, 8, 22, 23, 0, 0, DateTimeKind.Utc),
+            endUtc);
+        Assert.Equal(TimeSpan.FromHours(24), endUtc - startUtc);
+    }
+
     private static AppClock CreateClock(int year, int month, int day, int hour) =>
         new(new FixedTimeProvider(new DateTimeOffset(year, month, day, hour, 0, 0, TimeSpan.Zero)));
 
@@ -52,3 +68,4 @@ public sealed class AppClockTests
         public override DateTimeOffset GetUtcNow() => utcNow;
     }
 }
+
