@@ -33,4 +33,5 @@ public sealed class FoodItemNameNormalizerTests
 
         Assert.Equal("Greek Yoghurt", result);
     }
+
 }
