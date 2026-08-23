@@ -148,7 +148,7 @@ button.menu-goal-row {
     cursor: pointer;
 }
 
-    .no-gym-days-button.is-active {
-        background: rgba(34, 197, 94, 0.35);
-        border-color: rgba(34, 197, 94, 0.55);
-    }
+.no-gym-days-button.is-active {
+    background: rgba(34, 197, 94, 0.35);
+    border-color: rgba(34, 197, 94, 0.55);
+}
