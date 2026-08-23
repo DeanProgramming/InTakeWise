@@ -122,17 +122,38 @@
                            asp-action="LoadSampleReceipt"
                            asp-route-returnUrl="@Model.ReturnUrl"
                            class="menu-action receipt-source-card receipt-sample-card">
-                            <div class="menu-action-title">Load Fictional Sample Receipt</div>
-                            <div class="menu-action-sub">
-                                Prefill five sample grocery items • no upload or AI call
+                            <div class="menu-action-title">
+                                @(Model.IsSample ? "Reload Fictional Sample Receipt" : "Load Fictional Sample Receipt")
                             </div>
-                        </a>
-                    }
+                            <div class="menu-action-sub">
+                                @(Model.IsSample ? "Reset the five sample grocery items • no upload or AI call" : "Prefill five sample grocery items • no upload or AI call")
+                        </div>
+                    </a>
+                                        }
                 </div>
 
                 @if (!ViewData.ModelState.IsValid)
                 {
                     <div asp-validation-summary="ModelOnly" class="menu-validation"></div>
+                }
+
+                @if (Model.IsSample && !isDemo)
+                {
+                    <div class="menu-action receipt-source-card receipt-sample-card">
+                        <div class="menu-action-title">Fictional Sample Receipt</div>
+                        <div class="menu-action-sub">
+                            The five prefilled grocery items below match this bundled receipt image.
+                        </div>
+
+                        <figure class="receipt-demo-figure">
+                            <img src="~/images/test-receipt.png"
+                                 class="receipt-demo-image"
+                                 alt="Fictional Pantry Lane Market grocery receipt containing chicken breast, basmati rice, pasta, semi-skimmed milk, and eggs" />
+                            <figcaption>
+                                This image is fictional and was not uploaded or submitted to OpenAI.
+                            </figcaption>
+                        </figure>
+                    </div>
                 }
 
                 @if (Model.IsSample)
@@ -185,9 +206,7 @@
                         <div class="menu-action receipt-empty-state">
                             <div class="menu-action-title">No items to review yet</div>
                             <div class="menu-action-sub">
-                                @(isDemo
-                                                            ? "Use the built-in demo receipt above to load its simulated results."
-                                                            : "Upload a receipt, load the fictional sample, or add an item manually.")
+                                @(isDemo ? "Use the built-in demo receipt above to load its simulated results." : "Upload a receipt, load the fictional sample, or add an item manually.")
                         </div>
                     </div>
                                         }
@@ -304,4 +323,3 @@
     <script src="~/js/item-rows.js" asp-append-version="true"></script>
     <script src="~/js/receipt.js" asp-append-version="true"></script>
 }
-

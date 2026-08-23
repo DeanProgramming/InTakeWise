@@ -116,11 +116,13 @@
                         </div>
                     }
 
-                    <form asp-controller="LogEntry"
+                    <form id="logEntryForm"
+                          asp-controller="LogEntry"
                           asp-action="@(isMeal ? "Meal" : "Workout")"
                           method="post"
                           class="log-form"
-                          data-log-draft-key="@logDraftKey">
+                          data-log-draft-key="@logDraftKey"
+                          data-log-kind="@(isMeal ? "meal" : "workout")">
                         @Html.AntiForgeryToken()
 
                         <input type="hidden" name="mode" value="@Model.Mode" />
@@ -130,11 +132,11 @@
                             <input type="hidden" name="logTime" value="@Model.SelectedTimeOfDay" />
                         }
 
-                        <label class="log-section-label">
-                            @(isMeal ? $"{Model.SelectedTimeOfDay} entry" : "Workout entry")
-                        </label>
+                    <label class="log-section-label">
+                        @(isMeal ? $"{Model.SelectedTimeOfDay} entry" : "Workout entry")
+                    </label>
 
-                        <textarea name="userInput"
+                    <textarea name="userInput"
                               class="log-text-box menu-action"
                               rows="5"
                               maxlength="@InTakeWise.Services.AiInputValidator.MaximumLogInputCharacters"
@@ -142,18 +144,36 @@
                               aria-describedby="log-input-help"
                               placeholder="@(isMeal ? "Example: 200g chicken, rice, broccoli, yogurt..." : "Example: 30 min run, 20 min weights, moderate intensity...")">@Model.UserInput</textarea>
 
-                        <div id="log-input-help" class="menu-action-sub">
-                            Maximum @InTakeWise.Services.AiInputValidator.MaximumLogInputCharacters.ToString("N0") characters.
-                        </div>
+                    <div id="log-input-help" class="menu-action-sub">
+                        Maximum @InTakeWise.Services.AiInputValidator.MaximumLogInputCharacters.ToString("N0") characters.
+                    </div>
 
-                        <button type="submit" class="menu-action menu-primary-btn log-submit-btn">
+                    <button id="logSubmitBtn"
+                            type="submit"
+                            class="menu-action menu-primary-btn log-submit-btn shopping-generate-btn">
+                        <span id="logSubmitBtnText">
                             <span class="menu-action-title">Generate</span>
                             <span class="menu-action-sub">
                                 @(isMeal ? "Estimate calories and macros" : "Estimate workout burn")
                             </span>
-                        </button>
-                    </form>
-                }
+                        </span>
+                        <span id="logSubmitSpinner" class="shopping-spinner" aria-hidden="true"></span>
+                    </button>
+                </form>
+
+                <div id="logLoadingPanel"
+                     class="menu-action shopping-loading-panel"
+                     role="status"
+                     aria-live="polite"
+                     hidden>
+                    <div class="menu-action-title">
+                        @(isMeal ? "Analysing your meal..." : "Analysing your workout...")
+                    </div>
+                    <div class="menu-action-sub">
+                        @(isMeal ? "Estimating calories and macros from your description. This may take a moment." : "Estimating activity, duration, intensity and calories burned. This may take a moment.")
+                    </div>
+                </div>
+                                }
 
                 @if (isMeal && Model.GeneratedMealLog != null)
                 {
@@ -165,9 +185,7 @@
 
                         @if (!string.IsNullOrWhiteSpace(Model.GeneratedMealLog.RawInput))
                         {
-                            <div class="log-raw-input">
-                                @Model.GeneratedMealLog.RawInput
-                            </div>
+                            <div class="log-raw-input">@Model.GeneratedMealLog.RawInput.Trim()</div>
                         }
 
                         <div class="shopping-macro-grid log-macro-grid">
@@ -208,9 +226,7 @@
 
                         @if (!string.IsNullOrWhiteSpace(Model.GeneratedWorkoutLog.RawInput))
                         {
-                            <div class="log-raw-input">
-                                @Model.GeneratedWorkoutLog.RawInput
-                            </div>
+                            <div class="log-raw-input">@Model.GeneratedWorkoutLog.RawInput.Trim()</div>
                         }
 
                         <div class="shopping-macro-grid log-macro-grid">
